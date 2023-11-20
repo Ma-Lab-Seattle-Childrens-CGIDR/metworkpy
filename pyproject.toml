@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "metworkpy"
+version = "0.1.0"
+description = "Package for creating and working with network representations of genome scale metabolic models."
+authors = ["Braden Griebel <bgriebel@uw.edu>"]
+license = "mit"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10"
+networkx = "^3.2.1"
+xarray = "^2023.11.0"
+cobra = "^0.29.0"
+scikit-network = "^0.31.0"
+scipy = "^1.11.4"
+numpy = "^1.26.2"
+pandas = "^2.1.3"
+optlang = "^1.8.1"
+sympy = "^1.12"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.11.0"
+pytest = "^7.4.3"
+flake8 = "^6.1.0"
+pylint = "^3.0.2"
+
+
+[tool.poetry.group.docs.dependencies]
+Sphinx = "^7.2.6"
+sphinx-rtd-theme = "^1.3.0"
+sphinx-exec-code = "^0.10"
+jupyter = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
