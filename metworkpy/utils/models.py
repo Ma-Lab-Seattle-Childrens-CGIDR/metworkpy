@@ -126,7 +126,7 @@ def _parse_file_type(file_type):
 
 # region Model Comparison
 def model_eq(
-    model1: cobra.Model, model2: cobra.Model, verbose: bool = False
+        model1: cobra.Model, model2: cobra.Model, verbose: bool = False
 ) -> bool:
     """
     Check if two cobra models are equal.
@@ -162,7 +162,7 @@ def model_eq(
             return False
     # Check objective
     if not _check_objective_eq(
-        model1.objective, model2.objective, verbose=verbose
+            model1.objective, model2.objective, verbose=verbose
     ):
         if verbose:
             print("Models have different objectives")
@@ -171,13 +171,13 @@ def model_eq(
         return False
     # Check the underlying constraint model
     if not _check_optlang_container_eq(
-        model1.solver.constraints, model2.solver.constraints
+            model1.solver.constraints, model2.solver.constraints
     ):
         if verbose:
             print("Models have different constraints")
         return False
     if not _check_optlang_container_eq(
-        model1.solver.variables, model2.solver.variables
+            model1.solver.variables, model2.solver.variables
     ):
         if verbose:
             print("Models have different variables")
@@ -198,7 +198,7 @@ def model_eq(
 
 
 def _check_dictlist_subset(
-    dictlist1: cobra.DictList, dictlist2: cobra.DictList
+        dictlist1: cobra.DictList, dictlist2: cobra.DictList
 ) -> bool:
     """
     Check if dictlist1 is a subset of dictlist2.
@@ -217,7 +217,7 @@ def _check_dictlist_subset(
 
 
 def _check_dictlist_eq(
-    dictlist1: cobra.DictList, dictlist2: cobra.DictList
+        dictlist1: cobra.DictList, dictlist2: cobra.DictList
 ) -> bool:
     """
     Check if two dictlists are equal.
@@ -237,7 +237,7 @@ def _check_dictlist_eq(
 
 
 def _check_optlang_container_subset(
-    cont1: optlang.container.Container, cont2: optlang.container.Container
+        cont1: optlang.container.Container, cont2: optlang.container.Container
 ) -> bool:
     """
     Check if cont1 is a subset of cont2.
@@ -256,7 +256,7 @@ def _check_optlang_container_subset(
 
 
 def _check_optlang_container_eq(
-    cont1: optlang.container.Container, cont2: optlang.container.Container
+        cont1: optlang.container.Container, cont2: optlang.container.Container
 ) -> bool:
     """
     Check if two optlang containers are equal.
@@ -276,7 +276,7 @@ def _check_optlang_container_eq(
 
 
 def _check_reaction_eq(
-    rxn1: cobra.Reaction, rxn2: cobra.Reaction, verbose: bool = False
+        rxn1: cobra.Reaction, rxn2: cobra.Reaction, verbose: bool = False
 ) -> bool:
     """
     Check if two reactions are equal.
@@ -384,7 +384,7 @@ def _check_variable_eq(var1, var2, verbose: bool = False) -> bool:
 
 
 def _check_constraint_eq(
-    constraint1, constraint2, verbose: bool = False
+        constraint1, constraint2, verbose: bool = False
 ) -> bool:
     if constraint1.lb != constraint2.lb:
         if verbose:
@@ -395,12 +395,11 @@ def _check_constraint_eq(
             print(f"Constraint {constraint1.name} has different upper bounds")
         return False
     if not _check_expression_eq(
-        constraint1.expression, constraint2.expression, verbose=verbose
+            constraint1.expression, constraint2.expression, verbose=verbose
     ):
         if verbose:
             print(f"Constraint {constraint1.name} has different expressions")
         return False
     return True
-
 
 # endregion: Model Comparison

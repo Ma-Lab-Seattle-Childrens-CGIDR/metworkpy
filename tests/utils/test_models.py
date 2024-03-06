@@ -8,7 +8,7 @@ from cobra import Metabolite, Reaction
 from cobra.core.configuration import Configuration
 
 # Local imports
-import metworkpy.model_utils
+import metworkpy.utils.models
 
 
 class TestParseFileType(unittest.TestCase):
@@ -22,18 +22,18 @@ class TestParseFileType(unittest.TestCase):
 
     def test_parse_file_type(self):
         self.assertEqual(
-            metworkpy.model_utils._parse_file_type("joblib"), "joblib"
+            metworkpy.utils.models._parse_file_type("joblib"), "joblib"
         )
-        self.assertEqual(metworkpy.model_utils._parse_file_type("pkl"), "pickle")
+        self.assertEqual(metworkpy.utils.models._parse_file_type("pkl"), "pickle")
         self.assertEqual(
-            metworkpy.model_utils._parse_file_type("pickle"), "pickle"
+            metworkpy.utils.models._parse_file_type("pickle"), "pickle"
         )
-        self.assertEqual(metworkpy.model_utils._parse_file_type("yml"), "yaml")
-        self.assertEqual(metworkpy.model_utils._parse_file_type("xml"), "sbml")
-        self.assertEqual(metworkpy.model_utils._parse_file_type("jsn"), "json")
-        self.assertEqual(metworkpy.model_utils._parse_file_type("m"), "mat")
-        self.assertEqual(metworkpy.model_utils._parse_file_type("mat"), "mat")
-        self.assertEqual(metworkpy.model_utils._parse_file_type("sbml"), "sbml")
+        self.assertEqual(metworkpy.utils.models._parse_file_type("yml"), "yaml")
+        self.assertEqual(metworkpy.utils.models._parse_file_type("xml"), "sbml")
+        self.assertEqual(metworkpy.utils.models._parse_file_type("jsn"), "json")
+        self.assertEqual(metworkpy.utils.models._parse_file_type("m"), "mat")
+        self.assertEqual(metworkpy.utils.models._parse_file_type("mat"), "mat")
+        self.assertEqual(metworkpy.utils.models._parse_file_type("sbml"), "sbml")
 
 
 class TestModelIO(unittest.TestCase):
@@ -46,17 +46,17 @@ class TestModelIO(unittest.TestCase):
         Configuration.solver = "glpk"  # Use GLPK solver for testing
 
     def test_read_model(self):
-        data_path = str(pathlib.Path(__file__).parent.joinpath("data"))
-        model_json = metworkpy.model_utils.read_model(
+        data_path = str(pathlib.Path(__file__).parent.parent.joinpath("data"))
+        model_json = metworkpy.utils.models.read_model(
             os.path.join(data_path, "textbook_model.json")
         )
-        model_xml = metworkpy.model_utils.read_model(
+        model_xml = metworkpy.utils.models.read_model(
             os.path.join(data_path, "textbook_model.xml")
         )
-        model_mat = metworkpy.model_utils.read_model(
+        model_mat = metworkpy.utils.models.read_model(
             os.path.join(data_path, "textbook_model.mat")
         )
-        model_yaml = metworkpy.model_utils.read_model(
+        model_yaml = metworkpy.utils.models.read_model(
             os.path.join(data_path, "textbook_model.yaml")
         )
         for rxn in model_json.reactions:
@@ -73,25 +73,25 @@ class TestModelIO(unittest.TestCase):
             self.assertTrue(gene in model_yaml.genes)
 
     def test_write_model(self):
-        data_path = str(pathlib.Path(__file__).parent.joinpath("data"))
+        data_path = str(pathlib.Path(__file__).parent.parent.joinpath("data"))
         out_dir = str(
-            pathlib.Path(__file__).parent.joinpath("data").joinpath("temp")
+            pathlib.Path(__file__).parent.parent.joinpath("data").joinpath("temp")
         )
         try:
             os.mkdir(out_dir)
-            model = metworkpy.model_utils.read_model(
+            model = metworkpy.utils.models.read_model(
                 os.path.join(data_path, "textbook_model.json")
             )
-            metworkpy.model_utils.write_model(
+            metworkpy.utils.models.write_model(
                 model, os.path.join(out_dir, "textbook_model.json")
             )
-            metworkpy.model_utils.write_model(
+            metworkpy.utils.models.write_model(
                 model, os.path.join(out_dir, "textbook_model.xml")
             )
-            metworkpy.model_utils.write_model(
+            metworkpy.utils.models.write_model(
                 model, os.path.join(out_dir, "textbook_model.yaml")
             )
-            metworkpy.model_utils.write_model(
+            metworkpy.utils.models.write_model(
                 model, os.path.join(out_dir, "textbook_model.mat")
             )
             self.assertTrue(
@@ -106,16 +106,16 @@ class TestModelIO(unittest.TestCase):
             self.assertTrue(
                 os.path.exists(os.path.join(out_dir, "textbook_model.mat"))
             )
-            model_json = metworkpy.model_utils.read_model(
+            model_json = metworkpy.utils.models.read_model(
                 os.path.join(out_dir, "textbook_model.json")
             )
-            model_mat = metworkpy.model_utils.read_model(
+            model_mat = metworkpy.utils.models.read_model(
                 os.path.join(out_dir, "textbook_model.mat")
             )
-            model_xml = metworkpy.model_utils.read_model(
+            model_xml = metworkpy.utils.models.read_model(
                 os.path.join(out_dir, "textbook_model.xml")
             )
-            model_yaml = metworkpy.model_utils.read_model(
+            model_yaml = metworkpy.utils.models.read_model(
                 os.path.join(out_dir, "textbook_model.yaml")
             )
             for rxn in model_json.reactions:
@@ -133,13 +133,13 @@ class TestModelIO(unittest.TestCase):
         finally:
             if os.path.exists(out_dir):
                 if os.path.exists(
-                    os.path.join(out_dir, "textbook_model.json")
+                        os.path.join(out_dir, "textbook_model.json")
                 ):
                     os.remove(os.path.join(out_dir, "textbook_model.json"))
                 if os.path.exists(os.path.join(out_dir, "textbook_model.xml")):
                     os.remove(os.path.join(out_dir, "textbook_model.xml"))
                 if os.path.exists(
-                    os.path.join(out_dir, "textbook_model.yaml")
+                        os.path.join(out_dir, "textbook_model.yaml")
                 ):
                     os.remove(os.path.join(out_dir, "textbook_model.yaml"))
                 if os.path.exists(os.path.join(out_dir, "textbook_model.mat")):
@@ -154,25 +154,25 @@ class TestModelEquality(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         Configuration().solver = "glpk"
-        cls.data_path = str(pathlib.Path(__file__).parent / "data")
+        cls.data_path = str(pathlib.Path(__file__).parent.parent / "data")
         cls.model_path = os.path.join(cls.data_path, "test_model.json")
-        cls.model = metworkpy.model_utils.read_model(cls.model_path)
+        cls.model = metworkpy.utils.models.read_model(cls.model_path)
 
     def test_identical_models(self):
-        self.assertTrue(metworkpy.model_utils.model_eq(self.model, self.model))
+        self.assertTrue(metworkpy.utils.models.model_eq(self.model, self.model))
 
     def test_model_copy(self):
         model_copy = self.model.copy()
-        self.assertTrue(metworkpy.model_utils.model_eq(self.model, model_copy))
+        self.assertTrue(metworkpy.utils.models.model_eq(self.model, model_copy))
         self.assertTrue(
-            metworkpy.model_utils.model_eq(model_copy, self.model)
+            metworkpy.utils.models.model_eq(model_copy, self.model)
         )  # Should be order independent
 
     def test_adding_metabolite(self):
         model1 = self.model.copy()
         model2 = self.model.copy()
         # Initial equality check
-        self.assertTrue(metworkpy.model_utils.model_eq(model1, model2))
+        self.assertTrue(metworkpy.utils.models.model_eq(model1, model2))
         test_met = Metabolite(
             "test_met",
             formula="C1H2O3",
@@ -180,14 +180,14 @@ class TestModelEquality(unittest.TestCase):
             compartment="c",
         )
         model1.add_metabolites(test_met)
-        self.assertFalse(metworkpy.model_utils.model_eq(model1, model2))
-        self.assertFalse(metworkpy.model_utils.model_eq(model2, model1))
+        self.assertFalse(metworkpy.utils.models.model_eq(model1, model2))
+        self.assertFalse(metworkpy.utils.models.model_eq(model2, model1))
 
     def test_adding_reaction(self):
         model1 = self.model.copy()
         model2 = self.model.copy()
         # Initial equality check
-        self.assertTrue(metworkpy.model_utils.model_eq(model1, model2))
+        self.assertTrue(metworkpy.utils.models.model_eq(model1, model2))
         test_rxn = Reaction("test_rxn")
         test_rxn.name = "Test Reaction"
         test_rxn.subsystem = "Test Subsystem"
@@ -205,16 +205,16 @@ class TestModelEquality(unittest.TestCase):
             }
         )
         model1.add_reactions([test_rxn])
-        self.assertFalse(metworkpy.model_utils.model_eq(model1, model2))
-        self.assertFalse(metworkpy.model_utils.model_eq(model2, model1))
+        self.assertFalse(metworkpy.utils.models.model_eq(model1, model2))
+        self.assertFalse(metworkpy.utils.models.model_eq(model2, model1))
 
     def test_changes_reaction_bounds(self):
         model1 = self.model.copy()
         model2 = self.model.copy()
         model1.reactions.get_by_id("r_A_B_D_E").bounds = (-3.14, 3.14)
-        self.assertFalse(metworkpy.model_utils.model_eq(model1, model2))
+        self.assertFalse(metworkpy.utils.models.model_eq(model1, model2))
         self.assertFalse(
-            metworkpy.model_utils.model_eq(model2, model1)
+            metworkpy.utils.models.model_eq(model2, model1)
         )  # Order independent
 
     def test_gpr_change(self):
@@ -223,45 +223,45 @@ class TestModelEquality(unittest.TestCase):
         model1.reactions.get_by_id(
             "r_A_B_D_E"
         ).gene_reaction_rule = "g_A_B_D_E or g_C_E_F"
-        self.assertFalse(metworkpy.model_utils.model_eq(model1, model2))
-        self.assertFalse(metworkpy.model_utils.model_eq(model2, model1))
+        self.assertFalse(metworkpy.utils.models.model_eq(model1, model2))
+        self.assertFalse(metworkpy.utils.models.model_eq(model2, model1))
 
     def test_adding_variable(self):
         model1 = self.model.copy()
         model2 = self.model.copy()
         # Initial equality check
-        self.assertTrue(metworkpy.model_utils.model_eq(model1, model2))
+        self.assertTrue(metworkpy.utils.models.model_eq(model1, model2))
         var = model1.solver.interface.Variable("test_var")
         model1.solver.add(var)
         self.assertFalse(
-            metworkpy.model_utils.model_eq(model1, model2)
+            metworkpy.utils.models.model_eq(model1, model2)
         )  # Should detect added variable
         self.assertFalse(
-            metworkpy.model_utils.model_eq(model2, model1)
+            metworkpy.utils.models.model_eq(model2, model1)
         )  # Should be order independent
 
     def test_adding_constraint(self):
         model1 = self.model.copy()
         model2 = self.model.copy()
         # Initial equality check
-        self.assertTrue(metworkpy.model_utils.model_eq(model1, model2))
+        self.assertTrue(metworkpy.utils.models.model_eq(model1, model2))
         var1 = model1.solver.variables["r_A_B_D_E"]
         var2 = model1.solver.variables["r_C_E_F"]
         test_const = model1.solver.interface.Constraint(
             var1 + var2, lb=-5, ub=5
         )
         model1.solver.add(test_const)
-        self.assertFalse(metworkpy.model_utils.model_eq(model1, model2))
-        self.assertFalse(metworkpy.model_utils.model_eq(model2, model1))
+        self.assertFalse(metworkpy.utils.models.model_eq(model1, model2))
+        self.assertFalse(metworkpy.utils.models.model_eq(model2, model1))
 
     def test_changing_constraint_bound(self):
         model1 = self.model.copy()
         model2 = self.model.copy()
         # Initial equality check
-        self.assertTrue(metworkpy.model_utils.model_eq(model1, model2))
+        self.assertTrue(metworkpy.utils.models.model_eq(model1, model2))
         model1.solver.constraints["E_c"].lb = -5
-        self.assertFalse(metworkpy.model_utils.model_eq(model1, model2))
-        self.assertFalse(metworkpy.model_utils.model_eq(model2, model1))
+        self.assertFalse(metworkpy.utils.models.model_eq(model1, model2))
+        self.assertFalse(metworkpy.utils.models.model_eq(model2, model1))
 
 
 if __name__ == "__main__":
