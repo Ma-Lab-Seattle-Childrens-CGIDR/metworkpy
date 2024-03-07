@@ -1,8 +1,11 @@
 """
 Module for finding mutual information between two sampled distributions using nearest neighbor methods. Includes
-methods to compute mutual information between two continous distributions, between two discrete distributions, and
-between a continous and discrete distribution.
+methods to compute mutual information between two continuous distributions, between two discrete distributions, and
+between a continuous and discrete distribution.
 """
+
+# Inspired by the implementation in scikit-learn, although the implementations differ significantly.
+
 
 # Imports
 # Standard Library Imports
@@ -14,8 +17,9 @@ import scipy
 from scipy.spatial import KDTree, distance_matrix
 from scipy.special import digamma
 
-
 # local imports
+from metworkpy.utils import _arguments
+
 
 # region: Main Mutual Information Function
 def mutual_information(x: ArrayLike,
@@ -79,8 +83,8 @@ def mutual_information(x: ArrayLike,
     x, y = _validate_samples(x, y)
 
     # Check that if either x or y are discrete, they are either 1 dimensional or a column vector
-    x = _check_discrete(sample= x, is_discrete=discrete_x)
-    y = _check_discrete(sample =y, is_discrete=discrete_y)
+    x = _check_discrete(sample=x, is_discrete=discrete_x)
+    y = _check_discrete(sample=y, is_discrete=discrete_y)
 
     # Parse the metrics to floats
     metric_x, metrix_y = _parse_metric(metric_x), _parse_metric(metric_y)
@@ -327,6 +331,7 @@ def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
 # endregion: Discrete-Discrete MI
 
 # region: Helper Functions
+# noinspection PyProtectedMember
 def _parse_metric(metric: Union[str, float]):
     if isinstance(metric, int):
         metric = float(metric)
@@ -335,11 +340,18 @@ def _parse_metric(metric: Union[str, float]):
             return metric
         else:
             raise ValueError("If metric is a float, must be in the range [1,inf] as it represents a Minkowski p-norm")
-    if metric.lower() in ["euclidean", "e", "eucl"]:
+    try:
+        arg = _arguments._parse_str_args_dict(metric, {"euclidean": ["euclidean"],
+                                                       "manhattan": ["manhattan", "absolute", "taxicab"],
+                                                       "chebyshev": ["chebyshev", "tchebyshev", "maxmimum"]})
+    except ValueError as err:
+        raise ValueError("Metric string couldn't be understood, should be Euclidean, Manhattan, Taxicab, or Chebyshev") \
+            from err
+    if arg == "euclidean":
         return 2.
-    if metric.lower() in ["manhattan", "absolute", "abs", "absolute value", "man", "taxi", "taxicab"]:
+    if arg == "manhattan":
         return 1.
-    if metric.lower() in ["chebyshev", "cheb", "cheby", "tchebyshev", "max", "maximum"]:
+    if arg == "chebyshev":
         return np.inf
 
 

@@ -12,6 +12,7 @@ import sympy as sym
 
 # Local Imports
 from metworkpy.imat.imat_functions import imat, add_imat_constraints, add_imat_objective_
+from metworkpy.utils import _arguments
 
 # define defaults for the iMAT functions
 DEFAULTS = {
@@ -446,6 +447,7 @@ def milp_model(model, rxn_weights, epsilon, threshold):
 
 
 # region Helper Functions
+# noinspection PyProtectedMember
 def _parse_method(method: str) -> str:
     """
     Parse the method string to a valid method name.
@@ -455,56 +457,24 @@ def _parse_method(method: str) -> str:
     :return: The parsed method name.
     :rtype: str
     """
-    if method.lower() in [
-        "simple",
-        "simple_bounds",
-        "simple bounds",
-        "simple-bounds",
-        "sb",
-    ]:
-        return "simple_bounds"
-    elif method.lower() in [
-        "imat",
-        "imat_restrictions",
-        "imat restrictions",
-        "imat-restrictions",
-        "ir",
-        "imat_constraints",
-        "imat constraints",
-        "imat-constraints",
-        "ic",
-    ]:
-        return "imat_constraint"
-    elif method.lower() in [
-        "subset",
-        "subset_ko",
-        "subset-ko",
-        "eliminate_below_threshold",
-        "eliminate-below-threshold",
-    ]:
-        return "subset"
-    elif method.lower() in [
-        "fva",
-        "flux_variability_analysis",
-        "flux variability analysis",
-        "flux-variability-analysis",
-        "f",
-    ]:
-        return "fva"
-    elif method.lower() in [
-        "milp",
-        "mixed_integer_linear_programming",
-        "mixed integer linear programming",
-        "mixed-integer-linear-programming",
-        "m",
-    ]:
-        return "milp"
-    else:
+    try:
+        return _arguments._parse_str_args_dict(method, {
+            "simple_bounds": ["simple bounds", "simple-bounds", "simple_bounds"],
+            "imat_constraint": ["imat", "imat_restrictions", "imat-restrictions", "imat restrictions", "ir",
+                                "imat constraints", "imat-constraints", "imat_constraints", "ic"],
+            "subset": ["subset-ko", "subset_ko", "eliminate-below-threshold", "eliminate_below_threshold"],
+            "fva": ["fva", "flux_variability_analysis", "flux-variability-analysis", "flux variability analysis"],
+            "milp": ["milp", "mixed_integer_linear_programming",
+                     "mixed integer linear programming",
+                     "mixed-integer-linear-programming"],
+
+        })
+    except ValueError as err:
         raise ValueError(
             f"Invalid method: {method}. Valid methods are: 'simple_bounds', \
-                'imat_restrictions', "
+                        'imat_restrictions', "
             f"'eliminate_below_threshold', 'fva', 'milp'."
-        )
+        ) from err
 
 
 def _inactive_bounds(

@@ -52,37 +52,56 @@ class TestHelperFunctions(unittest.TestCase):
 class TestContCont(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # Create the distributions for the multivariate Gaussian with various covariances
         norm_2d_0 = scipy.stats.multivariate_normal(mean=[0, 0], cov=[[1, 0], [0, 1]])
         norm_2d_0_3 = scipy.stats.multivariate_normal(mean=[0, 0], cov=[[1, 0.3], [0.3, 1]])
         norm_2d_0_6 = scipy.stats.multivariate_normal(mean=[0, 0], cov=[[1, 0.6], [0.6, 1]])
 
+        # Sample the distributions
         cls.norm_2d_0_sample_1000 = norm_2d_0.rvs(size=1000)
         cls.norm_2d_0_3_sample_1000 = norm_2d_0_3.rvs(size=1000)
         cls.norm_2d_0_6_sample_1000 = norm_2d_0_6.rvs(size=1000)
 
+        # Known Mutual information for multivariate gaussian with different covariances
+        # See the Kraskov et al. paper for details
         cls.norm_2d_0_mi = -(1 / 2) * np.log(1 - 0 ** 2)
         cls.norm_2d_0_3_mi = -(1 / 2) * np.log(1 - 0.3 ** 2)
         cls.norm_2d_0_6_mi = -(1 / 2) * np.log(1 - 0.6 ** 2)
 
     def test_cont_cont_gen(self):
-        mi_0 = mi._mi_cont_cont_gen(x=self.norm_2d_0_sample_1000[:, 0].reshape(-1,1),
-                                    y=self.norm_2d_0_sample_1000[:, 0].reshape(-1,1),
+        mi_0 = mi._mi_cont_cont_gen(x=self.norm_2d_0_sample_1000[:, 0].reshape(-1, 1),
+                                    y=self.norm_2d_0_sample_1000[:, 1].reshape(-1, 1),
                                     n_neighbors=1,
                                     metric_x=np.inf,
                                     metric_y=np.inf)
-        mi_0_3 = mi._mi_cont_cont_gen(x=self.norm_2d_0_3_sample_1000[:, 0].reshape(-1,1),
-                                      y=self.norm_2d_0_3_sample_1000[:, 0].reshape(-1,1),
+        mi_0_3 = mi._mi_cont_cont_gen(x=self.norm_2d_0_3_sample_1000[:, 0].reshape(-1, 1),
+                                      y=self.norm_2d_0_3_sample_1000[:, 1].reshape(-1, 1),
                                       n_neighbors=1,
                                       metric_x=np.inf,
                                       metric_y=np.inf)
-        mi_0_6 = mi._mi_cont_cont_gen(x=self.norm_2d_0_6_sample_1000[:, 0].reshape(-1,1),
-                                      y=self.norm_2d_0_6_sample_1000[:, 0].reshape(-1,1),
+        mi_0_6 = mi._mi_cont_cont_gen(x=self.norm_2d_0_6_sample_1000[:, 0].reshape(-1, 1),
+                                      y=self.norm_2d_0_6_sample_1000[:, 1].reshape(-1, 1),
                                       n_neighbors=1,
                                       metric_x=np.inf,
                                       metric_y=np.inf)
-        self.assertAlmostEqual(mi_0, self.norm_2d_0_mi, places=3)
-        self.assertAlmostEqual(mi_0_3, self.norm_2d_0_3_mi, places=3)
-        self.assertAlmostEqual(mi_0_6, self.norm_2d_0_6_mi, places=3)
+        # Estimates so using a high tolerance
+        self.assertTrue(np.isclose(mi_0, self.norm_2d_0_mi, atol=0.1))
+        self.assertTrue(np.isclose(mi_0_3, self.norm_2d_0_3_mi, atol=0.1))
+        self.assertTrue(np.isclose(mi_0_6, self.norm_2d_0_6_mi, atol=0.1))
+
+    def test_cont_cont_cheb_only(self):
+        mi_0 = mi._mi_cont_cont_cheb_only(x=self.norm_2d_0_sample_1000[:, 0].reshape(-1, 1),
+                                          y=self.norm_2d_0_sample_1000[:, 1].reshape(-1, 1),
+                                          n_neighbors=1, )
+        mi_0_3 = mi._mi_cont_cont_cheb_only(x=self.norm_2d_0_3_sample_1000[:, 0].reshape(-1, 1),
+                                            y=self.norm_2d_0_3_sample_1000[:, 1].reshape(-1, 1),
+                                            n_neighbors=1)
+        mi_0_6 = mi._mi_cont_cont_cheb_only(x=self.norm_2d_0_6_sample_1000[:, 0].reshape(-1, 1),
+                                            y=self.norm_2d_0_6_sample_1000[:, 1].reshape(-1, 1),
+                                            n_neighbors=1)
+        self.assertTrue(np.isclose(mi_0, self.norm_2d_0_mi, atol=0.1))
+        self.assertTrue(np.isclose(mi_0_3, self.norm_2d_0_3_mi, atol=0.1))
+        self.assertTrue(np.isclose(mi_0_6, self.norm_2d_0_6_mi, atol=0.1))
 
 
 if __name__ == '__main__':
