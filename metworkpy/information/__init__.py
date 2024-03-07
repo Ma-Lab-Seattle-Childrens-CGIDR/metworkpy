@@ -1,1 +1,1 @@
-import mutual_information
+from .mutual_information_functions import mutual_information

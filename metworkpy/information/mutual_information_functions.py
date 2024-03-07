@@ -79,8 +79,8 @@ def mutual_information(x: ArrayLike,
     x, y = _validate_samples(x, y)
 
     # Check that if either x or y are discrete, they are either 1 dimensional or a column vector
-    x = _check_discrete(discrete_x, x)
-    y = _check_discrete(discrete_y, y)
+    x = _check_discrete(sample= x, is_discrete=discrete_x)
+    y = _check_discrete(sample =y, is_discrete=discrete_y)
 
     # Parse the metrics to floats
     metric_x, metrix_y = _parse_metric(metric_x), _parse_metric(metric_y)
@@ -205,7 +205,7 @@ def _mi_cont_cont_gen(x: np.ndarray,
     """
     x_dist = distance_matrix(x, x, p=metric_x)  # Distance in x space
     y_dist = distance_matrix(y, y, p=metric_y)  # Distance in y space
-    z_dist = np.max(x_dist, y_dist)  # Equivalent to p=np.inf Minkosky p-norm
+    z_dist = np.maximum(x_dist, y_dist)  # Equivalent to p=np.inf Minkosky p-norm
     # For finding the kth neighbor, things to note:
     # - We are using the numpy partition function, which sorts the kth element into the sorted position
     #   with kth=0 sorting the first element, kth=1 sorting the second, etc.
@@ -214,7 +214,8 @@ def _mi_cont_cont_gen(x: np.ndarray,
     #   since the +1 of excluding the point itself (always 0) and the -1 of the index cancel.
     # TO SAVE ON SPACE THIS IS DONE IN PLACE, the z_dist matrix has an arbitrary ordering across axis=1
     # neighbor_distances takes the n_neighbors column, which corresponds to the distance to the nth neighbor
-    neighbor_distances = z_dist.partition(kth=n_neighbors, axis=1)[:, n_neighbors].reshape(-1, 1)
+    z_dist.partition(kth=n_neighbors, axis=1)
+    neighbor_distances = z_dist[:, n_neighbors].reshape(-1, 1)
     # Now, the number of points in x and y which are within neighbor_distances (or epsilon(i)/2)
     x_neighbors = (x_dist < neighbor_distances).sum(axis=1) - 1
     y_neighbors = (y_dist < neighbor_distances).sum(axis=1) - 1
@@ -278,7 +279,7 @@ def _mi_disc_cont(discrete: np.ndarray, continuous: np.ndarray, n_neighbors: int
         # Get the neighbors (the 1st neighbor will just be the point itself)
         dist, _ = type_tree.query(continuous[same_class_index], k=[n_neighbors + 1], p=metric_cont)
         # Add the values to the radius array
-        # Increase the distance slightly so that the kth neighbor will be included
+        # Increase the distance slightly to make sure that the kth neighbor will be included
         radius_array[same_class_index] = np.nextafter(dist, np.inf)
 
     # Find the number of neighbors within the radius, subtract 1 since it will include the point itself
@@ -327,11 +328,13 @@ def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
 
 # region: Helper Functions
 def _parse_metric(metric: Union[str, float]):
+    if isinstance(metric, int):
+        metric = float(metric)
     if isinstance(metric, float):
-        if metric >= 1:
-            return float
+        if metric >= 1.:
+            return metric
         else:
-            ValueError("If metric is a float, must be in the range [1,inf] as it represents a Minkowski p-norm")
+            raise ValueError("If metric is a float, must be in the range [1,inf] as it represents a Minkowski p-norm")
     if metric.lower() in ["euclidean", "e", "eucl"]:
         return 2.
     if metric.lower() in ["manhattan", "absolute", "abs", "absolute value", "man", "taxi", "taxicab"]:
@@ -359,7 +362,9 @@ def _validate_samples(x: ArrayLike, y: ArrayLike):
     return x, y
 
 
-def _check_discrete(is_discrete, sample):
+def _check_discrete(sample, is_discrete):
+    if not isinstance(is_discrete, bool):
+        raise ValueError("discrete_* arguments must be boolean")
     if is_discrete:
         if len(sample.shape) == 1:  # if x is 1 dimensional, reshape it into a column vector
             sample = sample.reshape(-1, 1)
@@ -368,6 +373,5 @@ def _check_discrete(is_discrete, sample):
                              "supported. You can try with x as a sample from a continuous distribution, or encode the "
                              "multiple dimensions into one.")
     return sample
-
 
 # endregion: Helper Functions
