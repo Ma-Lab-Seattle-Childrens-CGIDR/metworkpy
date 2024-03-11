@@ -76,7 +76,7 @@ def mutual_information(x: ArrayLike,
             Method for estimating mutual information between samples from two continuous distributions.
        2. `Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
        <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0087357>`_
-            Method for estimating mutual infromation between a sample from a discrete distribution and a sample
+            Method for estimating mutual information between a sample from a discrete distribution and a sample
             from a continuous distribution.
     """
     # Validate the x and y samples
@@ -87,7 +87,7 @@ def mutual_information(x: ArrayLike,
     y = _check_discrete(sample=y, is_discrete=discrete_y)
 
     # Parse the metrics to floats
-    metric_x, metrix_y = _parse_metric(metric_x), _parse_metric(metric_y)
+    metric_x, metric_y = _parse_metric(metric_x), _parse_metric(metric_y)
     if jitter:
         generator = np.random.default_rng(seed=jitter_seed)
         if isinstance(jitter, tuple):
@@ -109,7 +109,7 @@ def mutual_information(x: ArrayLike,
         if discrete_y:
             mi = _mi_disc_cont(continuous=x, discrete=y, n_neighbors=n_neighbors, metric_cont=metric_x)
     elif not (discrete_x or discrete_y):  # if both are continuous
-        mi = _mi_cont_cont(x=x, y=y, n_neighbors=n_neighbors, metric_x=metric_x, metric_y=metrix_y)
+        mi = _mi_cont_cont(x=x, y=y, n_neighbors=n_neighbors, metric_x=metric_x, metric_y=metric_y)
     elif discrete_x and discrete_y:
         mi = _mi_disc_disc(x=x, y=y)
     else:
@@ -172,6 +172,7 @@ def _mi_cont_cont_cheb_only(x: np.ndarray, y: np.ndarray, n_neighbors: int):
 
     # Find the distances from z to n_neighbor point
     r, _ = z_tree.query(z, k=[n_neighbors + 1], p=np.inf)
+    r = r.squeeze()
 
     # Find the number of neighbors within radius r
     r = np.nextafter(r, 0)  # Shrink r barely, to ensure it doesn't include the kth neighbor
@@ -233,7 +234,7 @@ def _mi_cont_cont_gen(x: np.ndarray,
 
 # region: Continuous-Discrete MI
 
-def _mi_disc_cont(discrete: np.ndarray, continuous: np.ndarray, n_neighbors: int, metric_cont: float = "euclidean",
+def _mi_disc_cont(discrete: np.ndarray, continuous: np.ndarray, n_neighbors: int, metric_cont: float = 2.,
                   **kwargs) -> float:
     """
     Calculate the mutual information between a discrete and continuous distribution using the nearest neighbor method.
@@ -277,11 +278,13 @@ def _mi_disc_cont(discrete: np.ndarray, continuous: np.ndarray, n_neighbors: int
 
     radius_array = np.empty(n_data_points, dtype=float)
     count_array = np.empty(n_data_points, dtype=float)
-    for d_class in discrete_classes:
-        same_class_index = (discrete == d_class)
-        type_tree = KDTree(continuous[same_class_index], **kwargs)
+    for d_class, count in zip(discrete_classes, counts):
+        same_class_index = (discrete == d_class).squeeze()
+        count_array[same_class_index] = count
+        type_tree = KDTree(continuous[same_class_index, :], **kwargs)
         # Get the neighbors (the 1st neighbor will just be the point itself)
-        dist, _ = type_tree.query(continuous[same_class_index], k=[n_neighbors + 1], p=metric_cont)
+        dist, _ = type_tree.query(continuous[same_class_index, :], k=[n_neighbors + 1], p=metric_cont)
+        dist = dist.squeeze()
         # Add the values to the radius array
         # Increase the distance slightly to make sure that the kth neighbor will be included
         radius_array[same_class_index] = np.nextafter(dist, np.inf)
@@ -323,8 +326,10 @@ def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
     for y_i, y_f in zip(y_element, y_freq):
         for x_i, x_f in zip(x_element, x_freq):
             # Find the joint frequency
-            joint = z_freq[(z_element[:, 0] == x_f) & (z_element[:, 1] == y_f), :]
-            mi += (joint * np.log(joint / (x_f * y_f)))  # NOTE: Log is base e (i.e. natural)
+            joint = z_freq[(z_element[:, 0] == x_i) & (z_element[:, 1] == y_i)]
+            if not joint.size > 0:
+                continue
+            mi += (joint * np.log(joint / (x_f * y_f))).item()  # NOTE: Log is base e (i.e. natural)
     return mi
 
 

@@ -20,9 +20,9 @@ This project makes use of the following external libraries:
     [BSD-3-Clause](https://github.com/opencobra/cobrapy/blob/devel/LICENSE)
  - [SymPy](https://www.sympy.org/en/index.html) licensed under the [BSD-3-Clause](https://github.com/sympy/sympy/blob/master/LICENSE)
 
-The mutual information implementation and tests where inspired by those found in the `feature_selection` module of 
-[scikit-learn](https://github.com/scikit-learn/scikit-learn?tab=readme-ov-file) 
-licensed under the [BSD-3-Clause](https://github.com/scikit-learn/scikit-learn?tab=BSD-3-Clause-1-ov-file)
+The mutual information implementation where partially inspired by those found in the 
+`feature_selection` module of [scikit-learn](https://github.com/scikit-learn/scikit-learn?tab=readme-ov-file), and the tests for those methods 
+were adapted from those in scikit-learn, which is licensed under the [BSD-3-Clause](https://github.com/scikit-learn/scikit-learn?tab=BSD-3-Clause-1-ov-file)
 
 # References:
 ## Mutual Information:

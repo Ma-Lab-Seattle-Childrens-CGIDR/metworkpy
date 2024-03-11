@@ -860,8 +860,9 @@ The externally maintained libraries used for this project are:
   """
 ------------------------------------------------------------------------------------------------------------------------
 
-The Methods and Tests for Mutual Information were partially inspired by those found in the feature_selection module
-of scikit-learn which is licensed under the BSD 3-Clause License reproduced here:
+The Methods for Mutual Information were partially inspired by those found in the feature_selection module
+of scikit-learn, and some of the code for testing the methods was adapted from the tests in the same module.
+Scikit-learn is licensed under a BSD-3-Clause reproduced here:
     """
     BSD 3-Clause License
 
