@@ -89,20 +89,7 @@ def mutual_information(x: ArrayLike,
     # Parse the metrics to floats
     metric_x, metric_y = _parse_metric(metric_x), _parse_metric(metric_y)
     if jitter:
-        generator = np.random.default_rng(seed=jitter_seed)
-        if isinstance(jitter, tuple):
-            if len(jitter) != 2:
-                raise ValueError(f"If jitter is a tuple, must have length 2 not {len(jitter)}")
-            jitter_x, jitter_y = jitter
-        elif isinstance(jitter, float):
-            jitter_x = jitter
-            jitter_y = jitter
-        else:
-            raise ValueError("Unexpected type for jitter, should be None, Float, or tuple of floats.")
-        if not discrete_x:
-            x = x + generator.normal(loc=0., scale=jitter_x, size=x.shape)
-        if not discrete_y:
-            y = y + generator.normal(loc=0., scale=jitter_y, size=y.shape)
+        x, y = _jitter(x, y, jitter=jitter, jitter_seed=jitter_seed, discrete_x=discrete_x, discrete_y=discrete_y)
     if discrete_x ^ discrete_y:  # if one of x or y is discrete
         if discrete_x:
             mi = _mi_disc_cont(continuous=y, discrete=x, n_neighbors=n_neighbors, metric_cont=metric_y)
@@ -390,5 +377,32 @@ def _check_discrete(sample, is_discrete):
                              "supported. You can try with x as a sample from a continuous distribution, or encode the "
                              "multiple dimensions into one.")
     return sample
+
+
+def _jitter_single(arr: np.ndarray, jitter: float, generator: np.random.Generator):
+    return arr + generator.normal(loc=0., scale=jitter, size=arr.shape)
+
+
+def _jitter(x: np.ndarray,
+            y: np.ndarray,
+            jitter: Union[float, tuple[float, float]],
+            jitter_seed: int,
+            discrete_x: bool,
+            discrete_y: bool):
+    generator = np.random.default_rng(jitter_seed)
+    if isinstance(jitter, tuple):
+        if len(jitter) != 2:
+            raise ValueError(f"If jitter is a tuple, must have length 2 not {len(jitter)}")
+        jitter_x, jitter_y = jitter
+    elif isinstance(jitter, float):
+        jitter_x = jitter
+        jitter_y = jitter
+    else:
+        raise ValueError("Unexpected type for jitter, should be float or tuple of floats")
+    if not discrete_x:
+        x = _jitter_single(x, jitter=jitter_x, generator=generator)
+    if not discrete_y:
+        y = _jitter_single(y, jitter=jitter_y, generator=generator)
+    return x, y
 
 # endregion: Helper Functions

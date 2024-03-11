@@ -407,6 +407,29 @@ class TestHelperFunctions(unittest.TestCase):
             _ = mi._check_discrete(sample=x, is_discrete=True)
         self.assertTrue((mi._check_discrete(sample=y, is_discrete=True) == y.reshape(-1, 1)).all())
 
+    def test_jitter_single(self):
+        generator = np.random.default_rng(seed=314)
+        arr_test = generator.normal(loc=1., scale=5, size=(10,3))
+        arr_jittered = mi._jitter_single(arr_test, jitter=1e-10, generator=generator)
+        # Test that they are not the same
+        self.assertTrue(~np.all(arr_test==arr_jittered))
+        # But that they are very close
+        self.assertTrue(np.isclose(arr_jittered, arr_test).all())
+
+    def test_jitter(self):
+        generator = np.random.default_rng(314)
+        arr1 = generator.normal(loc=1., scale=10, size=(10,5))
+        arr2 = generator.normal(loc=2., scale=5., size=(10,3))
+
+        arr1_jit, arr2_jit = mi._jitter(arr1, arr2, jitter=(1e-9, 1e-10), jitter_seed=42, discrete_x=False,
+                                        discrete_y=False)
+
+        self.assertTrue(~np.all(arr1_jit == arr1))
+        self.assertTrue(np.all(np.isclose(arr1, arr1_jit)))
+
+        self.assertTrue(~np.all(arr2_jit == arr2))
+        self.assertTrue(np.all(np.isclose(arr2, arr2_jit)))
+
 
 if __name__ == '__main__':
     unittest.main()
