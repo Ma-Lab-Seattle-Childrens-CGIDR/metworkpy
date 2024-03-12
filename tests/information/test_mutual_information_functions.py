@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import scipy
 
+import metworkpy.utils._arguments
+import metworkpy.utils._jitter
 # Local Imports
 from metworkpy.information import mutual_information_functions as mi
 
@@ -372,12 +374,12 @@ class TestDiscDisc(unittest.TestCase):
 class TestHelperFunctions(unittest.TestCase):
     def test_parse_metric(self):
         with self.assertRaises(ValueError):
-            mi._parse_metric(0.5)
-        self.assertEqual(5., mi._parse_metric(5.))
-        self.assertEqual(2., mi._parse_metric("Euclidean"))
-        self.assertEqual(1., mi._parse_metric("Manhattan"))
-        self.assertEqual(np.inf, mi._parse_metric("Chebyshev"))
-        self.assertEqual(10., mi._parse_metric(10))
+            metworkpy.utils._arguments._parse_metric(0.5)
+        self.assertEqual(5., metworkpy.utils._arguments._parse_metric(5.))
+        self.assertEqual(2., metworkpy.utils._arguments._parse_metric("Euclidean"))
+        self.assertEqual(1., metworkpy.utils._arguments._parse_metric("Manhattan"))
+        self.assertEqual(np.inf, metworkpy.utils._arguments._parse_metric("Chebyshev"))
+        self.assertEqual(10., metworkpy.utils._arguments._parse_metric(10))
 
     def test_validate_sample(self):
         x = np.array([1, 2, 3, 4, 5])
@@ -410,7 +412,7 @@ class TestHelperFunctions(unittest.TestCase):
     def test_jitter_single(self):
         generator = np.random.default_rng(seed=314)
         arr_test = generator.normal(loc=1., scale=5, size=(10,3))
-        arr_jittered = mi._jitter_single(arr_test, jitter=1e-10, generator=generator)
+        arr_jittered = metworkpy.utils._jitter._jitter_single(arr_test, jitter=1e-10, generator=generator)
         # Test that they are not the same
         self.assertTrue(~np.all(arr_test==arr_jittered))
         # But that they are very close
@@ -421,8 +423,8 @@ class TestHelperFunctions(unittest.TestCase):
         arr1 = generator.normal(loc=1., scale=10, size=(10,5))
         arr2 = generator.normal(loc=2., scale=5., size=(10,3))
 
-        arr1_jit, arr2_jit = mi._jitter(arr1, arr2, jitter=(1e-9, 1e-10), jitter_seed=42, discrete_x=False,
-                                        discrete_y=False)
+        arr1_jit, arr2_jit = metworkpy.utils._jitter._jitter(arr1, arr2, jitter=(1e-9, 1e-10), jitter_seed=42, discrete_x=False,
+                                                             discrete_y=False)
 
         self.assertTrue(~np.all(arr1_jit == arr1))
         self.assertTrue(np.all(np.isclose(arr1, arr1_jit)))

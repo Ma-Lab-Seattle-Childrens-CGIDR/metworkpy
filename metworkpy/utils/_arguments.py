@@ -3,7 +3,9 @@ Simple helper functions for parsing arguments.
 """
 # Standard Library Imports
 import re
-from typing import Dict, List
+from typing import Dict, List, Union
+
+import numpy as np
 
 
 def _parse_str_args_list(arg: str, arg_list: List[str]) -> str:
@@ -36,7 +38,7 @@ def _parse_str_args_dict(arg: str, arg_dict: Dict[str, List]) -> str:
     :rtype: str
     :raises ValueError: If more than one argument group could be matched
     """
-    arg_regex = re.compile(r"^"+arg, re.IGNORECASE)
+    arg_regex = re.compile(r"^" + arg, re.IGNORECASE)
     filtered_groups = [key for key, arg_list in arg_dict.items()
                        if len([arg for arg in arg_list if arg_regex.match(arg)]) >= 1]
     if len(filtered_groups) == 1:
@@ -63,3 +65,26 @@ def _match_abbr(word: str, *args, **kwargs) -> re.Pattern:
         pattern = r"(?:" + char + pattern + r")?"
     pattern = word[0] + pattern
     return re.compile(pattern, *args, **kwargs)
+
+
+def _parse_metric(metric: Union[str, float]):
+    if isinstance(metric, int):
+        metric = float(metric)
+    if isinstance(metric, float):
+        if metric >= 1.:
+            return metric
+        else:
+            raise ValueError("If metric is a float, must be in the range [1,inf] as it represents a Minkowski p-norm")
+    try:
+        arg = _parse_str_args_dict(metric, {"euclidean": ["euclidean"],
+                                            "manhattan": ["manhattan", "absolute", "taxicab"],
+                                            "chebyshev": ["chebyshev", "tchebyshev", "maxmimum"]})
+    except ValueError as err:
+        raise ValueError("Metric string couldn't be understood, should be Euclidean, Manhattan, Taxicab, or Chebyshev") \
+            from err
+    if arg == "euclidean":
+        return 2.
+    if arg == "manhattan":
+        return 1.
+    if arg == "chebyshev":
+        return np.inf

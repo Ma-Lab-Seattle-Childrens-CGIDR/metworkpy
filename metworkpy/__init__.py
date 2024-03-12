@@ -14,3 +14,7 @@ from metworkpy.utils import (
     write_model,
     model_eq
 )
+
+from metworkpy.information import mutual_information
+
+from metworkpy.divergence import kl_divergence

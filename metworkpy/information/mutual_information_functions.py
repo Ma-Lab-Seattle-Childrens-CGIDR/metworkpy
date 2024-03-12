@@ -13,12 +13,12 @@ from typing import Union
 # External Imports
 import numpy as np
 from numpy.typing import ArrayLike
-import scipy
 from scipy.spatial import KDTree, distance_matrix
 from scipy.special import digamma
 
 # local imports
-from metworkpy.utils import _arguments
+from metworkpy.utils._arguments import _parse_metric
+from metworkpy.utils._jitter import _jitter
 
 
 # region: Main Mutual Information Function
@@ -45,7 +45,8 @@ def mutual_information(x: ArrayLike,
     :type discrete_x: bool
     :param discrete_y: Whether y is discrete or continuous
     :type discrete_y: bool
-    :param n_neighbors: Number of neighbors to use for computing mutual information
+    :param n_neighbors: Number of neighbors to use for computing mutual information. Will attempt to coerce into
+        an integer. Must be at least 1. Default 5.
     :type n_neighbors: int
     :param jitter: Amount of noise to add to avoid ties. If None no noise is added. If a float, that is the standard
         deviation of the random noise added to the continuous samples. If a tuple, the first element is the standard
@@ -72,13 +73,23 @@ def mutual_information(x: ArrayLike,
 
     .. seealso::
        1. `Kraskov, A., Stögbauer, H., & Grassberger, P. (2004). Estimating mutual information. Physical
-       Review E, 69(6), 066138. <https://journals.aps.org/pre/abstract/10.1103/PhysRevE.69.066138>`_
+            Review E, 69(6), 066138. <https://journals.aps.org/pre/abstract/10.1103/PhysRevE.69.066138>`_
             Method for estimating mutual information between samples from two continuous distributions.
        2. `Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
-       <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0087357>`_
-            Method for estimating mutual information between a sample from a discrete distribution and a sample
-            from a continuous distribution.
+           <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0087357>`_
+           Method for estimating mutual information between a sample from a discrete distribution and a sample
+           from a continuous distribution.
     """
+    try:
+        n_neighbors = int(n_neighbors)
+    except ValueError as err:
+        raise ValueError(f"n_neighbors must be able to be converted to an integer, but a {type(n_neighbors)} was"
+                         f"given instead.") from err
+
+    # Check that n_neighbors is greater than or equal to 1
+    if not (n_neighbors >= 1):
+        raise ValueError(f"n_neighbors must be at least 1, but argument was {n_neighbors}")
+
     # Validate the x and y samples
     x, y = _validate_samples(x, y)
 
@@ -324,33 +335,12 @@ def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
 
 # region: Helper Functions
 # noinspection PyProtectedMember
-def _parse_metric(metric: Union[str, float]):
-    if isinstance(metric, int):
-        metric = float(metric)
-    if isinstance(metric, float):
-        if metric >= 1.:
-            return metric
-        else:
-            raise ValueError("If metric is a float, must be in the range [1,inf] as it represents a Minkowski p-norm")
-    try:
-        arg = _arguments._parse_str_args_dict(metric, {"euclidean": ["euclidean"],
-                                                       "manhattan": ["manhattan", "absolute", "taxicab"],
-                                                       "chebyshev": ["chebyshev", "tchebyshev", "maxmimum"]})
-    except ValueError as err:
-        raise ValueError("Metric string couldn't be understood, should be Euclidean, Manhattan, Taxicab, or Chebyshev") \
-            from err
-    if arg == "euclidean":
-        return 2.
-    if arg == "manhattan":
-        return 1.
-    if arg == "chebyshev":
-        return np.inf
-
-
 def _validate_sample(sample: ArrayLike) -> np.ndarray:
     # Coerce to np array
     if not isinstance(sample, np.ndarray):
         sample = np.array(sample)
+    if len(sample.shape)>2:
+        raise ValueError("Sample must have a maximum of 2 axes")
     # If 1D, change to (n_samples,1)
     if len(sample.shape) == 1:
         sample = sample.reshape(-1, 1)
@@ -358,8 +348,12 @@ def _validate_sample(sample: ArrayLike) -> np.ndarray:
 
 
 def _validate_samples(x: ArrayLike, y: ArrayLike):
-    x = _validate_sample(x)
-    y = _validate_sample(y)
+    try:
+        x = _validate_sample(x)
+        y = _validate_sample(y)
+    except ValueError as err:
+        raise ValueError(f"Both samples arrays must have a maximum of 2 axes, but x has {len(x.shape)}"
+                         f"axes and y has {len(x.shape)} axes") from err
     if x.shape[0] != y.shape[0]:
         raise ValueError(f"The first dimension of x and y should match, but x has first dimension {x.shape[0]}, "
                          f"and y has a first dimension of {y.shape[0]}")
@@ -377,32 +371,5 @@ def _check_discrete(sample, is_discrete):
                              "supported. You can try with x as a sample from a continuous distribution, or encode the "
                              "multiple dimensions into one.")
     return sample
-
-
-def _jitter_single(arr: np.ndarray, jitter: float, generator: np.random.Generator):
-    return arr + generator.normal(loc=0., scale=jitter, size=arr.shape)
-
-
-def _jitter(x: np.ndarray,
-            y: np.ndarray,
-            jitter: Union[float, tuple[float, float]],
-            jitter_seed: int,
-            discrete_x: bool,
-            discrete_y: bool):
-    generator = np.random.default_rng(jitter_seed)
-    if isinstance(jitter, tuple):
-        if len(jitter) != 2:
-            raise ValueError(f"If jitter is a tuple, must have length 2 not {len(jitter)}")
-        jitter_x, jitter_y = jitter
-    elif isinstance(jitter, float):
-        jitter_x = jitter
-        jitter_y = jitter
-    else:
-        raise ValueError("Unexpected type for jitter, should be float or tuple of floats")
-    if not discrete_x:
-        x = _jitter_single(x, jitter=jitter_x, generator=generator)
-    if not discrete_y:
-        y = _jitter_single(y, jitter=jitter_y, generator=generator)
-    return x, y
 
 # endregion: Helper Functions
