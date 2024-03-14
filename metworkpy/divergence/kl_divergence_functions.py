@@ -11,50 +11,51 @@ from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
 
 # Local Imports
-from metworkpy.utils._jitter import _jitter_single
-from metworkpy.utils._arguments import _parse_metric
-
+from metworkpy.divergence._main_wrapper import _wrap_divergence_functions
 
 # region Main Function
 def kl_divergence(p: ArrayLike, q: ArrayLike, n_neighbors: int = 5, discrete: bool = False, jitter: float = None,
                   jitter_seed: int = None, distance_metric: Union[float, str] = "euclidean") -> float:
     """
-    Calculate the Kullback-Leibler Divergence between two distributions represented by samples p and q.
-    :param p:
-    :type p:
-    :param q:
-    :type q:
-    :param n_neighbors:
-    :type n_neighbors:
-    :param discrete:
-    :type discrete:
-    :param jitter:
-    :type jitter:
-    :param jitter_seed:
-    :type jitter_seed:
-    :param distance_metric:
-    :type distance_metric:
-    :return:
-    :rtype:
+    Calculate the Kulback-Leibler divergence between two distributions represented by samples p and q
+    :param p: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If `p` is
+        one dimensional, it will be reshaped to (n_samples,1). If it is not a np.ndarray, this function will attempt to
+        coerce it into one.
+    :type p: ArrayLike
+    :param q: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If `q` is
+        one dimensional, it will be reshaped to (n_samples,1). If it is not a np.ndarray, this function will attempt to
+        coerce it into one.
+    :type q: ArrayLike
+    :param n_neighbors: Number of neighbors to use for computing mutual information. Will attempt to coerce into an
+        integer. Must be at least 1. Default 5.
+    :type n_neighbors: int
+    :param discrete: Whether the samples are from discrete distributions
+    :type discrete: bool
+    :param jitter: Amount of noise to add to avoid ties. If None no noise is added. If a float, that is the standard
+        deviation of the random noise added to the continuous samples. If a tuple, the first element is the standard
+        deviation of the noise added to the x array, the second element is the standard deviation added to the y array.
+    :type jitter: Union[None, float, tuple[float,float]]
+    :param jitter_seed:Seed for the random number generator used for adding noise
+    :type jitter_seed:Union[None, int]
+    :param distance_metric: Metric to use for computing distance between points in p and q, can be "Euclidean",
+        "Manhattan", or "Chebyshev". Can also be a float representing the Minkowski p-norm.
+    :type distance_metric: Union[str, float]
+    :return: The Kulback-Leibler divergence between p and q
+    :rtype: float
 
     .. note::
-       - This function is no symetrical, and q is treated as representing the reference condition. If you want a
-         symetric metric try the Jenson-Shannon divergence
+       - This function is not symetrical, and q is treated as representing the reference condition. If you want a
+         symetric metric try the Jenson-Shannon divergence.
 
     .. seealso::
        1. 'Q. Wang, S. R. Kulkarni and S. Verdu, "Divergence Estimation for Multidimensional Densities Via
           k-Nearest-Neighbor Distances," in IEEE Transactions on Information Theory, vol. 55, no. 5, pp. 2392-2405,
           May 2009, doi: 10.1109/TIT.2009.2016060.'<https://ieeexplore.ieee.org/document/4839047>_
     """
-    distance_metric = _parse_metric(distance_metric)
-    p, q = _validate_samples(p=p, q=q)
-    if jitter and not discrete:
-        generator = np.random.default_rng(jitter_seed)
-        p = _jitter_single(p, jitter=jitter, generator=generator)
-        q = _jitter_single(q, jitter=jitter, generator=generator)
-    if discrete:
-        return _kl_disc(p,q)
-    return _kl_cont(p,q,n_neighbors=n_neighbors, metric=distance_metric)
+    return _wrap_divergence_functions(p=p,q=q, discrete_method=_kl_disc, continuous_method=_kl_cont,
+                                      n_neighbors=n_neighbors,
+                                      discrete=discrete, jitter=jitter, jitter_seed=jitter_seed,
+                                      distance_metric=distance_metric)
 
 
 # endregion Main Function
@@ -70,11 +71,6 @@ def _kl_disc(p: np.ndarray, q:np.ndarray):
     :return: The Kullback-Leibler divergence between the two distributions represented by the p and q samples
     :rtype: float
     """
-    try:
-        p,q = _validate_discrete(p), _validate_discrete(q)
-    except ValueError as err:
-        raise ValueError(f"p and q must represent single dimensional samples, and so have shape (n_samples, 1)"
-                         f"but p has dimension {p.shape[1]}, and q has dimension {q.shape[1]}.") from err
     p_elements, p_counts = np.unique(p, return_counts=True)
     q_elements, q_counts = np.unique(q, return_counts=True)
     p_freq = p_counts/p_counts.sum()
@@ -94,7 +90,6 @@ def _kl_disc(p: np.ndarray, q:np.ndarray):
     return kl
 
 # endregion Discrete Divergence
-
 
 # region Continuous Divergence
 def _kl_cont(p: np.ndarray, q: np.ndarray, n_neighbors: int = 5, metric: float = 2.):
@@ -130,41 +125,3 @@ def _kl_cont(p: np.ndarray, q: np.ndarray, n_neighbors: int = 5, metric: float =
 
 
 # endregion Continuous Divergence
-
-# region Helper Functions
-
-def _validate_sample(arr: ArrayLike) -> np.ndarray:
-    # Coerce to ndarray if needed
-    if not isinstance(arr, np.ndarray):
-        arr = np.array(arr)
-    # Check that the sample only has two axes
-    if len(arr.shape) > 2:
-        raise ValueError("Sample must have a maximum of 2 axes")
-    # If 1D, change to a column vector
-    if len(arr.shape) == 1:
-        arr = arr.reshape(-1, 1)
-    return arr
-
-
-def _validate_samples(p: ArrayLike, q: ArrayLike) -> tuple[np.ndarray, np.ndarray]:
-    # Coerce
-    try:
-        p = _validate_sample(p)
-        q = _validate_sample(q)
-    except ValueError as err:
-        raise ValueError(f"p and q must have a maximum of two axes, but p has {len(p.shape)} axes, and q has "
-                         f"{len(q.shape)} axes.") from err
-
-    if p.shape[1] != q.shape[1]:
-        raise ValueError(f"Both p and q distributions must have the same dimension, but p has a dimension {p.shape[1]} "
-                         f"and q has a dimension {q.shape[1]}")
-
-    return p, q
-
-def _validate_discrete(sample):
-    if sample.shape[1]!=1:
-        raise ValueError("For samples from discrete distributions, only a single dimension for the samples is supported"
-                         ", sample should have shape (n_samples, 1).")
-    return sample
-
-# endregion Helper Functions

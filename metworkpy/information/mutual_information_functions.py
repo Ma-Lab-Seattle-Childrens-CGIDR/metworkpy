@@ -4,7 +4,8 @@ methods to compute mutual information between two continuous distributions, betw
 between a continuous and discrete distribution.
 """
 
-# Inspired by the implementation in scikit-learn, although the implementations differ significantly.
+# Inspired by the implementation in scikit-learn, although the implementations differ so any errors are
+# Braden Griebel's.
 
 
 # Imports
@@ -21,7 +22,7 @@ from metworkpy.utils._arguments import _parse_metric
 from metworkpy.utils._jitter import _jitter
 
 
-# region: Main Mutual Information Function
+# region Main Mutual Information Function
 def mutual_information(x: ArrayLike,
                        y: ArrayLike,
                        discrete_x: bool = False,
@@ -54,9 +55,11 @@ def mutual_information(x: ArrayLike,
     :type jitter: Union[None, float, tuple[float,float]]
     :param jitter_seed: Seed for the random number generator used for adding noise
     :type jitter_seed: Union[None, int]
-    :param metric_x: Metric to use for computing distance between points in x
+    :param metric_x: Metric to use for computing distance between points in x, can be "Euclidean",
+        "Manhattan", or "Chebyshev". Can also be a float representing the Minkowski p-norm.
     :type metric_x: Union[str, int]
-    :param metric_y: Metric to use for computing distance between points in y
+    :param metric_y: Metric to use for computing distance between points in y, can be "Euclidean",
+        "Manhattan", or "Chebyshev". Can also be a float representing the Minkowski p-norm.
     :type metric_y: Union[str, int]
     :param truncate: Whether to ensure the mutual information is positive
     :type truncate: bool
@@ -101,6 +104,7 @@ def mutual_information(x: ArrayLike,
     metric_x, metric_y = _parse_metric(metric_x), _parse_metric(metric_y)
     if jitter:
         x, y = _jitter(x, y, jitter=jitter, jitter_seed=jitter_seed, discrete_x=discrete_x, discrete_y=discrete_y)
+    mi = None
     if discrete_x ^ discrete_y:  # if one of x or y is discrete
         if discrete_x:
             mi = _mi_disc_cont(continuous=y, discrete=x, n_neighbors=n_neighbors, metric_cont=metric_y)
@@ -117,9 +121,9 @@ def mutual_information(x: ArrayLike,
     return mi
 
 
-# endregion: Main Mutual Information Function
+# endregion Main Mutual Information Function
 
-# region: Continuous-Continuous MI
+# region Continuous-Continuous MI
 
 
 def _mi_cont_cont(x: np.ndarray, y: np.ndarray, n_neighbors: int, metric_x: float, metric_y: float):
@@ -228,9 +232,9 @@ def _mi_cont_cont_gen(x: np.ndarray,
             digamma(x.shape[0]))
 
 
-# endregion: Continuous-Continuous MI
+# endregion Continuous-Continuous MI
 
-# region: Continuous-Discrete MI
+# region Continuous-Discrete MI
 
 def _mi_disc_cont(discrete: np.ndarray, continuous: np.ndarray, n_neighbors: int, metric_cont: float = 2.,
                   **kwargs) -> float:
@@ -243,8 +247,8 @@ def _mi_disc_cont(discrete: np.ndarray, continuous: np.ndarray, n_neighbors: int
     :type continuous: np.ndarray
     :param n_neighbors: The number of neighbors to use for computing mutual information
     :type n_neighbors: int
-    :param metric_cont: Metric to use for computing distance between points in y (must be `float>=1` representing Minkowski
-        p-norm)
+    :param metric_cont: Metric to use for computing distance between points in y (must be `float>=1` representing
+        Minkowski p-norm)
     :type metric_cont: float
     :param kwargs: Arguments passed to KDTree
     :return: Mutual information between x and y
@@ -296,9 +300,9 @@ def _mi_disc_cont(discrete: np.ndarray, continuous: np.ndarray, n_neighbors: int
             digamma(neighbors_within_radius).mean())  # See equation 2 of Ross, 2014
 
 
-# endregion: Continuous-Discrete MI
+# endregion Continuous-Discrete MI
 
-# region: Discrete-Discrete MI
+# region Discrete-Discrete MI
 
 def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
     """
@@ -331,9 +335,9 @@ def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
     return mi
 
 
-# endregion: Discrete-Discrete MI
+# endregion Discrete-Discrete MI
 
-# region: Helper Functions
+# region Helper Functions
 # noinspection PyProtectedMember
 def _validate_sample(sample: ArrayLike) -> np.ndarray:
     # Coerce to np array
@@ -372,4 +376,4 @@ def _check_discrete(sample, is_discrete):
                              "multiple dimensions into one.")
     return sample
 
-# endregion: Helper Functions
+# endregion Helper Functions
