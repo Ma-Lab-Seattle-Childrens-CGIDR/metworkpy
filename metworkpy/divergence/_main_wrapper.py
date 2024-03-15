@@ -11,16 +11,25 @@ from numpy.typing import ArrayLike
 
 # Local Imports
 from metworkpy.utils._arguments import _parse_metric
-from metworkpy.divergence._data_validation import _validate_samples, _validate_discrete
+from metworkpy.divergence._data_validation import (
+    _validate_samples,
+    _validate_discrete,
+)
 from metworkpy.utils._jitter import _jitter_single
 
 
-def _wrap_divergence_functions(p: ArrayLike, q: ArrayLike,
-                               discrete_method: Callable[[np.ndarray, np.ndarray], float],
-                               continuous_method: Callable[[np.ndarray, np.ndarray, int, float], float],
-                               n_neighbors: int = 5, discrete: bool = False,
-                               jitter: float = None, jitter_seed: int = None,
-                               distance_metric: Union[float, str] = "euclidean") -> float:
+def _wrap_divergence_functions(
+        p: ArrayLike,
+        q: ArrayLike,
+        discrete_method: Callable[[np.ndarray, np.ndarray], float],
+        continuous_method: Callable[
+            [np.ndarray, np.ndarray, int, float], float],
+        n_neighbors: int = 5,
+        discrete: bool = False,
+        jitter: float = None,
+        jitter_seed: int = None,
+        distance_metric: Union[float, str] = "euclidean",
+) -> float:
     """
     Calculate the divergence between two distributions represented by samples p and q
     :param p: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If `p` is
@@ -56,8 +65,10 @@ def _wrap_divergence_functions(p: ArrayLike, q: ArrayLike,
     try:
         n_neighbors = int(n_neighbors)
     except ValueError as err:
-        raise ValueError(f"n_neighbors must be able to be converted to an integer, but a {type(n_neighbors)} was"
-                         f"given instead.") from err
+        raise ValueError(
+            f"n_neighbors must be able to be converted to an integer, but a {type(n_neighbors)} was"
+            f"given instead."
+        ) from err
     distance_metric = _parse_metric(distance_metric)
     p, q = _validate_samples(p, q)
     if jitter and not discrete:
@@ -69,8 +80,12 @@ def _wrap_divergence_functions(p: ArrayLike, q: ArrayLike,
             p = _validate_discrete(p)
             q = _validate_discrete(q)
         except ValueError as err:
-            raise ValueError(f"p and q must represent single dimensional samples, and so have shape (n_samples, 1)"
-                             f"but p has dimension {p.shape[1]}, and q has dimension {q.shape[1]}.") from err
+            raise ValueError(
+                f"p and q must represent single dimensional samples, and so have shape (n_samples, 1)"
+                f"but p has dimension {p.shape[1]}, and q has dimension {q.shape[1]}."
+            ) from err
         return discrete_method(p, q)
 
-    return continuous_method(p, q, n_neighbors=n_neighbors, metric=distance_metric)
+    return continuous_method(
+        p, q, n_neighbors=n_neighbors, metric=distance_metric
+    )

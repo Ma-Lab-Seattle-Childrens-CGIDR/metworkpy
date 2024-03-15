@@ -11,7 +11,11 @@ import pandas as pd
 import sympy as sym
 
 # Local Imports
-from metworkpy.imat.imat_functions import imat, add_imat_constraints, add_imat_objective_
+from metworkpy.imat.imat_functions import (
+    imat,
+    add_imat_constraints,
+    add_imat_objective_,
+)
 from metworkpy.utils import _arguments
 
 # define defaults for the iMAT functions
@@ -458,17 +462,45 @@ def _parse_method(method: str) -> str:
     :rtype: str
     """
     try:
-        return _arguments._parse_str_args_dict(method, {
-            "simple_bounds": ["simple bounds", "simple-bounds", "simple_bounds"],
-            "imat_constraint": ["imat", "imat_restrictions", "imat-restrictions", "imat restrictions", "ir",
-                                "imat constraints", "imat-constraints", "imat_constraints", "ic"],
-            "subset": ["subset-ko", "subset_ko", "eliminate-below-threshold", "eliminate_below_threshold"],
-            "fva": ["fva", "flux_variability_analysis", "flux-variability-analysis", "flux variability analysis"],
-            "milp": ["milp", "mixed_integer_linear_programming",
-                     "mixed integer linear programming",
-                     "mixed-integer-linear-programming"],
-
-        })
+        return _arguments._parse_str_args_dict(
+            method,
+            {
+                "simple_bounds": [
+                    "simple bounds",
+                    "simple-bounds",
+                    "simple_bounds",
+                ],
+                "imat_constraint": [
+                    "imat",
+                    "imat_restrictions",
+                    "imat-restrictions",
+                    "imat restrictions",
+                    "ir",
+                    "imat constraints",
+                    "imat-constraints",
+                    "imat_constraints",
+                    "ic",
+                ],
+                "subset": [
+                    "subset-ko",
+                    "subset_ko",
+                    "eliminate-below-threshold",
+                    "eliminate_below_threshold",
+                ],
+                "fva": [
+                    "fva",
+                    "flux_variability_analysis",
+                    "flux-variability-analysis",
+                    "flux variability analysis",
+                ],
+                "milp": [
+                    "milp",
+                    "mixed_integer_linear_programming",
+                    "mixed integer linear programming",
+                    "mixed-integer-linear-programming",
+                ],
+            },
+        )
     except ValueError as err:
         raise ValueError(
             f"Invalid method: {method}. Valid methods are: 'simple_bounds', \

@@ -54,3 +54,12 @@ build-backend = "poetry.core.masonry.api"
 filterwarnings = [
     'ignore:.+pass a TempConstr or use Model.addLConstr:DeprecationWarning'
 ]
+
+# Setup ruff
+[tool.ruff]
+line-length=88
+
+# Setup ruff linter
+[tool.ruff.lint]
+ignore-init-module-imports = true
+

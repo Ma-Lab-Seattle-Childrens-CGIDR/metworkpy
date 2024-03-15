@@ -10,7 +10,9 @@ between a continuous and discrete distribution.
 
 # Imports
 # Standard Library Imports
+from __future__ import annotations
 from typing import Union
+
 # External Imports
 import numpy as np
 from numpy.typing import ArrayLike
@@ -23,22 +25,24 @@ from metworkpy.utils._jitter import _jitter
 
 
 # region Main Mutual Information Function
-def mutual_information(x: ArrayLike,
-                       y: ArrayLike,
-                       discrete_x: bool = False,
-                       discrete_y: bool = False,
-                       n_neighbors: int = 5,
-                       jitter: Union[None, float] = None,
-                       jitter_seed: Union[None, int] = None,
-                       metric_x: Union[str, float] = "euclidean",
-                       metric_y: Union[str, float] = "euclidean",
-                       truncate: bool = False) -> float:
+def mutual_information(
+        x: ArrayLike,
+        y: ArrayLike,
+        discrete_x: bool = False,
+        discrete_y: bool = False,
+        n_neighbors: int = 5,
+        jitter: Union[None, float] = None,
+        jitter_seed: Union[None, int] = None,
+        metric_x: Union[str, float] = "euclidean",
+        metric_y: Union[str, float] = "euclidean",
+        truncate: bool = False,
+) -> float:
     """
-    :param x: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If `x` is
+    :param x: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If ``x`` is
         one dimensional, it will be reshaped to (n_samples, 1). If it is not a np.ndarray, this function will
         attempt to coerce it into one.
     :type x: ArrayLike
-    :param y: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If `y` is
+    :param y: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If ``y`` is
         one dimensional, it will be reshaped to  (n_samples, 1). If it is not a np.ndarray, this function will
         attempt to coerce it into one.
     :type y: ArrayLike
@@ -67,6 +71,7 @@ def mutual_information(x: ArrayLike,
     :rtype: float
 
     .. note::
+
        - The metrics can either be provided as a float greater than 1 representing the Minkowski p-norm, or a string
          representing the name of a metric such as 'Manhattan', 'Chebyshev', or 'Euclidean'.
        - For scalar samples (samples from a 1-D distribution), all the metrics are the same.
@@ -75,23 +80,27 @@ def mutual_information(x: ArrayLike,
        - Always returns value in nats (i.e. mutual information is calculated using the natural logarithm.
 
     .. seealso::
-       1. `Kraskov, A., Stögbauer, H., & Grassberger, P. (2004). Estimating mutual information. Physical
-            Review E, 69(6), 066138. <https://journals.aps.org/pre/abstract/10.1103/PhysRevE.69.066138>`_
+
+       1. Kraskov, A., Stögbauer, H., & Grassberger, P. (2004). Estimating mutual information. Physical Review E, 69(6), 066138.
             Method for estimating mutual information between samples from two continuous distributions.
-       2. `Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
-           <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0087357>`_
+       2. Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
            Method for estimating mutual information between a sample from a discrete distribution and a sample
            from a continuous distribution.
+
     """
     try:
         n_neighbors = int(n_neighbors)
     except ValueError as err:
-        raise ValueError(f"n_neighbors must be able to be converted to an integer, but a {type(n_neighbors)} was"
-                         f"given instead.") from err
+        raise ValueError(
+            f"n_neighbors must be able to be converted to an integer, but a {type(n_neighbors)} was"
+            f"given instead."
+        ) from err
 
     # Check that n_neighbors is greater than or equal to 1
     if not (n_neighbors >= 1):
-        raise ValueError(f"n_neighbors must be at least 1, but argument was {n_neighbors}")
+        raise ValueError(
+            f"n_neighbors must be at least 1, but argument was {n_neighbors}"
+        )
 
     # Validate the x and y samples
     x, y = _validate_samples(x, y)
@@ -103,19 +112,44 @@ def mutual_information(x: ArrayLike,
     # Parse the metrics to floats
     metric_x, metric_y = _parse_metric(metric_x), _parse_metric(metric_y)
     if jitter:
-        x, y = _jitter(x, y, jitter=jitter, jitter_seed=jitter_seed, discrete_x=discrete_x, discrete_y=discrete_y)
+        x, y = _jitter(
+            x,
+            y,
+            jitter=jitter,
+            jitter_seed=jitter_seed,
+            discrete_x=discrete_x,
+            discrete_y=discrete_y,
+        )
     mi = None
     if discrete_x ^ discrete_y:  # if one of x or y is discrete
         if discrete_x:
-            mi = _mi_disc_cont(continuous=y, discrete=x, n_neighbors=n_neighbors, metric_cont=metric_y)
+            mi = _mi_disc_cont(
+                continuous=y,
+                discrete=x,
+                n_neighbors=n_neighbors,
+                metric_cont=metric_y,
+            )
         if discrete_y:
-            mi = _mi_disc_cont(continuous=x, discrete=y, n_neighbors=n_neighbors, metric_cont=metric_x)
+            mi = _mi_disc_cont(
+                continuous=x,
+                discrete=y,
+                n_neighbors=n_neighbors,
+                metric_cont=metric_x,
+            )
     elif not (discrete_x or discrete_y):  # if both are continuous
-        mi = _mi_cont_cont(x=x, y=y, n_neighbors=n_neighbors, metric_x=metric_x, metric_y=metric_y)
+        mi = _mi_cont_cont(
+            x=x,
+            y=y,
+            n_neighbors=n_neighbors,
+            metric_x=metric_x,
+            metric_y=metric_y,
+        )
     elif discrete_x and discrete_y:
         mi = _mi_disc_disc(x=x, y=y)
     else:
-        raise ValueError("Error with discrete_x and/or discrete_y parameters, both must be boolean.")
+        raise ValueError(
+            "Error with discrete_x and/or discrete_y parameters, both must be boolean."
+        )
     if truncate:
         return max(mi, 0)
     return mi
@@ -126,7 +160,13 @@ def mutual_information(x: ArrayLike,
 # region Continuous-Continuous MI
 
 
-def _mi_cont_cont(x: np.ndarray, y: np.ndarray, n_neighbors: int, metric_x: float, metric_y: float):
+def _mi_cont_cont(
+        x: np.ndarray,
+        y: np.ndarray,
+        n_neighbors: int,
+        metric_x: float,
+        metric_y: float,
+):
     """
     Calculate the mutual information between two continuous distributions using the nearest neighbor method.
     Dispatches to either _mi_cont_cont_cheb_only, or _mi_cont_cont_gen depending on which is applicable (
@@ -146,9 +186,13 @@ def _mi_cont_cont(x: np.ndarray, y: np.ndarray, n_neighbors: int, metric_x: floa
     :return: The mutual information score between the two distributions represented by the x and y samples
     :rtype: float
     """
-    if ((metric_x == np.inf) and (metric_y == np.inf)) or (x.shape[1] == 1 and y.shape[1] == 1):
+    if ((metric_x == np.inf) and (metric_y == np.inf)) or (
+            x.shape[1] == 1 and y.shape[1] == 1
+    ):
         return _mi_cont_cont_cheb_only(x=x, y=y, n_neighbors=n_neighbors)
-    return _mi_cont_cont_gen(x=x, y=y, n_neighbors=n_neighbors, metric_x=metric_x, metric_y=metric_y)
+    return _mi_cont_cont_gen(
+        x=x, y=y, n_neighbors=n_neighbors, metric_x=metric_x, metric_y=metric_y
+    )
 
 
 def _mi_cont_cont_cheb_only(x: np.ndarray, y: np.ndarray, n_neighbors: int):
@@ -177,21 +221,31 @@ def _mi_cont_cont_cheb_only(x: np.ndarray, y: np.ndarray, n_neighbors: int):
     r = r.squeeze()
 
     # Find the number of neighbors within radius r
-    r = np.nextafter(r, 0)  # Shrink r barely, to ensure it doesn't include the kth neighbor
-    x_neighbors = x_tree.query_ball_point(x=x, r=r, p=np.inf, return_length=True) - 1
-    y_neighbors = y_tree.query_ball_point(x=y, r=r, p=np.inf, return_length=True) - 1
+    r = np.nextafter(
+        r, 0
+    )  # Shrink r barely, to ensure it doesn't include the kth neighbor
+    x_neighbors = (
+            x_tree.query_ball_point(x=x, r=r, p=np.inf, return_length=True) - 1
+    )
+    y_neighbors = (
+            y_tree.query_ball_point(x=y, r=r, p=np.inf, return_length=True) - 1
+    )
 
     # Now use equation (8) from Kraskov, Stogbauer, and Grassberger 2004
-    return (digamma(n_neighbors) -
-            np.mean(digamma(x_neighbors + 1) + digamma(y_neighbors + 1)) +
-            digamma(z.shape[0]))
+    return (
+            digamma(n_neighbors)
+            - np.mean(digamma(x_neighbors + 1) + digamma(y_neighbors + 1))
+            + digamma(z.shape[0])
+    )
 
 
-def _mi_cont_cont_gen(x: np.ndarray,
-                      y: np.ndarray,
-                      n_neighbors: int,
-                      metric_x: float,
-                      metric_y: float):
+def _mi_cont_cont_gen(
+        x: np.ndarray,
+        y: np.ndarray,
+        n_neighbors: int,
+        metric_x: float,
+        metric_y: float,
+):
     """
     Calculate the mutual information between two continuous distributions using the nearest neighbor method.
     This method allows for any x and y metrics, but is much slower than the _mi_cont_cont_cheb_only.
@@ -212,7 +266,9 @@ def _mi_cont_cont_gen(x: np.ndarray,
     """
     x_dist = distance_matrix(x, x, p=metric_x)  # Distance in x space
     y_dist = distance_matrix(y, y, p=metric_y)  # Distance in y space
-    z_dist = np.maximum(x_dist, y_dist)  # Equivalent to p=np.inf Minkosky p-norm
+    z_dist = np.maximum(
+        x_dist, y_dist
+    )  # Equivalent to p=np.inf Minkosky p-norm
     # For finding the kth neighbor, things to note:
     # - We are using the numpy partition function, which sorts the kth element into the sorted position
     #   with kth=0 sorting the first element, kth=1 sorting the second, etc.
@@ -227,17 +283,25 @@ def _mi_cont_cont_gen(x: np.ndarray,
     x_neighbors = (x_dist < neighbor_distances).sum(axis=1) - 1
     y_neighbors = (y_dist < neighbor_distances).sum(axis=1) - 1
     # Now use equation (8) from Kraskov, Stogbauer, and Grassberger 2004
-    return (digamma(n_neighbors) -
-            np.mean(digamma(x_neighbors + 1) + digamma(y_neighbors + 1)) +
-            digamma(x.shape[0]))
+    return (
+            digamma(n_neighbors)
+            - np.mean(digamma(x_neighbors + 1) + digamma(y_neighbors + 1))
+            + digamma(x.shape[0])
+    )
 
 
 # endregion Continuous-Continuous MI
 
 # region Continuous-Discrete MI
 
-def _mi_disc_cont(discrete: np.ndarray, continuous: np.ndarray, n_neighbors: int, metric_cont: float = 2.,
-                  **kwargs) -> float:
+
+def _mi_disc_cont(
+        discrete: np.ndarray,
+        continuous: np.ndarray,
+        n_neighbors: int,
+        metric_cont: float = 2.0,
+        **kwargs,
+) -> float:
     """
     Calculate the mutual information between a discrete and continuous distribution using the nearest neighbor method.
     :param discrete: Array representing the samples from the discrete distribution, should have shape (n_samples, 1)
@@ -267,11 +331,13 @@ def _mi_disc_cont(discrete: np.ndarray, continuous: np.ndarray, n_neighbors: int
     """
     discrete_classes, counts = np.unique(discrete, return_counts=True)
     if (counts < n_neighbors + 1).any():
-        raise ValueError(f"Some classes contain insufficient points to have n_neighbors neighbors: "
-                         f"{discrete_classes[counts < (n_neighbors + 1)]} contain {counts[counts < (n_neighbors + 1)]}."
-                         f" You can try using a smaller number of neighbors, such as "
-                         f"{counts[counts < (n_neighbors + 1)].min() - 1}, or filter out the classes with insufficient "
-                         f"numbers of points.")
+        raise ValueError(
+            f"Some classes contain insufficient points to have n_neighbors neighbors: "
+            f"{discrete_classes[counts < (n_neighbors + 1)]} contain {counts[counts < (n_neighbors + 1)]}."
+            f" You can try using a smaller number of neighbors, such as "
+            f"{counts[counts < (n_neighbors + 1)].min() - 1}, or filter out the classes with insufficient "
+            f"numbers of points."
+        )
 
     n_data_points = discrete.shape[0]
 
@@ -285,24 +351,33 @@ def _mi_disc_cont(discrete: np.ndarray, continuous: np.ndarray, n_neighbors: int
         count_array[same_class_index] = count
         type_tree = KDTree(continuous[same_class_index, :], **kwargs)
         # Get the neighbors (the 1st neighbor will just be the point itself)
-        dist, _ = type_tree.query(continuous[same_class_index, :], k=[n_neighbors + 1], p=metric_cont)
+        dist, _ = type_tree.query(
+            continuous[same_class_index, :], k=[n_neighbors + 1], p=metric_cont
+        )
         dist = dist.squeeze()
         # Add the values to the radius array
         # Increase the distance slightly to make sure that the kth neighbor will be included
         radius_array[same_class_index] = np.nextafter(dist, np.inf)
 
     # Find the number of neighbors within the radius, subtract 1 since it will include the point itself
-    neighbors_within_radius = full_tree.query_ball_point(continuous, radius_array, p=metric_cont,
-                                                         return_length=True) - 1
-    return (digamma(n_data_points) -
-            digamma(count_array).mean() +
-            digamma(n_neighbors) -
-            digamma(neighbors_within_radius).mean())  # See equation 2 of Ross, 2014
+    neighbors_within_radius = (
+            full_tree.query_ball_point(
+                continuous, radius_array, p=metric_cont, return_length=True
+            )
+            - 1
+    )
+    return (
+            digamma(n_data_points)
+            - digamma(count_array).mean()
+            + digamma(n_neighbors)
+            - digamma(neighbors_within_radius).mean()
+    )  # See equation 2 of Ross, 2014
 
 
 # endregion Continuous-Discrete MI
 
 # region Discrete-Discrete MI
+
 
 def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
     """
@@ -324,18 +399,21 @@ def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
     y_freq = y_count / y_count.sum()
     z_freq = z_count / z_count.sum()
     # now calculate the MI
-    mi = 0.  # Start at 0, and accumulate it using a sum formula
+    mi = 0.0  # Start at 0, and accumulate it using a sum formula
     for y_i, y_f in zip(y_element, y_freq):
         for x_i, x_f in zip(x_element, x_freq):
             # Find the joint frequency
             joint = z_freq[(z_element[:, 0] == x_i) & (z_element[:, 1] == y_i)]
             if not joint.size > 0:
                 continue
-            mi += (joint * np.log(joint / (x_f * y_f))).item()  # NOTE: Log is base e (i.e. natural)
+            mi += (
+                    joint * np.log(joint / (x_f * y_f))
+            ).item()  # NOTE: Log is base e (i.e. natural)
     return mi
 
 
 # endregion Discrete-Discrete MI
+
 
 # region Helper Functions
 # noinspection PyProtectedMember
@@ -343,7 +421,7 @@ def _validate_sample(sample: ArrayLike) -> np.ndarray:
     # Coerce to np array
     if not isinstance(sample, np.ndarray):
         sample = np.array(sample)
-    if len(sample.shape)>2:
+    if len(sample.shape) > 2:
         raise ValueError("Sample must have a maximum of 2 axes")
     # If 1D, change to (n_samples,1)
     if len(sample.shape) == 1:
@@ -356,11 +434,15 @@ def _validate_samples(x: ArrayLike, y: ArrayLike):
         x = _validate_sample(x)
         y = _validate_sample(y)
     except ValueError as err:
-        raise ValueError(f"Both samples arrays must have a maximum of 2 axes, but x has {len(x.shape)}"
-                         f"axes and y has {len(x.shape)} axes") from err
+        raise ValueError(
+            f"Both samples arrays must have a maximum of 2 axes, but x has {len(x.shape)}"
+            f"axes and y has {len(x.shape)} axes"
+        ) from err
     if x.shape[0] != y.shape[0]:
-        raise ValueError(f"The first dimension of x and y should match, but x has first dimension {x.shape[0]}, "
-                         f"and y has a first dimension of {y.shape[0]}")
+        raise ValueError(
+            f"The first dimension of x and y should match, but x has first dimension {x.shape[0]}, "
+            f"and y has a first dimension of {y.shape[0]}"
+        )
     return x, y
 
 
@@ -368,12 +450,16 @@ def _check_discrete(sample, is_discrete):
     if not isinstance(is_discrete, bool):
         raise ValueError("discrete_* arguments must be boolean")
     if is_discrete:
-        if len(sample.shape) == 1:  # if x is 1 dimensional, reshape it into a column vector
+        if (
+                len(sample.shape) == 1
+        ):  # if x is 1 dimensional, reshape it into a column vector
             sample = sample.reshape(-1, 1)
         if sample.shape[1] != 1:
-            raise ValueError("For samples from discrete distributions, currently only a single dimension is "
-                             "supported. You can try with x as a sample from a continuous distribution, or encode the "
-                             "multiple dimensions into one.")
+            raise ValueError(
+                "For samples from discrete distributions, currently only a single dimension is "
+                "supported. You can try with x as a sample from a continuous distribution, or encode the "
+                "multiple dimensions into one."
+            )
     return sample
 
 # endregion Helper Functions
