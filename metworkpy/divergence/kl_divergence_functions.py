@@ -154,7 +154,7 @@ def _kl_cont(
     return (
             (p.shape[1] / p.shape[0]) * np.sum(
         np.log(np.divide(q_dist, p_dist)))
-            + np.log(q.shape[0] / (p.shape[0 - 1]))
+            + np.log(q.shape[0] / (p.shape[0] - 1))
     ).item()
 
 # endregion Continuous Divergence
