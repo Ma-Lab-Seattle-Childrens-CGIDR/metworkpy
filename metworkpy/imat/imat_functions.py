@@ -101,7 +101,7 @@ def flux_to_binary(
     elif which_reactions == "active":
         return (
                 (fluxes >= epsilon - tolerance) | (
-                    fluxes <= -epsilon + tolerance)
+                fluxes <= -epsilon + tolerance)
         ).astype(int)
     elif which_reactions == "inactive":
         return (

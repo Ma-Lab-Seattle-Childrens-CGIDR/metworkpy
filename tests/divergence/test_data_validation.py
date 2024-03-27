@@ -5,7 +5,8 @@ import unittest
 import numpy as np
 
 # Local Imports
-from metworkpy.divergence._data_validation import _validate_discrete, _validate_sample, _validate_samples
+from metworkpy.divergence._data_validation import _validate_discrete, _validate_sample, \
+    _validate_samples
 
 
 class TestDataValidation(unittest.TestCase):
@@ -21,7 +22,8 @@ class TestDataValidation(unittest.TestCase):
         self.assertIsInstance(validated_list_arr, np.ndarray)
         self.assertEqual(validated_list_arr.shape[1], 1)
         arr_3d = np.zeros(shape=(4, 3, 5))
-        with self.assertRaisesRegex(ValueError, r"Sample must have a maximum of 2 axes"):
+        with self.assertRaisesRegex(ValueError,
+                                    r"Sample must have a maximum of 2 axes"):
             _validate_sample(arr_3d)
         arr_1d = np.ones(shape=10)
         validated_arr_1d = _validate_sample(arr_1d)
@@ -45,7 +47,8 @@ class TestDataValidation(unittest.TestCase):
         # Test incorrect number of dimensions
         arr1_3d = np.ones(shape=(4, 3, 5))
         arr2_3d = np.ones(shape=(4, 3, 5))
-        with self.assertRaisesRegex(ValueError, r"p and q must have a maximum of two axes.+"):
+        with self.assertRaisesRegex(ValueError,
+                                    r"p and q must have a maximum of two axes.+"):
             _ = _validate_samples(arr1_3d, arr2_3d)
 
 

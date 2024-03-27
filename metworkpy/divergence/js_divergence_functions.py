@@ -207,6 +207,6 @@ def _js_disc(p: np.ndarray, q: np.ndarray):
             / q_total
     )
 
-    return jensenshannon(p_freq, q_freq, base=np.e)**2
+    return jensenshannon(p_freq, q_freq, base=np.e) ** 2
 
 # endregion Discrete Case

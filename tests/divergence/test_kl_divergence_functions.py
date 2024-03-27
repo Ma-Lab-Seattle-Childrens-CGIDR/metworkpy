@@ -24,7 +24,7 @@ class TestMainKL(unittest.TestCase):
         cls.known_p = generator.choice([0, 1, 2, 3], size=50000, replace=True,
                                        p=[7 / 25, 12 / 25, 4 / 25, 2 / 25])
         cls.known_p_rep = generator.choice([0, 1, 2, 3], size=10000, replace=True,
-                                       p=[7 / 25, 12 / 25, 4 / 25, 2 / 25])
+                                           p=[7 / 25, 12 / 25, 4 / 25, 2 / 25])
         cls.known_q = generator.choice([0, 1, 2, 3], size=50000, replace=True,
                                        p=[1 / 4, 1 / 4, 1 / 4, 1 / 4])
         cls.theory_kl_p_q = ((7 / 25) * np.log((7 / 25) / (1 / 4)) +
@@ -77,8 +77,6 @@ class TestMainKL(unittest.TestCase):
                                      self.known_q.reshape(-1, 1), discrete=True)))
 
 
-
-
 class TestContinuousKL(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -108,15 +106,14 @@ class TestContinuousKL(unittest.TestCase):
         self.assertTrue(np.isclose(calc_kl_div_0, 0., rtol=1e-1, atol=0.05))
 
     def test_multidimensional(self):
-        _ = _kl_cont(self.norm_2d_2d_0_3_0_6_sample_1000[:,[0,1]],
-                     self.norm_2d_2d_0_3_0_6_sample_1000[:,[2,3]])
+        _ = _kl_cont(self.norm_2d_2d_0_3_0_6_sample_1000[:, [0, 1]],
+                     self.norm_2d_2d_0_3_0_6_sample_1000[:, [2, 3]])
 
     def test_jitter(self):
         js_no_jitter = kl_divergence(self.norm_0_3, self.norm_2_10)
         js_jitter = kl_divergence(self.norm_0_3, self.norm_2_10, jitter_seed=42,
                                   jitter=1e-10)
         self.assertTrue(np.isclose(js_jitter, js_no_jitter))
-
 
 
 class TestDiscreteKL(unittest.TestCase):
