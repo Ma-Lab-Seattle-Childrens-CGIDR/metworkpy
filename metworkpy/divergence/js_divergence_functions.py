@@ -10,6 +10,7 @@ from typing import Union
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
+from scipy.spatial.distance import jensenshannon
 from scipy.special import digamma
 
 # Local Imports
@@ -115,7 +116,8 @@ def _js_cont(
     combined = np.vstack([p, q])
     n_data_points = combined.shape[0]
     classes = np.vstack([np.zeros((len(p), 1)), np.ones((len(q), 1))])
-    # This is overkill, but it matches the MI formulation better, and allows for easier refactoring into the divergence
+    # This is overkill, but it matches the MI formulation better, and allows for easier
+    # refactoring into the divergence
     # between more than 2 distributions
     discrete_classes, counts = np.unique(classes, return_counts=True)
 
@@ -205,10 +207,6 @@ def _js_disc(p: np.ndarray, q: np.ndarray):
             / q_total
     )
 
-    comb_freq = 0.5 * (p_freq + q_freq)
-
-    return 0.5 * np.multiply(
-        p_freq, np.log(p_freq / comb_freq)
-    ) + 0.5 * np.multiply(q_freq, np.log(q_freq / comb_freq))
+    return jensenshannon(p_freq, q_freq, base=np.e)**2
 
 # endregion Discrete Case
