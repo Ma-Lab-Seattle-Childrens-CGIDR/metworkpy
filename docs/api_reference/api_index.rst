@@ -8,6 +8,7 @@ API Reference for Metworkpy
    :caption: Contents:
 
    divergence
+   graph
    imat
    information
    parse

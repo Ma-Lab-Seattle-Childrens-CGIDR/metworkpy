@@ -3,11 +3,10 @@ import unittest
 
 # External Imports
 import numpy as np
-import scipy.stats
+from scipy.stats import multivariate_normal
 
 # Local Imports
-from metworkpy.divergence.kl_divergence_functions import kl_divergence, _kl_cont, \
-    _kl_disc
+import metworkpy.divergence.kl_divergence_functions
 
 
 class TestMainKL(unittest.TestCase):
@@ -37,44 +36,63 @@ class TestMainKL(unittest.TestCase):
                              (1 / 4) * np.log((1 / 4) / (2 / 25)))
 
     def test_kl_cont(self):
-        calc_kl_div = kl_divergence(p=self.norm_0_3, q=self.norm_2_10,
-                                    n_neighbors=3)
+        calc_kl_div = metworkpy.divergence.kl_divergence_functions.kl_divergence(
+            p=self.norm_0_3, q=self.norm_2_10,
+            n_neighbors=3)
         self.assertTrue(np.isclose(calc_kl_div, self.theory_kl_div, rtol=2e-1))
 
-        calc_kl_div_0 = kl_divergence(p=self.norm_2_10, q=self.norm_2_10_rep,
-                                      n_neighbors=4)
+        calc_kl_div_0 = metworkpy.divergence.kl_divergence_functions.kl_divergence(
+            p=self.norm_2_10, q=self.norm_2_10_rep,
+            n_neighbors=4)
         self.assertTrue(np.isclose(calc_kl_div_0, 0., rtol=1e-1, atol=0.05))
 
     def test_identical_distributions(self):
         # Identical distributions should have KL divergence estimates near 0
-        self.assertTrue(np.isclose(_kl_disc(self.known_p,
-                                            self.known_p_rep), 0.,
-                                   atol=5e-2))
+        self.assertTrue(np.isclose(
+            metworkpy.divergence.kl_divergence_functions._kl_disc(self.known_p,
+                                                                  self.known_p_rep), 0.,
+            atol=5e-2))
 
     def test_known_kl(self):
         # Test against theory KL values
-        calc_kl_p_q = kl_divergence(self.known_p, self.known_q, discrete=True)
-        calc_kl_q_p = kl_divergence(self.known_q, self.known_p, discrete=True)
+        calc_kl_p_q = metworkpy.divergence.kl_divergence_functions.kl_divergence(
+            self.known_p, self.known_q, discrete=True)
+        calc_kl_q_p = metworkpy.divergence.kl_divergence_functions.kl_divergence(
+            self.known_q, self.known_p, discrete=True)
         self.assertTrue(np.isclose(calc_kl_p_q, self.theory_kl_p_q, rtol=1e-1))
         self.assertTrue(np.isclose(calc_kl_q_p, self.theory_kl_q_p, rtol=1e-1))
 
     def test_input_handling(self):
-        self.assertTrue(np.isclose(kl_divergence(self.norm_0_3, self.norm_2_10),
-                                   kl_divergence(self.norm_0_3.ravel(),
-                                                 self.norm_2_10.ravel())))
-        self.assertTrue(np.isclose(kl_divergence(self.norm_0_3, self.norm_2_10),
-                                   kl_divergence(list(self.norm_0_3),
-                                                 list(self.norm_2_10))))
+        self.assertTrue(np.isclose(
+            metworkpy.divergence.kl_divergence_functions.kl_divergence(self.norm_0_3,
+                                                                       self.norm_2_10),
+            metworkpy.divergence.kl_divergence_functions.kl_divergence(
+                self.norm_0_3.ravel(),
+                self.norm_2_10.ravel())))
+        self.assertTrue(np.isclose(
+            metworkpy.divergence.kl_divergence_functions.kl_divergence(self.norm_0_3,
+                                                                       self.norm_2_10),
+            metworkpy.divergence.kl_divergence_functions.kl_divergence(
+                list(self.norm_0_3),
+                list(self.norm_2_10))))
 
         self.assertTrue(
-            np.isclose(kl_divergence(self.known_p, self.known_q, discrete=True),
-                       kl_divergence(list(self.known_p), list(self.known_q),
-                                     discrete=True)))
+            np.isclose(
+                metworkpy.divergence.kl_divergence_functions.kl_divergence(self.known_p,
+                                                                           self.known_q,
+                                                                           discrete=True),
+                metworkpy.divergence.kl_divergence_functions.kl_divergence(
+                    list(self.known_p), list(self.known_q),
+                    discrete=True)))
 
         self.assertTrue(
-            np.isclose(kl_divergence(self.known_p, self.known_q, discrete=True),
-                       kl_divergence(self.known_p.reshape(-1, 1),
-                                     self.known_q.reshape(-1, 1), discrete=True)))
+            np.isclose(
+                metworkpy.divergence.kl_divergence_functions.kl_divergence(self.known_p,
+                                                                           self.known_q,
+                                                                           discrete=True),
+                metworkpy.divergence.kl_divergence_functions.kl_divergence(
+                    self.known_p.reshape(-1, 1),
+                    self.known_q.reshape(-1, 1), discrete=True)))
 
 
 class TestContinuousKL(unittest.TestCase):
@@ -88,31 +106,36 @@ class TestContinuousKL(unittest.TestCase):
                 2 * 10 ** 2) - 0.5
 
         # Multidimensional case
-        norm_2d_2d_0_3_0_6 = scipy.stats.multivariate_normal(mean=[0, 0, 0, 0],
-                                                             cov=[[1, 0.3, 0.6, 0.6],
-                                                                  [0.3, 1, 0.6, 0.6],
-                                                                  [0.6, 0.6, 1, 0.3],
-                                                                  [0.6, 0.6, 0.3, 1]],
-                                                             seed=314)
+        norm_2d_2d_0_3_0_6 = multivariate_normal(mean=[0, 0, 0, 0],
+                                                 cov=[[1, 0.3, 0.6, 0.6],
+                                                      [0.3, 1, 0.6, 0.6],
+                                                      [0.6, 0.6, 1, 0.3],
+                                                      [0.6, 0.6, 0.3, 1]],
+                                                 seed=314)
         cls.norm_2d_2d_0_3_0_6_sample_1000 = norm_2d_2d_0_3_0_6.rvs(size=1000)
 
     def test_kl_cont(self):
-        calc_kl_div = _kl_cont(p=self.norm_0_3, q=self.norm_2_10,
-                               n_neighbors=3)
+        calc_kl_div = metworkpy.divergence.kl_divergence_functions._kl_cont(
+            p=self.norm_0_3, q=self.norm_2_10,
+            n_neighbors=3)
         self.assertTrue(np.isclose(calc_kl_div, self.theory_kl_div, rtol=2e-1))
 
-        calc_kl_div_0 = _kl_cont(p=self.norm_2_10, q=self.norm_2_10_rep,
-                                 n_neighbors=4)
+        calc_kl_div_0 = metworkpy.divergence.kl_divergence_functions._kl_cont(
+            p=self.norm_2_10, q=self.norm_2_10_rep,
+            n_neighbors=4)
         self.assertTrue(np.isclose(calc_kl_div_0, 0., rtol=1e-1, atol=0.05))
 
     def test_multidimensional(self):
-        _ = _kl_cont(self.norm_2d_2d_0_3_0_6_sample_1000[:, [0, 1]],
-                     self.norm_2d_2d_0_3_0_6_sample_1000[:, [2, 3]])
+        _ = metworkpy.divergence.kl_divergence_functions._kl_cont(
+            self.norm_2d_2d_0_3_0_6_sample_1000[:, [0, 1]],
+            self.norm_2d_2d_0_3_0_6_sample_1000[:, [2, 3]])
 
     def test_jitter(self):
-        js_no_jitter = kl_divergence(self.norm_0_3, self.norm_2_10)
-        js_jitter = kl_divergence(self.norm_0_3, self.norm_2_10, jitter_seed=42,
-                                  jitter=1e-10)
+        js_no_jitter = metworkpy.divergence.kl_divergence_functions.kl_divergence(
+            self.norm_0_3, self.norm_2_10)
+        js_jitter = metworkpy.divergence.kl_divergence_functions.kl_divergence(
+            self.norm_0_3, self.norm_2_10, jitter_seed=42,
+            jitter=1e-10)
         self.assertTrue(np.isclose(js_jitter, js_no_jitter))
 
 
@@ -137,14 +160,17 @@ class TestDiscreteKL(unittest.TestCase):
 
     def test_identical_distributions(self):
         # Identical distributions should have KL divergence estimates near 0
-        self.assertTrue(np.isclose(_kl_disc(self.known_p,
-                                            self.known_p_rep), 0.,
-                                   atol=5e-2))
+        self.assertTrue(np.isclose(
+            metworkpy.divergence.kl_divergence_functions._kl_disc(self.known_p,
+                                                                  self.known_p_rep), 0.,
+            atol=5e-2))
 
     def test_known_kl(self):
         # Test against theory KL values
-        calc_kl_p_q = _kl_disc(self.known_p, self.known_q)
-        calc_kl_q_p = _kl_disc(self.known_q, self.known_p)
+        calc_kl_p_q = metworkpy.divergence.kl_divergence_functions._kl_disc(
+            self.known_p, self.known_q)
+        calc_kl_q_p = metworkpy.divergence.kl_divergence_functions._kl_disc(
+            self.known_q, self.known_p)
 
         self.assertTrue(np.isclose(calc_kl_p_q, self.theory_kl_p_q, rtol=1e-1))
         self.assertTrue(np.isclose(calc_kl_q_p, self.theory_kl_q_p, rtol=1e-1))

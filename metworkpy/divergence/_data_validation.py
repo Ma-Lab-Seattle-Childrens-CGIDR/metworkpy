@@ -27,24 +27,28 @@ def _validate_samples(
         q = _validate_sample(q)
     except ValueError as err:
         raise ValueError(
-            f"p and q must have a maximum of two axes, but p has {len(p.shape)} axes, and q has "
+            f"p and q must have a maximum of two axes, but p has {len(p.shape)} axes, "
+            f"and q has"
             f"{len(q.shape)} axes."
         ) from err
 
     if p.shape[1] != q.shape[1]:
         raise ValueError(
-            f"Both p and q distributions must have the same dimension, but p has a dimension {p.shape[1]} "
+            f"Both p and q distributions must have the same dimension, but p has a "
+            f"dimension {p.shape[1]}"
             f"and q has a dimension {q.shape[1]}"
         )
 
     return p, q
 
 
-# This is just a stub, but can be used to add any additional validation logic to the handling of discrete inputs
+# This is just a stub, but can be used to add any additional validation logic to the
+# handling of discrete inputs
 def _validate_discrete(sample):
     if sample.shape[1] != 1:
         raise ValueError(
-            "For samples from discrete distributions, only a single dimension for the samples is supported"
+            "For samples from discrete distributions, only a single dimension for the "
+            "samples is supported"
             ", sample should have shape (n_samples, 1)."
         )
     return sample
