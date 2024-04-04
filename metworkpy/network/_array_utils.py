@@ -103,12 +103,25 @@ def _split_arr_sign(
 def _sparse_max(*arr_list: csc_array | csr_array) -> csc_array | csr_array:
     """
     Find the element wise max of a list of sparse arrays
+
     :param arr_list: Sequence of csc or csr sparse arrays
     :type arr_list: list[csc_array| csr_array, ...]
     :return: Element wise maximum of sparse arrays
     :rtype: csc_array | csr_array
     """
     return functools.reduce(lambda x, y: x.maximum(y), arr_list)
+
+
+def _sparse_mean(*arr_list: csc_array | csr_array) -> csc_array | csr_array:
+    """
+    Find the element wise max of a list of sparse arrays
+
+    :param arr_list: Sequence of csc or csr sparse arrays
+    :type arr_list: list[csc_array| csr_array, ...]
+    :return: Element wise maximum of sparse arrays
+    :rtype: csc_array | csr_array
+    """
+    return functools.reduce(lambda x, y: x + y, arr_list) / len(arr_list)
 
 
 def _broadcast_mult_arr_vec(arr: csr_array, vec: csc_array):

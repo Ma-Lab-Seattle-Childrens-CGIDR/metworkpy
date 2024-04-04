@@ -18,8 +18,8 @@ import sympy as sym
 
 # define defaults for the iMAT functions
 DEFAULTS = {
-    "epsilon": 1e-2,
-    "threshold": 1e-3,
+    "epsilon": 1e-3,
+    "threshold": 1e-4,
     "tolerance": Configuration().tolerance,
 }
 

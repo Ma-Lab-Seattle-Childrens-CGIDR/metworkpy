@@ -198,6 +198,40 @@ class TestSparseMax(unittest.TestCase):
                 self.arr1, self.arr2, self.arr3) != self.max_arr
              ).toarray().any())
 
+class TestSparseMean(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.arr1 = csr_array([
+            [0, 1, 0],
+            [0, 0, 1],
+            [1, 0, 0],
+        ])
+        cls.arr2 = csr_array([
+            [1, 1, 0],
+            [0, 0, 0],
+            [0, 1, 0],
+        ])
+        cls.arr3 = csr_array([
+            [0, 0, 0],
+            [1, 0, 0],
+            [0, 0, 0],
+        ])
+        cls.mean_arr = csr_array([
+            [1/3, 2/3, 0],
+            [1/3, 0, 1/3],
+            [1/3, 1/3, 0],
+        ])
+
+    def test_sparse_max(self):
+        sparse_mean = metworkpy.network._array_utils._sparse_mean(self.arr1,
+                                                                  self.arr2,
+                                                                  self.arr3)
+        self.assertIsInstance(sparse_mean, csr_array)
+        self.assertTrue(np.isclose(sparse_mean.toarray(),
+                                   self.mean_arr.toarray()).all())
+
+
+
 
 class TestBroadcastMultArrVec(unittest.TestCase):
     @classmethod
