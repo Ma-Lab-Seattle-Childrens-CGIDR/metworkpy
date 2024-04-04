@@ -10,9 +10,10 @@ from scipy import sparse
 from scipy.sparse import sparray, csr_array
 
 # Local Imports
-from metworkpy.graph._array_utils import (_split_arr_col, _split_arr_sign,
+from metworkpy.network._array_utils import (_split_arr_col, _split_arr_sign,
                                           _split_arr_row, _sparse_max,
                                           _broadcast_mult_arr_vec)
+from metworkpy.utils._arguments import _parse_str_args_dict
 
 
 # region Main Function
@@ -25,7 +26,20 @@ def create_graph(model: cobra,
 def create_adjacency_matrix(model: cobra,
                             weighted: bool,
                             directed: bool,
-                            sparse: bool = True) -> ArrayLike | sparray:
+                            out_format: str = "Frame") -> ArrayLike | sparray:
+    try:
+        out_format = _parse_str_args_dict(out_format, {
+            "frame":["dataframe", "frame"],
+            "dok": ["dok", "dictionary of keys", "dictionary_of_keys",
+                    "dictionary-of-keys"],
+            "lil": ["lil", "list of lists", "list-of-lists", "list_of_lists"],
+            "csc": ["csc", "condensed sparse columns", "condensed-sparse-columns",
+                    "condensed_sparse_columns"],
+            "csr": ["csr", "condensed sparse rows", "condensed-sparse-rows",
+                    "condensed_sparse_rows"]
+        })
+    except ValueError as err:
+        raise ValueError("Couldn't parse format") from err
     pass
 
 

@@ -10,7 +10,9 @@ import numpy as np
 
 def _parse_str_args_list(arg: str, arg_list: List[str]) -> str:
     """
-    Function to decide which string argument from a list of arguments is trying to be passed
+    Function to decide which string argument from a list of arguments is trying to be
+    passed
+
     :param arg: Argument to parse
     :type arg: str
     :param arg_list: List of possible arguments to match against
@@ -30,8 +32,9 @@ def _parse_str_args_list(arg: str, arg_list: List[str]) -> str:
 
 def _parse_str_args_dict(arg: str, arg_dict: Dict[str, List]) -> str:
     """
-    Function to decide which group of arguments given as values in a dictionary the argument matches, returns the key
-    for that group.
+    Function to decide which group of arguments given as values in a dictionary the
+    argument matches, returns the key for that group.
+
     :param arg: Argument to match
     :type arg: str
     :param arg_dict: Dictionary defining argument groups
@@ -49,7 +52,8 @@ def _parse_str_args_dict(arg: str, arg_dict: Dict[str, List]) -> str:
     if len(filtered_groups) == 1:
         return filtered_groups[0]
     raise ValueError(
-        f"Argument could match more than one argument group in arg_dict: {filtered_groups}"
+        f"Argument could match more than one argument group in arg_dict: "
+        f"{filtered_groups}"
     )
 
 

@@ -8,8 +8,8 @@ import numpy as np
 from scipy.sparse import csr_array, csc_array
 
 # Local Imports
-import metworkpy.graph._array_utils
-from metworkpy.graph._array_utils import _broadcast_mult_arr_vec
+import metworkpy.network._array_utils
+from metworkpy.network._array_utils import _broadcast_mult_arr_vec
 
 
 class TestSplitArrayColumns(unittest.TestCase):
@@ -37,7 +37,7 @@ class TestSplitArrayColumns(unittest.TestCase):
 
     def test_numpy(self):
         # Split into 2 sub-arrays
-        arr1, arr2 = metworkpy.graph._array_utils._split_arr_col(self.test_arr_np,
+        arr1, arr2 = metworkpy.network._array_utils._split_arr_col(self.test_arr_np,
                                                                  into=2)
         self.assertTupleEqual(arr1.shape, (4, 5))
         self.assertTupleEqual(arr2.shape, (4, 5))
@@ -52,7 +52,7 @@ class TestSplitArrayColumns(unittest.TestCase):
 
 
 def _split_arr_col_helper(test_obj: TestSplitArrayColumns, array_format):
-    arr1, arr2 = metworkpy.graph._array_utils._split_arr_col(
+    arr1, arr2 = metworkpy.network._array_utils._split_arr_col(
         array_format(test_obj.test_arr_np), into=2)
     test_obj.assertIsInstance(arr1, array_format)
     test_obj.assertIsInstance(arr2, array_format)
@@ -88,7 +88,7 @@ class TestSplitArrayRows(unittest.TestCase):
 
     def test_numpy(self):
         # Split into 2 sub-arrays
-        arr1, arr2 = metworkpy.graph._array_utils._split_arr_row(self.test_arr_np,
+        arr1, arr2 = metworkpy.network._array_utils._split_arr_row(self.test_arr_np,
                                                                  into=2)
         self.assertTupleEqual(arr1.shape, (5, 4))
         self.assertTupleEqual(arr2.shape, (5, 4))
@@ -103,7 +103,7 @@ class TestSplitArrayRows(unittest.TestCase):
 
 
 def _split_arr_row_helper(test_obj: TestSplitArrayColumns, array_format):
-    arr1, arr2 = metworkpy.graph._array_utils._split_arr_row(
+    arr1, arr2 = metworkpy.network._array_utils._split_arr_row(
         array_format(test_obj.test_arr_np), into=2)
     test_obj.assertIsInstance(arr1, array_format)
     test_obj.assertIsInstance(arr2, array_format)
@@ -142,7 +142,7 @@ class TestSplitArrSign(unittest.TestCase):
         ])
 
     def test_numpy(self):
-        pos_arr, neg_arr = metworkpy.graph._array_utils._split_arr_sign(
+        pos_arr, neg_arr = metworkpy.network._array_utils._split_arr_sign(
             self.test_arr_np)
         self.assertTupleEqual(pos_arr.shape, self.test_arr_np.shape)
         self.assertTupleEqual(neg_arr.shape, self.test_arr_np.shape)
@@ -158,7 +158,7 @@ class TestSplitArrSign(unittest.TestCase):
 
 
 def _split_sign_sparse_helper(test_obj, array_format):
-    pos_arr, neg_arr = metworkpy.graph._array_utils._split_arr_sign(
+    pos_arr, neg_arr = metworkpy.network._array_utils._split_arr_sign(
         array_format(test_obj.test_arr_np))
     test_obj.assertIsInstance(pos_arr, array_format)
     test_obj.assertTupleEqual(pos_arr.shape, test_obj.test_arr_np.shape)
@@ -194,7 +194,7 @@ class TestSparseMax(unittest.TestCase):
 
     def test_sparse_max(self):
         self.assertFalse(
-            (metworkpy.graph._array_utils._sparse_max(
+            (metworkpy.network._array_utils._sparse_max(
                 self.arr1, self.arr2, self.arr3) != self.max_arr
              ).toarray().any())
 

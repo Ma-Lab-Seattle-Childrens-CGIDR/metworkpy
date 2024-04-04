@@ -22,11 +22,7 @@ def read_model(model_path, file_type=None):
         model_path = str(model_path)
         file_type = model_path.split(".")[-1]
     file_type = _parse_file_type(file_type)
-    if file_type == "joblib":
-        from joblib import load
-
-        model = load(model_path)
-    elif file_type == "pickle":
+    if file_type == "pickle":
         import pickle
 
         with open(model_path, "rb") as f:
@@ -68,11 +64,7 @@ def write_model(model, model_path, file_type=None):
         model_path = str(model_path)
         file_type = model_path.split(".")[-1]
     file_type = _parse_file_type(file_type)
-    if file_type == "joblib":
-        from joblib import dump
-
-        dump(model, model_path)
-    elif file_type == "pickle":
+    if file_type == "pickle":
         import pickle
 
         with open(model_path, "wb") as f:
@@ -333,7 +325,6 @@ def _check_expression_eq(expr1, expr2, verbose=False) -> bool:
     :rtype: bool
     """
     if parse_expr(str(expr1)) - parse_expr(str(expr2)) != 0:
-        print("ENTERED IF STATEMENT")
         if verbose:
             print(f"Expressions {expr1} and {expr2} are not equal")
         return False
