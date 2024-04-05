@@ -1,0 +1,74 @@
+{
+"metabolites":[
+{
+"id":"A",
+"name":"Metabolite A",
+"compartment":"c",
+"formula":"CH4"
+},
+{
+"id":"B",
+"name":"Metabolite B",
+"compartment":"c",
+"formula":"C2H6"
+},
+{
+"id":"C",
+"name":"Metabolite C",
+"compartment":"c",
+"formula":"C3H10"
+}
+],
+"reactions":[
+{
+"id":"R_A_B_C",
+"name":"Main Reaction",
+"metabolites":{
+"A":-1.0,
+"B":-1.0,
+"C":1.0
+},
+"lower_bound":-100.0,
+"upper_bound":100.0,
+"gene_reaction_rule":"",
+"objective_coefficient":1.0,
+"subsystem":"Main Reaction System"
+},
+{
+"id":"R_A_ex",
+"name":"A exchange",
+"metabolites":{
+"A":-1
+},
+"lower_bound":-50.0,
+"upper_bound":50.0,
+"gene_reaction_rule":""
+},
+{
+"id":"R_B_ex",
+"name":"B exchange",
+"metabolites":{
+"B":-1
+},
+"lower_bound":-50.0,
+"upper_bound":50.0,
+"gene_reaction_rule":""
+},
+{
+"id":"R_C_ex",
+"name":"C exchange",
+"metabolites":{
+"C":-1
+},
+"lower_bound":0.0,
+"upper_bound":50.0,
+"gene_reaction_rule":""
+}
+],
+"genes":[],
+"id":"tiny_model",
+"compartments":{
+"c":""
+},
+"version":"1"
+}
