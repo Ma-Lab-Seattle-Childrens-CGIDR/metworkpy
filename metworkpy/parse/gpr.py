@@ -27,8 +27,26 @@ def gene_to_rxn_weights(
     :type fill_val: Any
     :return: A series of reaction weights
     :rtype: pd.Series
+    
+    .. note:
+       The fill value is applied to fill NaN values after the GPR rules have been
+       applied.  
+       If there are genes missing from the expression data, they will silently be
+       assigned a value of 0 before the GPR processing is performed. 
     """
+    # Check that all genes in the model are in the gene expression data, 
+    # and if not add them with a weight of 0
+    model_genes = set(model.genes.list_attr("id"))
+    expr_genes = set(gene_weights.index)
+    missing_genes = list(model_genes - expr_genes)
+    if missing_genes:
+        missing_genes_series = pd.Series(0,index=missing_genes)
+        gene_weights = pd.concat([gene_weights, missing_genes_series])
+    
+    # Create the rxn_weight series, filled with all 0
     rxn_weights = pd.Series(0, index=[rxn.id for rxn in model.reactions])
+    
+    # For each reaction, trinarize it based on the expression data
     for rxn in model.reactions:
         gpr = rxn.gene_reaction_rule
         rxn_weights[rxn.id] = eval_gpr(gpr, gene_weights, fn_dict)

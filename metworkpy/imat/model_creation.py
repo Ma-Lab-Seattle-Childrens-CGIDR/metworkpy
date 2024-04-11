@@ -35,6 +35,7 @@ def generate_model(
         epsilon: float = DEFAULTS["epsilon"],
         threshold: float = DEFAULTS["threshold"],
         objective_tolerance: float = DEFAULTS["objective_tolerance"],
+        **kwargs,
 ):
     """
     Generate a context specific model using iMAT.
@@ -75,18 +76,18 @@ def generate_model(
     method = _parse_method(method)
     if method == "imat_constraint":
         return imat_constraint_model(
-            model, rxn_weights, epsilon, threshold, objective_tolerance
+            model, rxn_weights, epsilon, threshold, objective_tolerance, **kwargs
         )
     elif method == "simple_bounds":
-        return simple_bounds_model(model, rxn_weights, epsilon, threshold)
+        return simple_bounds_model(model, rxn_weights, epsilon, threshold, **kwargs)
     elif method == "subset":
-        return subset_model(model, rxn_weights, epsilon, threshold)
+        return subset_model(model, rxn_weights, epsilon, threshold, **kwargs)
     elif method == "fva":
         return fva_model(
-            model, rxn_weights, epsilon, threshold, objective_tolerance
+            model, rxn_weights, epsilon, threshold, objective_tolerance, **kwargs
         )
     elif method == "milp":
-        return milp_model(model, rxn_weights, epsilon, threshold)
+        return milp_model(model, rxn_weights, epsilon, threshold, **kwargs)
     else:
         raise ValueError(
             f"Invalid method: {method}. Valid methods are: 'simple_bounds', \
@@ -486,15 +487,24 @@ def _parse_method(method: str) -> str:
                     "subset_ko",
                     "eliminate-below-threshold",
                     "eliminate_below_threshold",
+                    "subset-model",
+                    "subset_model",
+                    "subset model"
                 ],
                 "fva": [
                     "fva",
                     "flux_variability_analysis",
                     "flux-variability-analysis",
                     "flux variability analysis",
+                    "fva_model",
+                    "fva-model",
+                    "fva model"
                 ],
                 "milp": [
                     "milp",
+                    "milp-model",
+                    "milp_model",
+                    "milp model"
                     "mixed_integer_linear_programming",
                     "mixed integer linear programming",
                     "mixed-integer-linear-programming",
@@ -503,8 +513,8 @@ def _parse_method(method: str) -> str:
         )
     except ValueError as err:
         raise ValueError(
-            f"Invalid method: {method}. Valid methods are: 'simple_bounds', \
-                        'imat_restrictions', "
+            f"Invalid method: {method}. Valid methods are: 'simple_bounds', "
+            f"'imat_restrictions', "
             f"'eliminate_below_threshold', 'fva', 'milp'."
         ) from err
 
