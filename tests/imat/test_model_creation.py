@@ -244,16 +244,16 @@ class TestHelperFunctions(unittest.TestCase):
         test_df = pd.DataFrame(
             {
                 "inactive": [np.NaN, 1, 3, 3, 2, 1],
-                "forward": [1, 2, 3, 2, 3, 1],
-                "reverse": [2, 3, 2, 2, 2, 2],
+                "forward":       [1, 2, 3, 2, 3, 1],
+                "reverse":       [2, 3, 2, 2, 2, 2],
             },
             index=["A", "B", "C", "D", "E", "F"],
         )
         actual_results = test_df.apply(_milp_eval, axis=1).replace(
-            {np.NaN: -1}
+            {np.NaN: -2}
         )
         expected_results = pd.Series(
-            [-1, 2, -1, 0, 1, 2], index=["A", "B", "C", "D", "E", "F"]
+            [-2, -1, -2, 0, 1, -1], index=["A", "B", "C", "D", "E", "F"]
         )
         self.assertTrue(np.all(actual_results == expected_results))
 

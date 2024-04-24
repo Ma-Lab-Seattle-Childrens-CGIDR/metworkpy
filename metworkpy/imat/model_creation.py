@@ -7,6 +7,7 @@ from typing import Union
 # External Imports
 import cobra
 import numpy as np
+import optlang.interface
 import pandas as pd
 import sympy as sym
 
@@ -20,9 +21,9 @@ from metworkpy.utils import _arguments
 
 # define defaults for the iMAT functions
 DEFAULTS = {
-    "epsilon": 1e-2,
+    "epsilon": 1.,
     "objective_tolerance": 5e-2,
-    "threshold": 1e-3,
+    "threshold": 1e-1,
     "tolerance": 1e-7,
 }
 
@@ -49,10 +50,10 @@ def generate_model(
         'imat_restrictions', 'simple_bounds', 'eliminate_below_threshold',
         'fva', 'milp'.
     :type method: str
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to  be considered on.
     :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-1).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :param objective_tolerance: The tolerance for the objective value
@@ -111,10 +112,10 @@ def imat_constraint_model(
     :type model: cobra.Model
     :param rxn_weights: A dictionary or pandas series of reaction weights.
     :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to be considered on.
     :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-1).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :param objective_tolerance: The tolerance for the objective value.
@@ -173,10 +174,10 @@ def simple_bounds_model(model, rxn_weights, epsilon, threshold):
     :type model: cobra.Model
     :param rxn_weights: A dictionary or pandas series of reaction weights.
     :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to be considered on.
     :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-1).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :return: A context specific cobra.Model.
@@ -197,6 +198,8 @@ def simple_bounds_model(model, rxn_weights, epsilon, threshold):
     """
     updated_model = model.copy()
     imat_solution = imat(model, rxn_weights, epsilon, threshold)
+    if imat_solution.status != 'optimal':
+        raise ValueError("No optimal solution found for IMAT problem")
     fluxes = imat_solution.fluxes
     rl = rxn_weights[rxn_weights < 0].index.tolist()
     rh = rxn_weights[rxn_weights > 0].index.tolist()
@@ -236,10 +239,10 @@ def subset_model(model, rxn_weights, epsilon, threshold):
     :type model: cobra.Model
     :param rxn_weights: A dictionary or pandas series of reaction weights.
     :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to be considered on.
     :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-1).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :return: A context specific cobra.Model.
@@ -253,6 +256,8 @@ def subset_model(model, rxn_weights, epsilon, threshold):
     """
     updated_model = model.copy()
     imat_solution = imat(model, rxn_weights, epsilon, threshold)
+    if imat_solution.status != 'optimal':
+        raise ValueError("No optimal solution found for IMAT problem")
     fluxes = imat_solution.fluxes
     rl = rxn_weights[rxn_weights < 0].index.tolist()
     inactive_reactions = fluxes[
@@ -283,10 +288,10 @@ def fva_model(
     :type model: cobra.Model
     :param rxn_weights: A dictionary or pandas series of reaction weights.
     :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to be considered on.
     :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-1).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :param objective_tolerance: The tolerance for the objective value.
@@ -312,12 +317,13 @@ def fva_model(
     updated_model = model.copy()
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
     add_imat_objective_(imat_model, rxn_weights)
+    reactions = rxn_weights[~np.isclose(rxn_weights, 0)].index.tolist()
     fva_res = cobra.flux_analysis.flux_variability_analysis(
         imat_model,
         fraction_of_optimum=(1 - objective_tolerance),
         loopless=loopless,
+        reaction_list=reactions
     ).dropna()
-    reactions = rxn_weights[~np.isclose(rxn_weights, 0)].index.tolist()
     for rxn in reactions:
         reaction = updated_model.reactions.get_by_id(rxn)
         reaction.bounds = (
@@ -336,10 +342,10 @@ def milp_model(model, rxn_weights, epsilon, threshold):
     :type model: cobra.Model
     :param rxn_weights: A dictionary or pandas series of reaction weights.
     :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to be considered on.
     :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-1).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :return: A context specific cobra.Model.
@@ -358,13 +364,14 @@ def milp_model(model, rxn_weights, epsilon, threshold):
     updated_model = model.copy()
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
     add_imat_objective_(imat_model, rxn_weights)
+    reactions = rxn_weights[~np.isclose(rxn_weights, 0)].index.tolist()
     milp_results = pd.DataFrame(
         np.nan,
         columns=["inactive", "forward", "reverse"],
-        index=imat_model.reactions.list_attr("id"),
+        index=reactions,
         dtype=float,
     )
-    for rxn in milp_results.index:
+    for rxn in reactions:
         with imat_model as ko_model:  # Knock out the reaction
             reaction = ko_model.reactions.get_by_id(rxn)
             if (
@@ -391,7 +398,7 @@ def milp_model(model, rxn_weights, epsilon, threshold):
                     forward=True,
                 )
                 forward_solution = forward_model.slim_optimize(
-                    error_value=np.nan
+                    error_value=-1.
                 )
         with imat_model as reverse_model:
             reaction = reverse_model.reactions.get_by_id(rxn)
@@ -406,39 +413,34 @@ def milp_model(model, rxn_weights, epsilon, threshold):
                     forward=False,
                 )
                 reverse_solution = reverse_model.slim_optimize(
-                    error_value=np.nan
+                    error_value=-1.
                 )
         milp_results.loc[rxn, :] = [
             ko_solution,
             forward_solution,
             reverse_solution,
         ]
-    milp_results["results"] = (
-        milp_results.apply(_milp_eval, axis=1)
-        .replace({-1: np.NaN})
-        .replace({2: -1})
-        .dropna()
-    )
+    final_results = milp_results.apply(_milp_eval, axis=1).dropna()
     # Now 0 is inactive, 1 is forward, -1 is reverse, nan is under determined
-    for rxn in milp_results.index:
+    for rxn in reactions:
         if pd.isna(
-                milp_results.loc[rxn, "results"]
+                final_results[rxn]
         ):  # skip under-determined reactions
             # should never actually happen due to drop na, but here for safety
             continue
         reaction = updated_model.reactions.get_by_id(rxn)
-        if milp_results.loc[rxn, "results"] == 0:  # inactive
+        if final_results[rxn] == 0:  # inactive
             reaction.bounds = _inactive_bounds(
                 reaction.lower_bound, reaction.upper_bound, threshold
             )
-        elif milp_results.loc[rxn, "results"] == 1:  # forward
+        elif final_results[rxn] == 1:  # forward
             reaction.bounds = _active_bounds(
                 reaction.lower_bound,
                 reaction.upper_bound,
                 epsilon,
                 forward=True,
             )
-        elif milp_results.loc[rxn, "results"] == -1:  # reverse
+        elif final_results[rxn] == -1:  # reverse
             reaction.bounds = _active_bounds(
                 reaction.lower_bound,
                 reaction.upper_bound,
@@ -573,15 +575,21 @@ def _active_bounds(
 def _milp_eval(milp_res: pd.Series) -> float:
     """
     Function for evaluating the results of the MILP method, to determine if a \
-        reaction should be considered active or
-    inactive.
+        reaction should be considered active or inactive. Returns 1 if
+        forced forward, -1 if forced reverse, 0 if inactive, and NaN if
+        under determined.
     """
     if pd.isna(milp_res).any():
         return np.nan
     if (
             len(np.unique(milp_res)) == 3
-    ):  # All three values are unique, return index of greatest value
-        return np.argmax(milp_res)
+    ):  # Find which is max, then return based on that
+        max_ind = np.argmax(milp_res)
+        if max_ind > 1:
+            res = -1
+        else:
+            res = max_ind
+        return res
     elif (milp_res["forward"] == milp_res["reverse"]) and (
             milp_res["inactive"] > milp_res["forward"]
     ):
@@ -599,7 +607,7 @@ def _milp_eval(milp_res: pd.Series) -> float:
     ):
         # Forced inactive, and forward are the same, and reverse is
         # greater than both, so reverse
-        return 2
+        return -1
     else:
         # Under-determined case, return nan
         return np.nan
