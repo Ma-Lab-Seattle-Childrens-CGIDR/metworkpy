@@ -292,7 +292,7 @@ def _imat_pos_weight_(model: cobra.Model, rxn: str, epsilon: float) -> None:
     )
     model.solver.add(y_pos)
     forward_constraint = model.solver.interface.Constraint(
-        reaction_flux + y_pos * (lb - epsilon),
+        reaction_flux + (y_pos * (lb - epsilon)),
         lb=lb,
         name=f"forward_constraint_{reaction.id}",
     )
