@@ -154,6 +154,29 @@ class TestConversionToWeights(unittest.TestCase):
         actual = expr_to_weights(test_series, quantile)
         self.assertTrue(np.all(actual == expected))
 
+    def test_dataframe_conversion(self):
+        test_frame = pd.DataFrame({
+            "A":[-4, -4, -3, -2, -1, 0, 2, 2, 3, 5, 5],
+            "B":[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
+            "C":[-6, -4, -3, -2, -1, 0, 0, 2, 3, 3, 5],
+        })
+        expected = pd.Series([-1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1])
+        actual = expr_to_weights(test_frame, quantile=(0.1, 0.9))
+        self.assertTrue(np.all(actual == expected))
+
+    def test_subset_genes(self):
+        test_series = pd.Series(
+            [-1,-1,-1,-1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1],
+            index = ["A","B","C","D","E","F","G","H","I","J",
+                     "K","L","M","N","O","P","Q","R","S"]
+        )
+        subset = ["A","D","E","F","G","H","I","J","K","L","M","S","Z"]
+        result_series = expr_to_weights(test_series, quantile=(0.1,0.9),
+                                        subset=subset)
+        self.assertEqual(result_series["Z"], 0)
+        self.assertEqual(result_series["A"], -1)
+        self.assertEqual(result_series["S"], 1)
+
 
 if __name__ == '__main__':
     unittest.main()

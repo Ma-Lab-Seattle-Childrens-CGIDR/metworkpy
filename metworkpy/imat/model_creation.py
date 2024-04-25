@@ -586,9 +586,9 @@ def _milp_eval(milp_res: pd.Series) -> float:
     ):  # Find which is max, then return based on that
         max_ind = np.argmax(milp_res)
         if max_ind > 1:
-            res = -1
+            res = -1  # reverse is the max
         else:
-            res = max_ind
+            res = max_ind  # Index corresponds to which is max
         return res
     elif (milp_res["forward"] == milp_res["reverse"]) and (
             milp_res["inactive"] > milp_res["forward"]

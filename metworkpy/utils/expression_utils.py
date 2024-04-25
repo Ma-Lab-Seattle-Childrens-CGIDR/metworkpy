@@ -3,7 +3,7 @@ Module containing utility functions for working with gene expression
 data, and converting it into qualitative weights
 """
 # Standard library imports
-from typing import Callable, Union
+from typing import Callable, Union, Iterable
 from warnings import warn
 
 # External imports
@@ -11,12 +11,14 @@ import numpy as np
 from numpy.typing import ArrayLike
 import pandas as pd
 
+
 # Local imports
 
 
 def expr_to_weights(expression: Union[pd.Series, pd.DataFrame],
                     quantile: Union[float, tuple[float, float]] = 0.15,
                     aggregator: Callable[[ArrayLike], float] = np.median,
+                    subset: Iterable = None,
                     sample_axis: Union[int, str] = 1,
                     ) -> pd.Series:
     """
@@ -37,6 +39,11 @@ def expr_to_weights(expression: Union[pd.Series, pd.DataFrame],
         across samples, only used if expression is a DataFrame (default
         median).
     :type aggregator: Callable[[np.ArrayLike], float]
+    :param subset: Subset of genes to perform calculations on. `expression` is
+        filtered to only include these genes before quantiles are calculated. If
+        any genes are present in the subset, but not in expression, they will be
+        assigned a value of 0 following the trinarization.
+    :type subset: Iterable
     :param sample_axis: Which axis represents samples in the expression
         data (only used if expression is DataFrame). "index" or 0 if rows
         represent different samples, "column" or 1 if columns represent
@@ -57,9 +64,18 @@ def expr_to_weights(expression: Union[pd.Series, pd.DataFrame],
         quantile = (quantile, 1 - quantile)
     if isinstance(expression, pd.DataFrame):
         expression = expression.apply(aggregator, axis=sample_axis)
+    if not subset:
+        low, high = np.quantile(expression, quantile)
+        return expression.map(
+            lambda x: -1 if x <= low else (1 if x >= high else 0))
+    # Only use subset genes which are in expression
+    subset_genes = [gene for gene in subset if gene in expression.index]
+    expression = expression[subset_genes]
+    result_series = pd.Series(0, index=subset)
     low, high = np.quantile(expression, quantile)
-    return expression.map(
-        lambda x: -1 if x <= low else (1 if x >= high else 0))
+    result_series[subset_genes] = expression.map(
+        lambda x: -1 if x <= low else (1 if x >= high else 0))[subset_genes]
+    return result_series
 
 
 # region Conversion functions
