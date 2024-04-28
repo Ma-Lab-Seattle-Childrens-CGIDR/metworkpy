@@ -25,6 +25,7 @@ def create_network(model: cobra,
                    weighted: bool,
                    directed: bool,
                    weight_by: str = "stoichiometry",
+                   metabolites_to_remove: list[str] | None = None,
                    reaction_data: list[str] | None = None,
                    metabolite_data: list[str] | None = None,
                    reciprocal_weights: bool = False,
@@ -47,11 +48,17 @@ def create_network(model: cobra,
     :type weight_by: str
     :param reaction_data: List of additional attributes to include as node attributes
         for each reaction
-    :type reaction_data: list[str]
+    :type reaction_data: list[str] | None
+    :param metabolites_to_remove: List of any metabolites that should be removed from
+        the final network. This can be used to remove metabolites that participate
+        in a large number of reactions, but are not desired in downstream analysis
+        such as water, or ATP. Each metabolite should be the string ID associated with
+        them in the cobra model.
+    :type metabolites_to_remove: list[str] | None
     :param metabolite_data: List of additional data to include as node
         attributes for each metabolite. Must be an attribute of the
         metabolites in the cobra Model
-    :type metabolite_data: list[str]
+    :type metabolite_data: list[str] | None
     :param reciprocal_weights: Whether to use the reciprocal of the weights, useful
         if higher flux should equate with lower weights in the final network
         (for use with graph algorithms)
@@ -110,6 +117,7 @@ def create_network(model: cobra,
                                      dtype="string")
         for data_type in reaction_data:
             node_info_rxn[data_type] = model.reactions.list_attr(data_type)
+        node_info_rxn["node_type"] = "reaction"
 
         out_network.add_nodes_from((n, dict(d)) for n, d in node_info_rxn.iterrows())
 
@@ -120,9 +128,11 @@ def create_network(model: cobra,
                                      dtype="string")
         for data_type in metabolite_data:
             node_info_met[data_type] = model.metabolites.list_attr(data_type)
-
+        node_info_met["node_type"] = "metabolite"
         out_network.add_nodes_from((n, dict(d)) for n, d in node_info_met.iterrows())
-
+    # Remove any metabolites desired
+    if metabolites_to_remove:
+        out_network.remove_nodes_from(metabolites_to_remove)
     return out_network
 
 
