@@ -481,15 +481,23 @@ test = ["pytest"]
 
 [[package]]
 name = "cplex"
-version = "22.1.1.1"
+version = "22.1.1.2"
 description = "A Python interface to the CPLEX Callable Library, Community Edition."
 optional = true
 python-versions = "*"
 files = [
-    {file = "cplex-22.1.1.1-cp311-cp311-macosx_10_6_x86_64.whl", hash = "sha256:9a2bc9d03e41e7b23e78b0442a0492444ca8163f16b4137f825bc9b295e5ed6a"},
-    {file = "cplex-22.1.1.1-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:c5c031afe9fef89c9a2ec76e0151befc8ace47ee1a21b9893939c29f5a1f5c2e"},
-    {file = "cplex-22.1.1.1-cp311-cp311-manylinux2014_ppc64le.whl", hash = "sha256:e1360abf1726aa4a7cc0efa76f8d9e961f4ac419a0b682de6df664e14473fcc1"},
-    {file = "cplex-22.1.1.1-cp311-cp311-win_amd64.whl", hash = "sha256:a7775d3754afeae9b9f882c2aa5084867731cb70ab73a0ea50bb48a5c172ce8b"},
+    {file = "cplex-22.1.1.2-cp310-cp310-macosx_10_6_x86_64.whl", hash = "sha256:d74a91f6e9c6f4ad4c7c69f7ab937ea9e91178a556f6f105c87eef9e434ea42e"},
+    {file = "cplex-22.1.1.2-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:a7230032928b1a657c384d3f49c04d8b80d0ab8134a2f4c0b26ff50e71ec767a"},
+    {file = "cplex-22.1.1.2-cp310-cp310-manylinux2014_ppc64le.whl", hash = "sha256:dd81e8ee7a7f1fb5769bcbb1349b084b37c495cbd0db1a095d774f97d790ee3c"},
+    {file = "cplex-22.1.1.2-cp310-cp310-win_amd64.whl", hash = "sha256:68b33bb9ff84be3442a6f71000e7214781c6aa8674143a9aa79cb9a84e697dfd"},
+    {file = "cplex-22.1.1.2-cp311-cp311-macosx_10_6_x86_64.whl", hash = "sha256:cda2f59af50d6c3d6476b2e38aba1e947f9bd72591d71961a9d53b5582062ba9"},
+    {file = "cplex-22.1.1.2-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:2a0f6984980779e6878a6cded52ee08806bae49af6bd209c7740549417e69e96"},
+    {file = "cplex-22.1.1.2-cp311-cp311-manylinux2014_ppc64le.whl", hash = "sha256:0ac0005414a09facbeaa976a89b3153d4ed15f23a89bf5d283f65d4e951f63be"},
+    {file = "cplex-22.1.1.2-cp311-cp311-win_amd64.whl", hash = "sha256:46550cac476d74cc95dc3abf6f9bfe08c9fd61d889e20f2028f754b9fe503b88"},
+    {file = "cplex-22.1.1.2-cp39-cp39-macosx_10_6_x86_64.whl", hash = "sha256:21f6fd1ad4876a7775e64fe8a1fb43f6bb7a010c5e099abdb8c01887a8cc1d84"},
+    {file = "cplex-22.1.1.2-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:3211f9c84f44c6317ea1e83a6c2ff1cfdc08532f421987b7faa8c07a018dfae5"},
+    {file = "cplex-22.1.1.2-cp39-cp39-manylinux2014_ppc64le.whl", hash = "sha256:648ad8c1c83ea30b0802c571a0dbf7fac23dcb9dc121ea0768c1794313aec2a7"},
+    {file = "cplex-22.1.1.2-cp39-cp39-win_amd64.whl", hash = "sha256:285b26008a77942c6c9c29bff91e1658c1beed2aa520e1a8b26137d81abf81dc"},
 ]
 
 [[package]]

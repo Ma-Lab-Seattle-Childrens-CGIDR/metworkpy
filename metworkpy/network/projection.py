@@ -88,7 +88,7 @@ def _directed_projection(network: nx.DiGraph,
                          node_set: Iterable,
                          weight: Callable[[float, float], float],
                          attr: str = "weight") -> nx.DiGraph:
-    res_graph = network.subgraph(nodes=node_set)
+    res_graph = network.subgraph(nodes=node_set).copy()
     for node in network.nodes():
         if node in res_graph:
             continue
@@ -116,7 +116,7 @@ def _unirected_projection(network: nx.Graph,
                           node_set: Iterable,
                           weight: Callable[[float, float], float],
                           attr: str = "weight") -> nx.Graph:
-    res_graph = network.subgraph(nodes=node_set)
+    res_graph = network.subgraph(nodes=node_set).copy()
     for node in network.nodes():
         if node in res_graph:
             continue

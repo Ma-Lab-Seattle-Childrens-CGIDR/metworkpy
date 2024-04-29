@@ -22,7 +22,8 @@ __all__ = [
     "gene_to_reaction_dict",
     "reaction_to_gene_df",
     "reaction_to_gene_dict",
-    "reaction_to_gene_list"
+    "reaction_to_gene_list",
+    "bipartite_project"
 ]
 
 from metworkpy import utils, imat, parse, information, divergence, network
@@ -37,4 +38,5 @@ from metworkpy.information import mutual_information
 from metworkpy.divergence import kl_divergence, js_divergence
 
 from metworkpy.network import (create_network, create_adjacency_matrix,
-                               label_density, find_dense_clusters)
+                               label_density, find_dense_clusters,
+                               bipartite_project)

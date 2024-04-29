@@ -102,6 +102,22 @@ def gene_to_reaction_df(model: cobra.Model,
                         how: Literal[
                             "left", "right", "outer", "inner", "cross"] = "left"
                         ) -> pd.DataFrame:
+    """
+    Translate from a dataframe indexed by gene symbols to one indexed by reaction ids
+
+    :param model: Cobra model to use for translating
+    :type model: cobra.Model
+    :param gene_df: DataFrame to translate, should be indexed by genes
+    :type gene_df: pd.DataFrame
+    :param how: When the reaction-indexed dataframe is joined to the
+        gene-indexed dataframe, what type of join should be used
+        (see Pandas `Merge`_ documentation)
+    :type how: Literal["left", "right", "outer", "inner", "cross"]
+    :return: Dataframe indexed by gene
+    :rtype: pd.DataFrame
+
+    .. _Merge: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html
+    """
     gene_list = gene_df.index.to_list()
     gene_reaction_dict = {"genes": [], "reactions": []}
     for gene in gene_list:
@@ -117,6 +133,22 @@ def reaction_to_gene_df(model: cobra.Model,
                         how: Literal[
                             "left", "right", "outer", "inner", "cross"] = "left"
                         ) -> pd.DataFrame:
+    """
+    Translate from a dataframe indexed by reaction ids to one indexed by gene symbols
+
+    :param model: Cobra model to use for translating
+    :type model: cobra.Model
+    :param reaction_df: DataFrame to translate, should be indexed by reactions
+    :type reaction_df: pd.DataFrame
+    :param how: When the gene-indexed dataframe is joined to the
+        reaction-indexed dataframe, what type of join should be used
+        (see Pandas `Merge`_ documentation)
+    :type how: Literal["left", "right", "outer", "inner", "cross"]
+    :return: Dataframe indexed by gene
+    :rtype: pd.DataFrame
+
+    .. _Merge: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html
+    """
     rxn_list = reaction_df.index.to_list()
     rxn_gene_dict = {"genes": [], "reactions": []}
     for rxn in rxn_list:
