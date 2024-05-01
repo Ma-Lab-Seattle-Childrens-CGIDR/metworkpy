@@ -2,27 +2,30 @@
 Module containing utility functions for working with gene expression
 data, and converting it into qualitative weights
 """
+from __future__ import annotations
+
 # Standard library imports
 from typing import Callable, Union, Iterable
 from warnings import warn
 
 # External imports
 import numpy as np
+from numpy._typing import ArrayLike
 from numpy.typing import ArrayLike
 import pandas as pd
 
 
 # Local imports
 
-
-def expr_to_weights(expression: Union[pd.Series, pd.DataFrame],
-                    quantile: Union[float, tuple[float, float]] = 0.15,
-                    aggregator: Callable[[ArrayLike], float] = np.median,
-                    subset: Iterable = None,
-                    sample_axis: Union[int, str] = 1,
-                    ) -> pd.Series:
+# region IMAT weights function
+def expr_to_gene_weights(expression: Union[pd.Series, pd.DataFrame],
+                         quantile: Union[float, tuple[float, float]] = 0.15,
+                         aggregator: Callable[[ArrayLike], float] = np.median,
+                         subset: Iterable = None,
+                         sample_axis: Union[int, str] = 1,
+                         ) -> pd.Series:
     """
-    Convert gene expression data to qualitative weights
+    Convert gene expression data to qualitative gene weights
 
     :param expression: Normalized gene expression data. If it is a DataFrame
         representing multiple samples, those samples will be aggregated
@@ -68,7 +71,7 @@ def expr_to_weights(expression: Union[pd.Series, pd.DataFrame],
         low, high = np.quantile(expression, quantile)
         return expression.map(
             lambda x: -1 if x <= low else (1 if x >= high else 0))
-    # Only use subset genes which are in expression
+    # Only use subset genes which are in expression data
     subset_genes = [gene for gene in subset if gene in expression.index]
     expression = expression[subset_genes]
     result_series = pd.Series(0, index=subset)
@@ -77,6 +80,76 @@ def expr_to_weights(expression: Union[pd.Series, pd.DataFrame],
         lambda x: -1 if x <= low else (1 if x >= high else 0))[subset_genes]
     return result_series
 
+# endregion IMAT weights function
+
+# region Metchange Weights Functions
+def expr_to_metchange_gene_weights(
+        expression: pd.Series | pd.DataFrame,
+        quantile_cutoff: float,
+        subset: Iterable[str] | None = None,
+        aggregator: Callable[[ArrayLike[float]], float] = np.median,
+        sample_axis: str | int = 1) -> pd.Series:
+    """
+    Convert gene expression values into metchange gene weights
+
+    :param expression: Gene expression values. Either a series with genes as the index,
+        or a Dataframe with genes as one axis, and samples as the other. In the case
+        of a dataframe, the expression values are aggregated before the weights
+        are calculated.
+    :type expression: pd.Series | pd.DataFrame
+    :param quantile_cutoff: Cutoff used for defining the weights. The expression value
+        corresponding to this quantile is used as the threshold. Everything above
+        the threshold is weighted 0, and everything below is weighted in proportion
+        to distance from the threshold. The weight will be between 0 and 1, with
+        values near the threshold being near 0, and values near 0 being weighted 1.
+    :type quantile_cutoff: float
+    :param subset: Subset of genes to use in weighting. Default of None will use
+        all genes in `expression`. If not none, expression will be filtered down
+        to this subset of genes before the quantile threshold is calculated,
+        and the returned series will only include this subset of genes.
+    :type subset: Iterable[str] | None
+    :param aggregator: Aggregation function to use for aggregating expression
+        data across multiple samples. Should accept a single Arraylike argument,
+        and return a float.  Default is median.
+    :type aggregator: Callable[[Arraylike[float]], float]
+    :param sample_axis: Which axis in `expression` dataframe represents samples.
+        Can be 'index', 'columns', 0 or 1. A value of 0 or 'index' means rows
+        represent different samples, while a value of 1 or 'columns' means that
+        columns represent different samples.
+    :type sample_axis: str | int
+    :return: Series of gene weights (floats between 0 and 1, representing the
+        probability that a gene product is absent), indexed by gene ids.
+    :rtype: pd.Series
+
+    .. note:
+       This does not convert the expression values into reaction weights, to do so
+       `metworkpy.parse.gpr.gene_to_rxn_weights` can be used. The function dict will need to
+       be altered from the default, with `{'AND':max, 'OR':min}` due to the metchange
+       weights being probability of absense rather than presence.
+
+    .. seealso:
+       :func: `metworkpy.parse.gpr.gene_to_rxn_weights`
+    """
+    if isinstance(expression, pd.DataFrame):
+        expression = expression.apply(aggregator, axis=sample_axis)
+    if subset is None:
+        subset = expression.index
+    subset = [gene for gene in subset if gene in expression.index]
+    expression = expression[subset]
+    return _expr_to_metchange_gene_weight_series(expression=expression,
+                                                 quantile_cutoff=quantile_cutoff)
+
+
+def _expr_to_metchange_gene_weight_series(expression: pd.Series,
+                                          quantile_cutoff: float) -> pd.Series:
+    cutoff = np.quantile(expression, quantile_cutoff)
+    weights = pd.Series(np.NaN, index=expression.index)
+    weights[expression < cutoff] = (expression[expression < cutoff] + (
+        -cutoff)) / cutoff
+    weights[expression >= cutoff] = 0.
+    return weights
+
+# endregion Metchange Weights Functions
 
 # region Conversion functions
 def count_to_rpkm(count: pd.DataFrame,

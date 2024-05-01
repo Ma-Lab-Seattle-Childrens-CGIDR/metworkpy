@@ -418,91 +418,71 @@ class TestCreateNetwork(unittest.TestCase):
         setup(cls)
 
     def test_directed_unweighted(self):
-        test_network = create_network(model=self.test_model,
-                                      directed=True,
-                                      weighted=False)
+        test_network = create_network(model=self.test_model, weighted=False,
+                                      directed=True)
         self.assertIsInstance(test_network, nx.DiGraph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
-        tiny_network = create_network(model=self.tiny_model,
-                                      directed=True,
-                                      weighted=False)
+        tiny_network = create_network(model=self.tiny_model, weighted=False,
+                                      directed=True)
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 1)
         with self.assertRaises(KeyError):
             _ = tiny_network["R_C_ex"]["C"]
 
     def test_undirected_unweighted(self):
-        test_network = create_network(model=self.test_model,
-                                      directed=False,
-                                      weighted=False)
+        test_network = create_network(model=self.test_model, weighted=False,
+                                      directed=False)
         self.assertIsInstance(test_network, nx.Graph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
-        tiny_network = create_network(model=self.tiny_model,
-                                      directed=False,
-                                      weighted=False)
+        tiny_network = create_network(model=self.tiny_model, weighted=False,
+                                      directed=False)
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 1)
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 1)
 
     def test_directed_weighted_stoichiometry(self):
-        test_network = create_network(model=self.test_model,
-                                      directed=True,
-                                      weighted=True,
-                                      weight_by="stoichiometry")
+        test_network = create_network(model=self.test_model, weighted=True,
+                                      directed=True, weight_by="stoichiometry")
         self.assertIsInstance(test_network, nx.DiGraph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
-        tiny_network = create_network(model=self.tiny_model,
-                                      directed=True,
-                                      weighted=True,
-                                      weight_by="stoichiometry")
+        tiny_network = create_network(model=self.tiny_model, weighted=True,
+                                      directed=True, weight_by="stoichiometry")
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 1)
         with self.assertRaises(KeyError):
             _ = tiny_network["R_C_ex"]["C"]
 
     def test_undirected_weighted_stoichiometry(self):
-        test_network = create_network(model=self.test_model,
-                                      directed=False,
-                                      weighted=True,
-                                      weight_by="stoichiometry")
+        test_network = create_network(model=self.test_model, weighted=True,
+                                      directed=False, weight_by="stoichiometry")
         self.assertIsInstance(test_network, nx.Graph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
-        tiny_network = create_network(model=self.tiny_model,
-                                      directed=False,
-                                      weighted=True,
-                                      weight_by="stoichiometry")
+        tiny_network = create_network(model=self.tiny_model, weighted=True,
+                                      directed=False, weight_by="stoichiometry")
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 1)
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 1)
 
     def test_directed_weighted_flux(self):
-        test_network = create_network(model=self.test_model,
-                                      directed=True,
-                                      weighted=True,
-                                      weight_by="flux")
+        test_network = create_network(model=self.test_model, weighted=True,
+                                      directed=True, weight_by="flux")
         self.assertIsInstance(test_network, nx.DiGraph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 50)
-        tiny_network = create_network(model=self.tiny_model,
-                                      directed=True,
-                                      weighted=True,
-                                      weight_by="flux")
+        tiny_network = create_network(model=self.tiny_model, weighted=True,
+                                      directed=True, weight_by="flux")
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 50)
         with self.assertRaises(KeyError):
             _ = tiny_network["R_C_ex"]["C"]
 
     def test_undirected_weighted_flux(self):
-        test_network = create_network(model=self.test_model,
-                                      directed=False,
-                                      weighted=True,
-                                      weight_by="flux")
+        test_network = create_network(model=self.test_model, weighted=True,
+                                      directed=False, weight_by="flux")
         self.assertIsInstance(test_network, nx.Graph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 50)
-        tiny_network = create_network(model=self.tiny_model,
-                                      directed=False,
-                                      weighted=True,
-                                      weight_by="flux")
+        tiny_network = create_network(model=self.tiny_model, weighted=True,
+                                      directed=False, weight_by="flux")
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 50)
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 50)
 

@@ -25,7 +25,7 @@ def create_network(model: cobra,
                    weighted: bool,
                    directed: bool,
                    weight_by: str = "stoichiometry",
-                   metabolites_to_remove: list[str] | None = None,
+                   nodes_to_remove: list[str] | None = None,
                    reaction_data: list[str] | None = None,
                    metabolite_data: list[str] | None = None,
                    reciprocal_weights: bool = False,
@@ -49,12 +49,13 @@ def create_network(model: cobra,
     :param reaction_data: List of additional attributes to include as node attributes
         for each reaction
     :type reaction_data: list[str] | None
-    :param metabolites_to_remove: List of any metabolites that should be removed from
-        the final network. This can be used to remove metabolites that participate
+    :param nodes_to_remove: List of any metabolites or reactions that should be removed
+        from the final network. This can be used to remove metabolites that participate
         in a large number of reactions, but are not desired in downstream analysis
-        such as water, or ATP. Each metabolite should be the string ID associated with
-        them in the cobra model.
-    :type metabolites_to_remove: list[str] | None
+        such as water, or ATP, or pseudo reactions like biomass. Each
+        metabolite/reaction should be the string ID associated with them in the cobra
+        model.
+    :type nodes_to_remove: list[str] | None
     :param metabolite_data: List of additional data to include as node
         attributes for each metabolite. Must be an attribute of the
         metabolites in the cobra Model
@@ -131,8 +132,8 @@ def create_network(model: cobra,
         node_info_met["node_type"] = "metabolite"
         out_network.add_nodes_from((n, dict(d)) for n, d in node_info_met.iterrows())
     # Remove any metabolites desired
-    if metabolites_to_remove:
-        out_network.remove_nodes_from(metabolites_to_remove)
+    if nodes_to_remove:
+        out_network.remove_nodes_from(nodes_to_remove)
     return out_network
 
 
@@ -147,7 +148,7 @@ def create_adjacency_matrix(model: cobra.Model,
                             ) -> tuple[ArrayLike | sparray, list[str], dict[str, str]]:
     """
     Create an adjacency matrix representing the metabolic network of a provided
-    cobra Model
+        cobra Model
 
     :param model: Cobra Model to create the network from
     :type model: cobra.Model
@@ -172,12 +173,13 @@ def create_adjacency_matrix(model: cobra.Model,
     :param out_format: Format for the returned adjacency matrix
     :type out_format: str
     :return: Tuple of
+
         1. Adjacency matrix
         2.  Index of the matrix: a list of strings with the
             reaction or metabolite id for each node
-        3. Index dictionary: a dictionary with keys 'reaction' and 'metabolite',
-            and values of lists of string ids corresponding to the reaction,
-            and metabolite node respectively
+        3. Index dictionary: a dictionary with keys 'reaction' and
+           'metabolite', and values of lists of string ids corresponding to the
+           reaction, and metabolite node respectively
     :rtype: tuple[pd.DataFrame | sparray, list[str], dict[str,str]]
 
     .. note:

@@ -18,8 +18,8 @@ import sympy as sym
 
 # define defaults for the iMAT functions
 DEFAULTS = {
-    "epsilon": 1e-3,
-    "threshold": 1e-4,
+    "epsilon": 1,
+    "threshold": 1e-2,
     "tolerance": Configuration().tolerance,
 }
 
@@ -82,10 +82,10 @@ def flux_to_binary(
         epsilon. "reverse" will return 1 for reactions with flux less than
         -epsilon, and 0 for reactions with flux greater than -epsilon.
     :type which_reactions: str
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to be considered on.
     :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-2).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :param tolerance: The tolerance of the solver. Default from cobra is 1e-7.
@@ -128,10 +128,10 @@ def compute_imat_objective(
     :type fluxes: pandas.Series
     :param rxn_weights: A dictionary or pandas series of reaction weights.
     :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to be considered on.
     :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-2).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :return: The iMAT objective value.
@@ -167,10 +167,10 @@ def add_imat_constraints_(
     :type model: cobra.Model
     :param rxn_weights: A dictionary or pandas series of reaction weights.
     :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to be considered on.
     :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-2).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :return: The updated model.
@@ -198,10 +198,10 @@ def add_imat_constraints(
     :type model: cobra.Model
     :param rxn_weights: A dictionary or pandas series of reaction weights.
     :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to be considered on.
     :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-2).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :return: The updated model.
@@ -278,7 +278,7 @@ def _imat_pos_weight_(model: cobra.Model, rxn: str, epsilon: float) -> None:
     :type model: cobra.Model
     :param rxn: The reaction ID to add the constraint to.
     :type rxn: str
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to be considered on.
     :type epsilon: float
     :return: None
@@ -317,7 +317,7 @@ def _imat_neg_weight_(model: cobra.Model, rxn: str, threshold: float) -> None:
     :type model: cobra.Model
     :param rxn: The reaction ID to add the constraint to.
     :type rxn: str
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-2).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :return: None
