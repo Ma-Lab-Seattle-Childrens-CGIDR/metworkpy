@@ -80,6 +80,7 @@ def expr_to_gene_weights(expression: Union[pd.Series, pd.DataFrame],
         lambda x: -1 if x <= low else (1 if x >= high else 0))[subset_genes]
     return result_series
 
+
 # endregion IMAT weights function
 
 # region Metchange Weights Functions
@@ -148,6 +149,7 @@ def _expr_to_metchange_gene_weight_series(expression: pd.Series,
         -cutoff)) / cutoff
     weights[expression >= cutoff] = 0.
     return weights
+
 
 # endregion Metchange Weights Functions
 

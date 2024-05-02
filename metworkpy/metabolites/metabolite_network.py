@@ -179,7 +179,9 @@ def find_metabolite_network_genes(model: cobra.Model,
                 pfba_sol.name = "fluxes"
                 gene_fluxes = reaction_to_gene_df(model,
                                                   pfba_sol.to_frame()).reset_index()
-
+                # Set the values of res_df such that the value reflects the
+                # maximum value in terms of magnitude, but sign is maintained,
+                # i.e. if a gene is
                 gene_fluxes_max = gene_fluxes.groupby("genes").max()["fluxes"]
                 gene_fluxes_min = gene_fluxes.groupby("genes").min()["fluxes"]
                 res_df.loc[

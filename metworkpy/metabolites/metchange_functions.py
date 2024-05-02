@@ -5,11 +5,13 @@ Module Implementing the Metchange Algorithm
 # Standard Library Imports
 from __future__ import annotations
 from typing import Iterable
+import warnings
 
 # External Imports
 import cobra
 import numpy as np
 import pandas as pd
+
 
 # Local Imports
 
@@ -17,9 +19,9 @@ import pandas as pd
 # region Metchange
 
 def metchange(model: cobra.Model,
-              metabolites: Iterable[str],
               reaction_weights: dict[str, float] | pd.Series,
-              proportion: float
+              metabolites: Iterable[str] = None,
+              proportion: float = 0.95
               ) -> pd.Series:
     """
     Use the Metchange algorithm to find the inconsistency scores for a set of
@@ -27,7 +29,8 @@ def metchange(model: cobra.Model,
 
     :param model: Cobra model to use for performing the metchange algorithm
     :type model: cobra.Model
-    :param metabolites: Metabolites to calculate consistency scores for
+    :param metabolites: Metabolites to calculate consistency scores for, if None
+        (default) will calculate for all metabolites in the model
     :type metabolites: Iterable[str]
     :param reaction_weights: Weights for the reactions in the model, should
         correspond to the probability that reaction should not be active.
@@ -52,6 +55,16 @@ def metchange(model: cobra.Model,
     """
     if isinstance(reaction_weights, dict):
         reaction_weights = pd.Series(reaction_weights)
+    # If reaction weights is empty, set it to be 0 for all metabolites
+    # And raise warning
+    if len(reaction_weights) == 0:
+        warnings.warn("Reaction weights is empty, setting all weights to 0",
+                      UserWarning)
+        reaction_weights = pd.Series(0, index=model.reactions.list_attr("id"))
+    if metabolites is None:
+        metabolites = model.metabolites.list_attr("id")
+    elif isinstance(metabolites, str):
+        metabolites = metabolites.split(sep=",")
     res_series = pd.Series(np.nan, index=metabolites)
     for metabolite in metabolites:
         with MetchangeObjectiveConstraint(model=model,
@@ -87,7 +100,7 @@ class MetchangeObjectiveConstraint:
     def __init__(self, model: cobra.Model,
                  metabolite: str,
                  reaction_weights: pd.Series,
-                 proportion: float):
+                 proportion: float = 0.95):
         self.added_sink = f"tmp_{metabolite}_sink"
         self.metabolite = metabolite
         self.model = model
@@ -117,7 +130,6 @@ class MetchangeObjectiveConstraint:
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.model.objective = self.original_objective
         self.model.objective_direction = self.original_objective_direction
-        self.model.remove_reactions(self.added_sink)
-
+        self.model.remove_reactions([self.added_sink])
 
 # endregion Context Manager
