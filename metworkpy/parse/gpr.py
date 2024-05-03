@@ -1,4 +1,6 @@
 # Standard Library Imports
+from __future__ import annotations
+from collections import deque
 import re
 from typing import Any
 
@@ -40,12 +42,12 @@ def gene_to_rxn_weights(
     expr_genes = set(gene_weights.index)
     missing_genes = list(model_genes - expr_genes)
     if missing_genes:
-        missing_genes_series = pd.Series(0,index=missing_genes)
+        missing_genes_series = pd.Series(0, index=missing_genes)
         gene_weights = pd.concat([gene_weights, missing_genes_series])
-    
+
     # Create the rxn_weight series, filled with all 0
     rxn_weights = pd.Series(0, index=[rxn.id for rxn in model.reactions])
-    
+
     # For each reaction, trinarize it based on the expression data
     for rxn in model.reactions:
         gpr = rxn.gene_reaction_rule
@@ -74,7 +76,7 @@ def eval_gpr(
         return None
     if fn_dict is None:
         fn_dict = {"AND": min, "OR": max}
-    gpr_expr = _str_to_list(gpr)
+    gpr_expr = _str_to_deque(gpr)
     gpr_expr = _to_postfix(gpr_expr)
     eval_stack = []
     for token in gpr_expr:
@@ -89,7 +91,7 @@ def eval_gpr(
     return eval_stack.pop()
 
 
-def _str_to_list(in_string: str, replacements: dict = None) -> list[str]:
+def _str_to_deque(in_string: str, replacements: dict = None) -> deque[str]:
     """
     Convert a string to a list of strings, splitting on whitespace and
     parentheses.
@@ -99,8 +101,8 @@ def _str_to_list(in_string: str, replacements: dict = None) -> list[str]:
     :param replacements: dict: Replace certain strings with other strings
         before splitting, uses regex
     :type replacements: dict
-    :return: A list of strings
-    :rtype: list[str]
+    :return: A deque of strings
+    :rtype: deque[str]
     """
     if not replacements:
         replacements = {
@@ -112,14 +114,17 @@ def _str_to_list(in_string: str, replacements: dict = None) -> list[str]:
     in_string = in_string.replace("(", " ( ").replace(")", " ) ")
     for key, value in replacements.items():
         in_string = re.sub(key, value, in_string)
-    return in_string.split()
+    return deque(in_string.split())
 
 
-def _process_token(token, postfix, operator_stack, precedence):
+def _process_token(token: str,
+                   postfix: deque[str],
+                   operator_stack: deque[str],
+                   precedence):
     """
     The process_token function takes in a token, the postfix list, the
     operator stack and precedence dictionary. It performs the shunting
-    yard algorithm for a the single provided token.
+    yard algorithm for a single provided token.
 
     :param token: Current token
     :type token: str
@@ -165,14 +170,14 @@ def _process_token(token, postfix, operator_stack, precedence):
         ):  # Check for mismatch in parentheses
             raise ValueError("Mismatched Parenthesis in Expression")
         _ = operator_stack.pop()  # Remove left paren from stack
-        return
+        return None
 
 
-def _to_postfix(infix: list[str], precedence: dict = None) -> list[str]:
+def _to_postfix(infix: deque[str], precedence: dict = None) -> deque[str]:
     """
     Convert an infix expression to postfix notation.
-    :param infix: list[str]: A list of strings representing an infix expression
-    :type infix: list[str]
+    :param infix: deque[str]: A deque of strings representing an infix expression
+    :type infix: deque[str]
     :param precedence: Dictionary of operators determining precedence
     :type precedence: dict[str:int]
     :return: A list of strings representing the postfix expression
@@ -181,8 +186,8 @@ def _to_postfix(infix: list[str], precedence: dict = None) -> list[str]:
     # Set default precedence
     if precedence is None:
         precedence = {"AND": 1, "OR": 1}
-    postfix = []
-    operator_stack = []
+    postfix = deque()
+    operator_stack = deque()
     # For each token, use shunting yard algorithm to process it
     for token in infix:
         _process_token(token, postfix, operator_stack, precedence)
