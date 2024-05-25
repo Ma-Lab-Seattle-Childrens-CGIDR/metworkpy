@@ -72,17 +72,14 @@ class TestMetchange(unittest.TestCase):
     def test_zero_weights(self):
         test_model = self.model.copy()
         weights = pd.Series()
-        with self.assertWarnsRegex(
-                UserWarning,
-                "Reaction weights is empty, setting all weights to 0"):
+        with self.assertRaisesRegex(
+                ValueError,
+                "Reaction weights is empty, must have at least one weight."):
             metchange_res = metchange(model=test_model,
                                       reaction_weights=weights,
                                       metabolites=None)
         # Test that it doesn't change the model
         self.assertTrue(model_eq(test_model, self.model))
-        # Test that all inconsistency scores are 0
-        self.assertTrue(np.isclose(metchange_res, 0.).all())
-
     def test_subset_metabolites(self):
         test_model = self.model.copy()
         weights = pd.Series([0., 0., 0., 0., 0., 0., .5, .5, 0., 0.], index=[

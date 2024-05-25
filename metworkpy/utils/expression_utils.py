@@ -145,8 +145,8 @@ def _expr_to_metchange_gene_weight_series(expression: pd.Series,
                                           quantile_cutoff: float) -> pd.Series:
     cutoff = np.quantile(expression, quantile_cutoff)
     weights = pd.Series(np.NaN, index=expression.index)
-    weights[expression < cutoff] = (expression[expression < cutoff] + (
-        -cutoff)) / cutoff
+    weights[expression < cutoff] = (expression[expression < cutoff]*(-1) +
+        cutoff) / cutoff
     weights[expression >= cutoff] = 0.
     return weights
 

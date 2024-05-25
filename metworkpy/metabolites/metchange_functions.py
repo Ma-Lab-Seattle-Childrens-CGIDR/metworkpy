@@ -4,6 +4,7 @@ Module Implementing the Metchange Algorithm
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+from functools import reduce
 from typing import Iterable
 import warnings
 
@@ -11,6 +12,7 @@ import warnings
 import cobra
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 
 # Local Imports
@@ -58,15 +60,13 @@ def metchange(model: cobra.Model,
     # If reaction weights is empty, set it to be 0 for all metabolites
     # And raise warning
     if len(reaction_weights) == 0:
-        warnings.warn("Reaction weights is empty, setting all weights to 0",
-                      UserWarning)
-        reaction_weights = pd.Series(0, index=model.reactions.list_attr("id"))
+        raise ValueError("Reaction weights is empty, must have at least one weight.")
     if metabolites is None:
         metabolites = model.metabolites.list_attr("id")
     elif isinstance(metabolites, str):
         metabolites = metabolites.split(sep=",")
     res_series = pd.Series(np.nan, index=metabolites)
-    for metabolite in metabolites:
+    for metabolite in tqdm(metabolites):
         with MetchangeObjectiveConstraint(model=model,
                                           metabolite=metabolite,
                                           reaction_weights=reaction_weights,
@@ -101,11 +101,15 @@ class MetchangeObjectiveConstraint:
                  metabolite: str,
                  reaction_weights: pd.Series,
                  proportion: float = 0.95):
+        if (reaction_weights == 0.).all():
+            raise ValueError(f"At least one weight must be non-zero, but all weights "
+                             f"in reaction_weights are zero.")
         self.added_sink = f"tmp_{metabolite}_sink"
         self.metabolite = metabolite
         self.model = model
         self.rxn_weights = reaction_weights
         self.proportion = proportion
+        self.to_add = []
 
     def __enter__(self):
         self.original_objective = self.model.objective
@@ -122,8 +126,25 @@ class MetchangeObjectiveConstraint:
         obj_max = self.model.slim_optimize()
         self.model.reactions.get_by_id(self.added_sink).lower_bound = (obj_max *
                                                                        self.proportion)
-        self.model.objective = {self.model.reactions.get_by_id(rxn): weight for
-                                rxn, weight in self.rxn_weights.items()}
+        rxn_vars = []
+        for rxn, weight in self.rxn_weights.items():
+            # If the weight is 0., doesn't need to be added
+            if weight == 0.:
+                continue
+            abs_var, *constr = (cobra.util.solver
+            .add_absolute_expression(
+                model=self.model,
+                expression=self.model.reactions.get_by_id(rxn).flux_expression,
+                name=f"abs_var_{rxn}_{self.metabolite}",
+                add=False
+            ))
+            self.to_add.append(abs_var)
+            self.to_add.extend(constr)
+            rxn_vars.append(abs_var * weight)
+        # Add needed constraints and variables to model
+        self.model.add_cons_vars(self.to_add)
+        # Create objective of weight*abs value of rxn flux
+        self.model.objective = reduce(lambda x, y: x + y, rxn_vars)
         self.model.objective_direction = "min"
         return self.model
 
@@ -131,5 +152,6 @@ class MetchangeObjectiveConstraint:
         self.model.objective = self.original_objective
         self.model.objective_direction = self.original_objective_direction
         self.model.remove_reactions([self.added_sink])
+        cobra.util.solver.remove_cons_vars_from_problem(self.model, self.to_add)
 
 # endregion Context Manager
