@@ -10,7 +10,6 @@ from warnings import warn
 
 # External imports
 import numpy as np
-from numpy._typing import ArrayLike
 from numpy.typing import ArrayLike
 import pandas as pd
 
