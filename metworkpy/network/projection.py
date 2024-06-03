@@ -7,7 +7,6 @@ from __future__ import annotations
 from typing import Iterable
 from typing import Callable
 
-import networkx
 # External Imports
 import networkx as nx
 from networkx.algorithms.bipartite import projected_graph, weighted_projected_graph

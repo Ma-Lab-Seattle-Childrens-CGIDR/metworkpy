@@ -6,13 +6,12 @@ import unittest
 import cobra
 # External Imports
 from cobra.core.configuration import Configuration
-import pandas as pd
 
 # Local Imports
 from metworkpy.metabolites.metabolite_network import (find_metabolite_network_reactions,
                                                       find_metabolite_network_genes,
                                                       MetaboliteObjective)
-from metworkpy.utils.models import model_eq, read_model, write_model
+from metworkpy.utils.models import model_eq, read_model
 
 
 def setup(cls):

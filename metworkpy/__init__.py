@@ -28,7 +28,8 @@ __all__ = [
     "find_metabolite_network_reactions",
     "metchange",
     "MetaboliteObjective",
-    "MetchangeObjectiveConstraint"
+    "MetchangeObjectiveConstraint",
+    "metabolites"
 ]
 
 from metworkpy import utils, imat, parse, information, divergence, network, metabolites

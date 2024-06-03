@@ -6,7 +6,6 @@ Module Implementing the Metchange Algorithm
 from __future__ import annotations
 from functools import reduce
 from typing import Iterable
-import warnings
 
 # External Imports
 import cobra
@@ -102,8 +101,8 @@ class MetchangeObjectiveConstraint:
                  reaction_weights: pd.Series,
                  proportion: float = 0.95):
         if (reaction_weights == 0.).all():
-            raise ValueError(f"At least one weight must be non-zero, but all weights "
-                             f"in reaction_weights are zero.")
+            raise ValueError("At least one weight must be non-zero, but all weights "
+                             "in reaction_weights are zero.")
         self.added_sink = f"tmp_{metabolite}_sink"
         self.metabolite = metabolite
         self.model = model

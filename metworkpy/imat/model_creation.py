@@ -7,7 +7,6 @@ from typing import Union
 # External Imports
 import cobra
 import numpy as np
-import optlang.interface
 import pandas as pd
 import sympy as sym
 
