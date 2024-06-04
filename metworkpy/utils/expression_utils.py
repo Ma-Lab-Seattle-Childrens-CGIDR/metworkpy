@@ -16,13 +16,15 @@ import pandas as pd
 
 # Local imports
 
+
 # region IMAT weights function
-def expr_to_gene_weights(expression: Union[pd.Series, pd.DataFrame],
-                         quantile: Union[float, tuple[float, float]] = 0.15,
-                         aggregator: Callable[[ArrayLike], float] = np.median,
-                         subset: Iterable = None,
-                         sample_axis: Union[int, str] = 1,
-                         ) -> pd.Series:
+def expr_to_gene_weights(
+    expression: Union[pd.Series, pd.DataFrame],
+    quantile: Union[float, tuple[float, float]] = 0.15,
+    aggregator: Callable[[ArrayLike], float] = np.median,
+    subset: Iterable = None,
+    sample_axis: Union[int, str] = 0,
+) -> pd.Series:
     """
     Convert gene expression data to qualitative gene weights
 
@@ -49,7 +51,7 @@ def expr_to_gene_weights(expression: Union[pd.Series, pd.DataFrame],
     :param sample_axis: Which axis represents samples in the expression
         data (only used if expression is DataFrame). "index" or 0 if rows
         represent different samples, "column" or 1 if columns represent
-        different samples (default is columns).
+        different samples (default is rows).
     :type sample_axis: int | str
     :return: Series of qualitative weights, -1 for low expression, 1 for
         high expression, and 0 otherwise.
@@ -60,6 +62,11 @@ def expr_to_gene_weights(expression: Union[pd.Series, pd.DataFrame],
         as it will be aggregated. If multiple different conditions are
         represented in your expression data, they should be seperated
         before this function is used.
+
+        For the quantile, if a tuple like `(0.15, 0.90)` is provided,
+        the bottom 15% of genes in terms of expression will have weights
+        of -1, while the top 10% will have weights of 1, and everything
+        in between will have weights of 0.
     """
     # Convert float to tuple if necessary
     if isinstance(quantile, float):
@@ -68,27 +75,29 @@ def expr_to_gene_weights(expression: Union[pd.Series, pd.DataFrame],
         expression = expression.apply(aggregator, axis=sample_axis)
     if not subset:
         low, high = np.quantile(expression, quantile)
-        return expression.map(
-            lambda x: -1 if x <= low else (1 if x >= high else 0))
+        return expression.map(lambda x: -1 if x <= low else (1 if x >= high else 0))
     # Only use subset genes which are in expression data
     subset_genes = [gene for gene in subset if gene in expression.index]
     expression = expression[subset_genes]
     result_series = pd.Series(0, index=subset)
     low, high = np.quantile(expression, quantile)
     result_series[subset_genes] = expression.map(
-        lambda x: -1 if x <= low else (1 if x >= high else 0))[subset_genes]
+        lambda x: -1 if x <= low else (1 if x >= high else 0)
+    )[subset_genes]
     return result_series
 
 
 # endregion IMAT weights function
 
+
 # region Metchange Weights Functions
 def expr_to_metchange_gene_weights(
-        expression: pd.Series | pd.DataFrame,
-        quantile_cutoff: float,
-        subset: Iterable[str] | None = None,
-        aggregator: Callable[[ArrayLike[float]], float] = np.median,
-        sample_axis: str | int = 1) -> pd.Series:
+    expression: pd.Series | pd.DataFrame,
+    quantile_cutoff: float,
+    subset: Iterable[str] | None = None,
+    aggregator: Callable[[ArrayLike[float]], float] = np.median,
+    sample_axis: str | int = 0,
+) -> pd.Series:
     """
     Convert gene expression values into metchange gene weights
 
@@ -136,25 +145,28 @@ def expr_to_metchange_gene_weights(
         subset = expression.index
     subset = [gene for gene in subset if gene in expression.index]
     expression = expression[subset]
-    return _expr_to_metchange_gene_weight_series(expression=expression,
-                                                 quantile_cutoff=quantile_cutoff)
+    return _expr_to_metchange_gene_weight_series(
+        expression=expression, quantile_cutoff=quantile_cutoff
+    )
 
 
-def _expr_to_metchange_gene_weight_series(expression: pd.Series,
-                                          quantile_cutoff: float) -> pd.Series:
+def _expr_to_metchange_gene_weight_series(
+    expression: pd.Series, quantile_cutoff: float
+) -> pd.Series:
     cutoff = np.quantile(expression, quantile_cutoff)
     weights = pd.Series(np.NaN, index=expression.index)
-    weights[expression < cutoff] = (expression[expression < cutoff]*(-1) +
-        cutoff) / cutoff
-    weights[expression >= cutoff] = 0.
+    weights[expression < cutoff] = (
+        expression[expression < cutoff] * (-1) + cutoff
+    ) / cutoff
+    weights[expression >= cutoff] = 0.0
     return weights
 
 
 # endregion Metchange Weights Functions
 
+
 # region Conversion functions
-def count_to_rpkm(count: pd.DataFrame,
-                  feature_length: pd.Series) -> pd.DataFrame:
+def count_to_rpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFrame:
     """
     Normalize raw count data using RPKM
 
@@ -170,17 +182,16 @@ def count_to_rpkm(count: pd.DataFrame,
     fl_genes = set(feature_length.index)
     if not (count_genes == fl_genes):
         warn(
-            "Different genes in count dataframe and feature length series, dropping any not in common")
+            "Different genes in count dataframe and feature length series, dropping any not in common"
+        )
         genes = [gene for gene in count.columns if gene in feature_length.index]
         count = count[genes]
         feature_length = feature_length[genes]
     sum_counts = count.sum(axis=1)
-    return count.divide(feature_length, axis=1).divide(sum_counts,
-                                                       axis=0) * 1.e9
+    return count.divide(feature_length, axis=1).divide(sum_counts, axis=0) * 1.0e9
 
 
-def count_to_fpkm(count: pd.DataFrame,
-                  feature_length: pd.Series) -> pd.DataFrame:
+def count_to_fpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFrame:
     """
     Converts count data to FPKM normalized expression
 
@@ -196,8 +207,7 @@ def count_to_fpkm(count: pd.DataFrame,
     return count_to_rpkm(count, feature_length)
 
 
-def count_to_tpm(count: pd.DataFrame,
-                 feature_length: pd.Series) -> pd.DataFrame:
+def count_to_tpm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFrame:
     """
     Converts count data to TPM normalized expression
 
@@ -213,13 +223,13 @@ def count_to_tpm(count: pd.DataFrame,
     fl_genes = set(feature_length.index)
     if not (count_genes == fl_genes):
         warn(
-            "Different genes in count dataframe and feature length series, dropping any not in common")
+            "Different genes in count dataframe and feature length series, dropping any not in common"
+        )
         genes = [gene for gene in count.columns if gene in feature_length.index]
         count = count[genes]
         feature_length = feature_length[genes]
     length_normalized = count.divide(feature_length, axis=1)
-    return length_normalized.divide(length_normalized.sum(axis=1),
-                                    axis=0) * 1.e6
+    return length_normalized.divide(length_normalized.sum(axis=1), axis=0) * 1.0e6
 
 
 def count_to_cpm(count: pd.DataFrame) -> pd.DataFrame:
@@ -245,7 +255,7 @@ def rpkm_to_tpm(rpkm: pd.DataFrame):
     :return: TPM normalized counts
     :rtype: pd.DataFrame
     """
-    return rpkm.divide(rpkm.sum(axis=1), axis=0) * 1.e6
+    return rpkm.divide(rpkm.sum(axis=1), axis=0) * 1.0e6
 
 
 def fpkm_to_tpm(fpkm: pd.DataFrame):
@@ -258,5 +268,6 @@ def fpkm_to_tpm(fpkm: pd.DataFrame):
     :rtype: pd.DataFrame
     """
     return rpkm_to_tpm(fpkm)
+
 
 # endregion Conversion functions
