@@ -51,7 +51,7 @@ jobs:
         fi
     - name: Lint with ruff
       run: |
-        poetry run ruff ./metworkpy
+        poetry run ruff check ./metworkpy
     - name: Test with pytest
       run: |
         poetry run pytest

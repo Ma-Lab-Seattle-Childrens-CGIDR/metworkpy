@@ -60,7 +60,3 @@ filterwarnings = [
 [tool.ruff]
 line-length=88
 
-# Setup ruff linter
-[tool.ruff.lint]
-ignore-init-module-imports = true
-
