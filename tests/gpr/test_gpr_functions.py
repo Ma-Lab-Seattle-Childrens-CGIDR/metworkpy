@@ -10,7 +10,7 @@ from cobra.core.configuration import Configuration
 import pandas as pd
 
 # Local Imports
-from metworkpy.parse.gpr import (
+from metworkpy.gpr.gpr_functions import (
     _str_to_deque,
     _to_postfix,
     eval_gpr,

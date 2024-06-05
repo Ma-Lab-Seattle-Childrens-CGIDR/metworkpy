@@ -29,10 +29,12 @@ __all__ = [
     "metchange",
     "MetaboliteObjective",
     "MetchangeObjectiveConstraint",
-    "metabolites"
+    "metabolites",
+    "eval_gpr",
+    "gene_to_rxn_weights"
 ]
 
-from metworkpy import utils, imat, parse, information, divergence, network, metabolites
+from metworkpy import utils, imat, gpr, information, divergence, network, metabolites
 
 from metworkpy.utils import (read_model, write_model, model_eq,
                              gene_to_reaction_dict, gene_to_reaction_df,
@@ -52,3 +54,5 @@ from metworkpy.metabolites import (find_metabolite_network_reactions,
                                    MetaboliteObjective,
                                    MetchangeObjectiveConstraint,
                                    metchange)
+
+from metworkpy.gpr import (eval_gpr, gene_to_rxn_weights)
