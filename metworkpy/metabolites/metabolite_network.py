@@ -9,6 +9,7 @@ from typing import Literal
 # External Imports
 import cobra
 import pandas as pd
+from tqdm import tqdm
 
 # Local Imports
 from metworkpy.utils import reaction_to_gene_df
@@ -20,6 +21,7 @@ def find_metabolite_network_reactions(model: cobra.Model,
                                       method: Literal["pfba", "essential"] = "pfba",
                                       pfba_proportion: float = 0.95,
                                       essential_proportion: float = 0.05,
+                                      **kwargs,
                                       ) -> pd.DataFrame[bool | float]:
     """
     Find which reactions are used to generate each metabolite in the model
@@ -47,6 +49,9 @@ def find_metabolite_network_reactions(model: cobra.Model,
         `essential_proportion * maximum_objective` are considered
         essential.
     :type essential_proportion: float
+    :param kwargs: Keyword arguments passed to `cobra.flux_analysis.variability.find_essential_genes`, 
+        or to `cobra.flux_analysis.pfba` depending on the chosen method.
+    :type kwargs: dict
     :return: A dataframe with reactions as the index and metabolites as the columns,
         containing either
 
@@ -71,7 +76,7 @@ def find_metabolite_network_reactions(model: cobra.Model,
                          f"{method}")
     res_df = pd.DataFrame(None, columns=model.metabolites.list_attr("id"),
                           index=model.reactions.list_attr("id"), dtype=res_dtype)
-    for metabolite in res_df.columns:
+    for metabolite in tqdm(res_df.columns):
         with MetaboliteObjective(model=model, metabolite=metabolite) as m:
             if method == "essential":
                 ess_rxns = [rxn.id for rxn in
@@ -80,7 +85,7 @@ def find_metabolite_network_reactions(model: cobra.Model,
                             .variability
                             .find_essential_reactions(
                                 model=m,
-                                threshold=essential_proportion * m.slim_optimize())) if rxn.id !=
+                                threshold=essential_proportion * m.slim_optimize(), **kwargs)) if rxn.id !=
                             f"tmp_{metabolite}_sink_rxn"]
                 res_df.loc[ess_rxns, metabolite] = True
                 res_df.loc[~res_df.index.isin(ess_rxns), metabolite] = False
@@ -88,7 +93,8 @@ def find_metabolite_network_reactions(model: cobra.Model,
                 pfba_sol = (cobra.flux_analysis.pfba(
                     model=m,
                     objective=m.objective,
-                    fraction_of_optimum=pfba_proportion)).fluxes
+                    fraction_of_optimum=pfba_proportion, 
+                    **kwargs)).fluxes
                 pfba_sol.drop(f"tmp_{metabolite}_sink_rxn", inplace=True)
                 res_df.loc[pfba_sol.index, metabolite] = pfba_sol
             else:
@@ -100,7 +106,8 @@ def find_metabolite_network_reactions(model: cobra.Model,
 def find_metabolite_network_genes(model: cobra.Model,
                                   method: Literal["pfba", "essential"] = "pfba",
                                   pfba_proportion: float = 0.95,
-                                  essential_proportion:float = 0.05
+                                  essential_proportion:float = 0.05,
+                                  **kwargs
                                   ) -> pd.DataFrame[bool | float]:
     """
     Find which genes are used to generate each metabolite in the model
@@ -130,6 +137,9 @@ def find_metabolite_network_genes(model: cobra.Model,
         `essential_proportion * maximum_objective` are considered
         essential.
     :type essential_proportion: float
+    :param kwargs: Keyword arguments passed to `cobra.flux_analysis.variability.find_essential_genes`, 
+        or to `cobra.flux_analysis.pfba` depending on the chosen method.
+    :type kwargs: dict 
     :return: A dataframe with genes as the index and metabolites as the columns,
         containing either
 
@@ -160,7 +170,7 @@ def find_metabolite_network_genes(model: cobra.Model,
                          f"{method}")
     res_df = pd.DataFrame(None, columns=model.metabolites.list_attr("id"),
                           index=model.genes.list_attr("id"), dtype=res_dtype)
-    for metabolite in res_df.columns:
+    for metabolite in tqdm(res_df.columns):
         with MetaboliteObjective(model=model, metabolite=metabolite) as m:
             if method == "essential":
                 ess_genes = [gene.id for gene in
@@ -169,13 +179,13 @@ def find_metabolite_network_genes(model: cobra.Model,
                              .variability
                              .find_essential_genes(
                                  model=m,
-                                 threshold=essential_proportion * m.slim_optimize()))]
+                                 threshold=essential_proportion * m.slim_optimize(), **kwargs))]
                 res_df.loc[ess_genes, metabolite] = True
                 res_df.loc[~res_df.index.isin(ess_genes), metabolite] = False
             elif method == "pfba":
                 pfba_sol = (cobra.flux_analysis.pfba(
                     model=m,
-                    fraction_of_optimum=pfba_proportion)).fluxes
+                    fraction_of_optimum=pfba_proportion, **kwargs)).fluxes
                 pfba_sol.name = "fluxes"
                 gene_fluxes = reaction_to_gene_df(model,
                                                   pfba_sol.to_frame()).reset_index()
