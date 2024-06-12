@@ -22,7 +22,8 @@ from tqdm import tqdm
 def metchange(model: cobra.Model,
               reaction_weights: dict[str, float] | pd.Series,
               metabolites: Iterable[str] = None,
-              proportion: float = 0.95
+              proportion: float = 0.95,
+              progress_bar: bool = False
               ) -> pd.Series:
     """
     Use the Metchange algorithm to find the inconsistency scores for a set of
@@ -39,6 +40,8 @@ def metchange(model: cobra.Model,
     :param proportion: Proportion of the maximum to constrain the metabolite
         production to be above.
     :type proportion: float
+    :param progress_bar: Whether a progress bar should be displayed
+    :type progress_bar: bool
     :return: Series of inconsistency scores for all the `metabolites`
     :rtype: pd.Series
 
@@ -65,7 +68,7 @@ def metchange(model: cobra.Model,
     elif isinstance(metabolites, str):
         metabolites = metabolites.split(sep=",")
     res_series = pd.Series(np.nan, index=metabolites)
-    for metabolite in tqdm(metabolites):
+    for metabolite in tqdm(metabolites, disable=not progress_bar):
         with MetchangeObjectiveConstraint(model=model,
                                           metabolite=metabolite,
                                           reaction_weights=reaction_weights,

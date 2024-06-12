@@ -46,7 +46,7 @@ def generate_model(
     :type rxn_weights: dict | pandas.Series
     :param method: The method to use for generating the context specific
         model. Valid methods are:
-        'imat_restrictions', 'simple_bounds', 'eliminate_below_threshold',
+        'imat_restrictions', 'simple_bounds', 'subset',
         'fva', 'milp'.
     :type method: str
     :param epsilon: The epsilon value to use for iMAT (default: 1).
@@ -69,7 +69,7 @@ def generate_model(
         | :func:`simple_bounds_model` for more information on the
             simple_bounds method.
         | :func:`subset_model` for more information on the
-            eliminate_below_threshold method.
+            subset method.
         | :func:`fva_model` for more information on the fva method.
         | :func:`milp_model` for more information on the milp method.
     """
@@ -92,7 +92,7 @@ def generate_model(
         raise ValueError(
             f"Invalid method: {method}. Valid methods are: 'simple_bounds', \
             'imat_restrictions', "
-            f"'eliminate_below_threshold', 'fva', 'milp'."
+            f"'subset', 'fva', 'milp'."
         )
 
 
@@ -278,6 +278,7 @@ def fva_model(
         threshold,
         objective_tolerance,
         loopless: bool = True,
+        **kwargs
 ):
     """
     Generate a context specific model by setting bounds on reactions based on
@@ -321,7 +322,8 @@ def fva_model(
         imat_model,
         fraction_of_optimum=(1 - objective_tolerance),
         loopless=loopless,
-        reaction_list=reactions
+        reaction_list=reactions,
+        **kwargs
     ).dropna()
     for rxn in reactions:
         reaction = updated_model.reactions.get_by_id(rxn)

@@ -5,6 +5,13 @@ description = "Tools for creating and working with network models of metabolism.
 authors = ["Braden Griebel <bgriebel@uw.edu>"]
 license = "MIT"
 readme = "README.md"
+homepage = "https://metworkpy.readthedocs.io/en/latest/"
+repository = "https://github.com/Braden-Griebel/metworkpy"
+documentation = "https://metworkpy.readthedocs.io/en/latest/"
+keywords = ["FBA", "metabolism", "IMAT", "metchange"]
+
+[tool.poetry.scripts]
+imatgen = 'metworkpy.scripts.imatgen:run'
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -17,7 +24,7 @@ optlang = "^1.8.1"
 sympy = "^1.12"
 cplex = { version = "^22.1.1.1", optional = true }
 gurobipy = { version = "^11.0.0", optional = true }
-pyarrow = "^15.0.0"
+pyarrow = "^16.1.0"
 tqdm = "^4.66.4"
 
 [tool.poetry.group.dev]

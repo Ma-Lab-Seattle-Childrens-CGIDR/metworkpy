@@ -21,6 +21,7 @@ def find_metabolite_network_reactions(model: cobra.Model,
                                       method: Literal["pfba", "essential"] = "pfba",
                                       pfba_proportion: float = 0.95,
                                       essential_proportion: float = 0.05,
+                                      progress_bar: bool = False,
                                       **kwargs,
                                       ) -> pd.DataFrame[bool | float]:
     """
@@ -49,6 +50,8 @@ def find_metabolite_network_reactions(model: cobra.Model,
         `essential_proportion * maximum_objective` are considered
         essential.
     :type essential_proportion: float
+    :param progress_bar: Whether a progress bar should be displayed
+    :type progress_bar: bool
     :param kwargs: Keyword arguments passed to `cobra.flux_analysis.variability.find_essential_genes`, 
         or to `cobra.flux_analysis.pfba` depending on the chosen method.
     :type kwargs: dict
@@ -76,7 +79,7 @@ def find_metabolite_network_reactions(model: cobra.Model,
                          f"{method}")
     res_df = pd.DataFrame(None, columns=model.metabolites.list_attr("id"),
                           index=model.reactions.list_attr("id"), dtype=res_dtype)
-    for metabolite in tqdm(res_df.columns):
+    for metabolite in tqdm(res_df.columns, disable= not progress_bar):
         with MetaboliteObjective(model=model, metabolite=metabolite) as m:
             if method == "essential":
                 ess_rxns = [rxn.id for rxn in
@@ -107,6 +110,7 @@ def find_metabolite_network_genes(model: cobra.Model,
                                   method: Literal["pfba", "essential"] = "pfba",
                                   pfba_proportion: float = 0.95,
                                   essential_proportion:float = 0.05,
+                                  progress_bar:bool = False,
                                   **kwargs
                                   ) -> pd.DataFrame[bool | float]:
     """
@@ -137,6 +141,8 @@ def find_metabolite_network_genes(model: cobra.Model,
         `essential_proportion * maximum_objective` are considered
         essential.
     :type essential_proportion: float
+    :param progress_bar: Whether to display a progress bar
+    :type progress_bar: bool
     :param kwargs: Keyword arguments passed to `cobra.flux_analysis.variability.find_essential_genes`, 
         or to `cobra.flux_analysis.pfba` depending on the chosen method.
     :type kwargs: dict 
@@ -170,7 +176,7 @@ def find_metabolite_network_genes(model: cobra.Model,
                          f"{method}")
     res_df = pd.DataFrame(None, columns=model.metabolites.list_attr("id"),
                           index=model.genes.list_attr("id"), dtype=res_dtype)
-    for metabolite in tqdm(res_df.columns):
+    for metabolite in tqdm(res_df.columns, disable=not progress_bar):
         with MetaboliteObjective(model=model, metabolite=metabolite) as m:
             if method == "essential":
                 ess_genes = [gene.id for gene in

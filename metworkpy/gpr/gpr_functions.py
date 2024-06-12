@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import deque
 import re
 from typing import Any
+import warnings
 
 # External Imports
 import cobra
@@ -42,6 +43,8 @@ def gene_to_rxn_weights(
     expr_genes = set(gene_weights.index)
     missing_genes = list(model_genes - expr_genes)
     if missing_genes:
+        warnings.warn(f"Genes {missing_genes} are in model but not in gene weights, "
+                      f"setting their weight to {fill_val}.")
         missing_genes_series = pd.Series(0, index=missing_genes)
         gene_weights = pd.concat([gene_weights, missing_genes_series])
 
