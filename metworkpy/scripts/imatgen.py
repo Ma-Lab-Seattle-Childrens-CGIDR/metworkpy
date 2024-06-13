@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 from typing import Callable
 
+import cobra.core
 # External Imports
 import numpy as np
 from numpy.typing import ArrayLike
@@ -18,7 +19,7 @@ from metworkpy.utils._arguments import _parse_str_args_dict
 
 
 # region Parse Arguments
-def parse_args() -> argparse.Namespace:
+def parse_args(arg_list:list[str]|None) -> argparse.Namespace:
     """
     Parse command line arguments
     :return: parsed arguments
@@ -61,13 +62,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-t", "--threshold",
                         dest="threshold", default=0.001,
                         help="Cutoff, below which a reaction is considered inactive",
-                        required=False)
+                        required=False, type=float)
     parser.add_argument("-T", "--objective-tolerance",
                         dest="objective_tolerance", default=5e-2,
                         help="The tolerance for the objective value, "
                              "(used for imat-restrictions and fva methods). The objective "
                              "value will be constrained to be within objective-tolerance*objective-value of the "
-                             "unconstrained objective value. Defaults to 0.05.")
+                             "unconstrained objective value. Defaults to 0.05.", type=float)
     parser.add_argument("-f", "--model-format",
                         dest="model_format", default=None,
                         help="The format of the input model file ("
@@ -115,7 +116,7 @@ def parse_args() -> argparse.Namespace:
                                              "genes will be considered lowly expressed, and the top 10 percent of "
                                              "genes will "
                                              "be considered highly expressed. Defaults to 0.15",
-                        required=False)
+                        required=False, type=str)
     parser.add_argument("--subset", dest="subset",
                         action="store_true", help="Specify that the gene expression to gene weight "
                                                   "conversion should only include the subset of genes "
@@ -140,20 +141,25 @@ def parse_args() -> argparse.Namespace:
                                                   "than non-loopless fva.")
     parser.add_argument("--processes", dest="processes", default=None,
                         help="How many processes should be used for performing the calculations associated "
-                             "with model generation. Only impacts FVA currently.", required=False)
-    return parser.parse_args()
+                             "with model generation. Defaults to cobrapy default, currently all hyperthreads minus 1."
+                             " Only impacts FVA currently.", required=False)
+    return parser.parse_args(arg_list)
 
 
 # endregion Parse Arguments
 
 # region Main Function
-def run() -> None:
+def run(arg_list: list[str]|None=None) -> None:
     """
     Function to run the command line interface
     """
-    args = parse_args()
+    args = parse_args(arg_list)
     if args.verbose:
         print("Reading input Model")
+    config = cobra.core.Configuration()
+    config.solver = args.solver
+    if args.processes is not None:
+        config.processes = args.processes
     # Read in the model
     in_model = metworkpy.read_model(args.model_file, file_type=args.model_format)
     # Set solver to desired solver (cplex, gurobi, glpk)
@@ -245,7 +251,7 @@ def _parse_samples(samples_str: str) -> list[int]:
             sample_list.append(int(val))
             continue
         start, stop = val.split(":")
-        sample_list += list(range(int(start), int(stop)))
+        sample_list += list(range(int(start), int(stop)+1))
     return sample_list
 
 
@@ -284,4 +290,4 @@ def _parse_aggregation_method(aggregation_method_str: str) -> Callable[[ArrayLik
         raise ValueError(f"Couldn't Parse Aggregation Method: {aggregation_method_str}, please use "
                          f"min, max, median, or mean")
 
-# region Helper Functions
+# endregion Helper Functions
