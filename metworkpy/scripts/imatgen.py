@@ -5,23 +5,23 @@ Script for generating IMAT models from the command line
 # Standard Library Imports
 from __future__ import annotations
 import argparse
-from typing import Callable
 
 import cobra.core
 # External Imports
-import numpy as np
-from numpy.typing import ArrayLike
 import pandas as pd
 
 # Local Imports
 import metworkpy
-from metworkpy.utils._arguments import _parse_str_args_dict
+from metworkpy.scripts._script_utils import _parse_samples, _parse_quantile, _parse_aggregation_method
 
 
 # region Parse Arguments
 def parse_args(arg_list:list[str]|None) -> argparse.Namespace:
     """
     Parse command line arguments
+
+    :param arg_list: List of command line strings (defaults to reading from stin)
+    :type arg_list: list[str]|None
     :return: parsed arguments
     :rtype: argparse.Namespace
     """
@@ -35,7 +35,7 @@ def parse_args(arg_list:list[str]|None) -> argparse.Namespace:
                         required=True)
     parser.add_argument("-g", "--gene-expression",
                         dest="gene_expression_file", default=None,
-                        help="Path to normalized gene expression file (csv format). Columns should represent genes"
+                        help="Path to normalized gene expression file (csv format). Columns should represent genes "
                              "with the first row being the gene id, matching the gene ids in the "
                              "cobra model. Rows should represent samples, with the first column being the "
                              "sample name. The --transpose argument can be used to specify the orientation "
@@ -86,10 +86,10 @@ def parse_args(arg_list:list[str]|None) -> argparse.Namespace:
                                            "samples will be aggregated (aggregation method can be selected "
                                            "using the --aggregate-method argument), and then used to "
                                            "compute the gene expression weights used in IMAT. Should be "
-                                           "a set of numbers, seperated by commas (no spaces) that represent"
-                                           "the 0-indexed rows (or columns if --transpose flag is used) for the"
-                                           "samples of interest. Colons can be used to specify an inclusive range"
-                                           "of values. For example '1,2:5,7 will specify rows 1,2,3,4,5,7'.",
+                                           "a set of numbers, seperated by commas (no spaces) that represent "
+                                           "the 0-indexed rows (or columns if --transpose flag is used) for the "
+                                           "samples of interest. Colons can be used to specify an inclusive range "
+                                           "of values. For example '1,2:5,7' will specify rows '1,2,3,4,5,7'.",
                         type=str)
     parser.add_argument("--aggregation-method", dest="aggregation_method",
                         default="median", help="Method used to aggregate multiple samples from "
@@ -98,7 +98,7 @@ def parse_args(arg_list:list[str]|None) -> argparse.Namespace:
     parser.add_argument("--transpose", dest="transpose",
                         action="store_true", help="Specify that the gene expression "
                                                   "input data is transposed from the "
-                                                  "default (i.e. the rows represent "
+                                                  "default (i.e. this flag indicates that the rows represent "
                                                   "genes, and the columns represent "
                                                   "samples)")
     parser.add_argument("--quantile", dest="quantile",
@@ -166,7 +166,8 @@ def run(arg_list: list[str]|None=None) -> None:
     # Gurobi and cplex are much faster than glpk, but require licences.
     # GLPK is the default since it is installed automatically alongside cobra,
     # so should always be present
-    in_model.solver = args.solver
+    if args.solver:
+        in_model.solver = args.solver
     # Read gene expression data
     if args.verbose:
         print("Reading gene expression data")
@@ -176,7 +177,7 @@ def run(arg_list: list[str]|None=None) -> None:
         gene_expression = gene_expression.transpose()
     # Filter for only the samples of interest
     if args.samples:
-        gene_expression = gene_expression[_parse_samples(args.samples)]
+        gene_expression = gene_expression.iloc[_parse_samples(args.samples)]
     # Convert gene expression to qualitative weights (i.e. -1, 0, 1)
     if args.verbose:
         print("Converting gene expression into gene weights")
@@ -184,11 +185,11 @@ def run(arg_list: list[str]|None=None) -> None:
         subset = in_model.genes.list_attr("id")
     else:
         subset = None
-    gene_weights = metworkpy.utils.expr_to_gene_weights(expression=gene_expression,
-                                                        quantile=_parse_quantile(args.quantile),
-                                                        aggregator=_parse_aggregation_method(args.aggregation_method),
-                                                        subset=subset,
-                                                        sample_axis=0)
+    gene_weights = metworkpy.utils.expr_to_imat_gene_weights(expression=gene_expression,
+                                                             quantile=_parse_quantile(args.quantile),
+                                                             aggregator=_parse_aggregation_method(args.aggregation_method),
+                                                             subset=subset,
+                                                             sample_axis=0)
     # Convert Gene Weights to reaction weights
     if args.verbose:
         print("Converting gene weights into reaction weights")
@@ -233,61 +234,3 @@ if __name__ == "__main__":
 
 
 # endregion Main Function
-
-# region Helper Functions
-def _parse_samples(samples_str: str) -> list[int]:
-    """
-    Parse a samples specification string to a list of sample rows
-    :param samples_str: Samples specification string
-    :type samples_str: str
-    :return: List of sample rows
-    :rtype: list[int]
-    """
-    if not samples_str:
-        return []
-    sample_list = []
-    for val in samples_str.split(","):
-        if ":" not in val:
-            sample_list.append(int(val))
-            continue
-        start, stop = val.split(":")
-        sample_list += list(range(int(start), int(stop)+1))
-    return sample_list
-
-
-def _parse_quantile(quantile_str: str) -> tuple[float, float]:
-    """
-    Parse a quantile specification string to a tuple of floats
-    :param quantile_str: The string specifying desired quantiles
-    :type quantile_str: str
-    :return: The parsed quantiles
-    :rtype: tuple[float,float]
-    """
-    if "," not in quantile_str:
-        q = float(quantile_str)
-        return q, 1 - q
-    low_q, high_q = quantile_str.split(",")
-    return float(low_q), float(high_q)
-
-
-def _parse_aggregation_method(aggregation_method_str: str) -> Callable[[ArrayLike], float]:
-    aggregation_method_str = _parse_str_args_dict(aggregation_method_str,
-                                                  {
-                                                      "min": ["minimum"],
-                                                      "max": ["maximum"],
-                                                      "median": ["median"],
-                                                      "mean": ["mean", "average"]
-                                                  })
-    if aggregation_method_str == "min":
-        return np.min
-    elif aggregation_method_str == "max":
-        return np.max
-    elif aggregation_method_str == "median":
-        return np.median
-    elif aggregation_method_str == "mean":
-        return np.mean
-    else:
-        raise ValueError(f"Couldn't Parse Aggregation Method: {aggregation_method_str}, please use "
-                         f"min, max, median, or mean")
-
-# endregion Helper Functions

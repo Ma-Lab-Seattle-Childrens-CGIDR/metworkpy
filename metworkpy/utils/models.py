@@ -41,8 +41,10 @@ def read_model(model_path, file_type=None):
         model = load_json_model(model_path)
     elif file_type == "mat":
         from cobra.io import load_matlab_model
-
-        model = load_matlab_model(model_path)
+        # Using a context manager/ file pointer since cobra
+        # won't always close the file
+        with open(model_path, "rb") as f:
+            model = load_matlab_model(f)
     else:
         raise ValueError("File type not supported")
     return model

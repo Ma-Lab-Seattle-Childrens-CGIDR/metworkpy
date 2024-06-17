@@ -18,7 +18,7 @@ import pandas as pd
 
 
 # region IMAT weights function
-def expr_to_gene_weights(
+def expr_to_imat_gene_weights(
     expression: Union[pd.Series, pd.DataFrame],
     quantile: Union[float, tuple[float, float]] = 0.15,
     aggregator: Callable[[ArrayLike], float] = np.median,

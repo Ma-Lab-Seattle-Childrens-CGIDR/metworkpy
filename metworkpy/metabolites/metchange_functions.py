@@ -22,7 +22,7 @@ from tqdm import tqdm
 def metchange(model: cobra.Model,
               reaction_weights: dict[str, float] | pd.Series,
               metabolites: Iterable[str] = None,
-              proportion: float = 0.95,
+              objective_tolerance: float = 0.05,
               progress_bar: bool = False
               ) -> pd.Series:
     """
@@ -37,9 +37,13 @@ def metchange(model: cobra.Model,
     :param reaction_weights: Weights for the reactions in the model, should
         correspond to the probability that reaction should not be active.
     :type reaction_weights: dict[str, float] | pd.Series
-    :param proportion: Proportion of the maximum to constrain the metabolite
-        production to be above.
-    :type proportion: float
+    :param objective_tolerance: The tolerance for the objective value during the second
+        optimization step, where the inner product of
+        reaction weights and reaction fluxes is minimized. The flux for each metabolite
+        will be constrained to be within
+        objective-tolerance*objective-value of the unconstrained objective value for
+        a metabolite. Defaults to 0.05.
+    :type objective_tolerance: float
     :param progress_bar: Whether a progress bar should be displayed
     :type progress_bar: bool
     :return: Series of inconsistency scores for all the `metabolites`
@@ -53,8 +57,9 @@ def metchange(model: cobra.Model,
        `metworkpy.parse.gpr.gene_to_rxn_weights`_ . The algorithm calculates the
        inconsistency score through a two part optimization. First, for a given
        metabolite, the maximum metabolite production is found. Then the metabolite
-       production is constrained to stay above proportion*maximum metabolite production,
-       and the inner product of reaction weights, and reaction fluxes is minimized.
+       production is constrained to stay within objective_tolerance*maximum-production of
+       the maximum metabolite production, and the inner product of reaction weights,
+       and reaction fluxes is minimized.
        This minimum inner product is the inconsistency score.
     """
     if isinstance(reaction_weights, dict):
@@ -72,7 +77,7 @@ def metchange(model: cobra.Model,
         with MetchangeObjectiveConstraint(model=model,
                                           metabolite=metabolite,
                                           reaction_weights=reaction_weights,
-                                          proportion=proportion) as m:
+                                          objective_tolerance=objective_tolerance) as m:
             res_series[metabolite] = m.slim_optimize()
     return res_series
 
@@ -93,16 +98,19 @@ class MetchangeObjectiveConstraint:
         of that reaction being missing. A lower value indicates that the reaction is
         more likely to be present.
     :type reaction_weights: pd.Series
-    :param proportion: Proportion of maximum metabolite production required as a
-        constraint during the second optimization, where the inner product of
-        reaction weights and reaction fluxes is minimized.
-    :type proportion: float
+    :param objective_tolerance: The tolerance for the objective value during the second
+        optimization step, where the inner product of
+        reaction weights and reaction fluxes is minimized. The flux for each metabolite
+        will be constrained to be within
+        objective-tolerance*objective-value of the unconstrained objective value for
+        a metabolite. Defaults to 0.05.
+    :type objectove_tolerance: float
     """
 
     def __init__(self, model: cobra.Model,
                  metabolite: str,
                  reaction_weights: pd.Series,
-                 proportion: float = 0.95):
+                 objective_tolerance: float = 0.05):
         if (reaction_weights == 0.).all():
             raise ValueError("At least one weight must be non-zero, but all weights "
                              "in reaction_weights are zero.")
@@ -110,7 +118,7 @@ class MetchangeObjectiveConstraint:
         self.metabolite = metabolite
         self.model = model
         self.rxn_weights = reaction_weights
-        self.proportion = proportion
+        self.objective_tolerance = objective_tolerance
         self.to_add = []
 
     def __enter__(self):
@@ -126,8 +134,8 @@ class MetchangeObjectiveConstraint:
         self.model.objective = self.added_sink
         self.model.objective_direction = 'max'
         obj_max = self.model.slim_optimize()
-        self.model.reactions.get_by_id(self.added_sink).lower_bound = (obj_max *
-                                                                       self.proportion)
+        self.model.reactions.get_by_id(self.added_sink).lower_bound = obj_max - (obj_max *
+                                                                       self.objective_tolerance)
         rxn_vars = []
         for rxn, weight in self.rxn_weights.items():
             # If the weight is 0., doesn't need to be added

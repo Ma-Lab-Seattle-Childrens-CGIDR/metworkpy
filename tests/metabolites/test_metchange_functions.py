@@ -51,7 +51,7 @@ class TestMetchangeObjectiveConstraint(unittest.TestCase):
             model=test_model,
             metabolite="F_c",
             reaction_weights=weights,
-            proportion=0.95,
+            objective_tolerance=0.05,
         ) as m:
             # Know that the inconsistency score will be 0
             self.assertAlmostEqual(m.slim_optimize(), 0.0)
@@ -79,7 +79,7 @@ class TestMetchangeObjectiveConstraint(unittest.TestCase):
             ],
         )
         with MetchangeObjectiveConstraint(
-            model=test_model, metabolite="F_c", reaction_weights=weights, proportion=1.0
+            model=test_model, metabolite="F_c", reaction_weights=weights, objective_tolerance=0.
         ) as m:
             self.assertAlmostEqual(m.slim_optimize(), 50.0)
             self.assertEqual(m.objective_direction, "min")
@@ -125,7 +125,7 @@ class TestMetchange(unittest.TestCase):
             model=test_model,
             reaction_weights=weights,
             metabolites=["F_c"],
-            proportion=1.0,
+            objective_tolerance=0.,
         )
         self.assertTrue(model_eq(test_model, self.model))
         self.assertTrue(np.isclose(metchange_res["F_c"], 50))
@@ -148,7 +148,7 @@ class TestMetchange(unittest.TestCase):
             ],
         )
         metchange_res = metchange(
-            model=test_model, reaction_weights=weights, metabolites=None, proportion=1.0
+            model=test_model, reaction_weights=weights, metabolites=None, objective_tolerance=0.
         )
         self.assertTrue(np.isclose(metchange_res["C_c"], 0.0))
         self.assertTrue(np.isclose(metchange_res["B_c"], 0.0))

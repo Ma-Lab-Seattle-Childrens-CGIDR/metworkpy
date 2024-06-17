@@ -9,6 +9,10 @@ import warnings
 import cobra
 import pandas as pd
 
+# Global function dictionary declarations
+METCHANGE_FUNC_DICT = {"AND": max, "OR": min}
+IMAT_FUNC_DICT = {"AND": min, "OR": max}
+
 
 def gene_to_rxn_weights(
         model: cobra.Model,

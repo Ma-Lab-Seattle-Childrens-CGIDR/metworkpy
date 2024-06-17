@@ -40,10 +40,6 @@ def setup(cls):
     cls.objective_tolerance = 5e-2
 
 
-class TestGenerateModel(unittest.TestCase):
-    pass
-
-
 class TestModelCreation(unittest.TestCase):
     data_path = None
     model = None

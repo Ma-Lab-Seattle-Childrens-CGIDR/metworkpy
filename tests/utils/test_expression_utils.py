@@ -6,7 +6,7 @@ import pandas as pd
 # Local imports
 from metworkpy.utils.expression_utils import (count_to_rpkm, count_to_fpkm, count_to_tpm,
                                               rpkm_to_tpm, fpkm_to_tpm, count_to_cpm,
-                                              expr_to_gene_weights)
+                                              expr_to_imat_gene_weights)
 
 
 class TestConversionFunctions(unittest.TestCase):
@@ -151,7 +151,7 @@ class TestConversionToWeights(unittest.TestCase):
         test_series = pd.Series([-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5])
         quantile = 0.1, 0.9
         expected = pd.Series([-1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1])
-        actual = expr_to_gene_weights(test_series, quantile)
+        actual = expr_to_imat_gene_weights(test_series, quantile)
         self.assertTrue(np.all(actual == expected))
 
     def test_dataframe_conversion(self):
@@ -161,7 +161,7 @@ class TestConversionToWeights(unittest.TestCase):
             "C": [-6, -4, -3, -2, -1, 0, 0, 2, 3, 3, 5],
         })
         expected = pd.Series([-1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1])
-        actual = expr_to_gene_weights(test_frame, quantile=(0.1, 0.9), sample_axis=1)
+        actual = expr_to_imat_gene_weights(test_frame, quantile=(0.1, 0.9), sample_axis=1)
         self.assertTrue(np.all(actual == expected))
 
     def test_subset_genes(self):
@@ -171,8 +171,8 @@ class TestConversionToWeights(unittest.TestCase):
                    "K", "L", "M", "N", "O", "P", "Q", "R", "S"]
         )
         subset = ["A", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "S", "Z"]
-        result_series = expr_to_gene_weights(test_series, quantile=(0.1, 0.9),
-                                             subset=subset)
+        result_series = expr_to_imat_gene_weights(test_series, quantile=(0.1, 0.9),
+                                                  subset=subset)
         self.assertEqual(result_series["Z"], 0)
         self.assertEqual(result_series["A"], -1)
         self.assertEqual(result_series["S"], 1)
