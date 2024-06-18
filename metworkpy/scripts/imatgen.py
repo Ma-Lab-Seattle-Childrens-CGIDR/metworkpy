@@ -81,7 +81,7 @@ def run_single(args: argparse.Namespace):
         out_model = metworkpy.imat.model_creation.subset_model(in_model, rxn_weights, args.epsilon, args.threshold)
     elif method == "fva":
         out_model = metworkpy.imat.model_creation.fva_model(
-            in_model, rxn_weights, args.epsilon, args.threshold, args.objective_tolerance
+            in_model, rxn_weights, args.epsilon, args.threshold, args.objective_tolerance, args.loopless
         )
     elif method == "milp":
         out_model = metworkpy.imat.model_creation.milp_model(in_model, rxn_weights, args.epsilon, args.threshold)
@@ -212,7 +212,8 @@ def run_multi(args: argparse.Namespace):
                 rxn_weights=r_weights,
                 epsilon=args.epsilon,
                 threshold=args.threshold,
-                objective_tolerance=args.objective_tolerance
+                objective_tolerance=args.objective_tolerance,
+                loopless=args.loopless
             )
         elif method == "milp":
             out_model = metworkpy.imat.model_creation.milp_model(
