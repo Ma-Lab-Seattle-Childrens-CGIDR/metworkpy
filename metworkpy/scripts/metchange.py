@@ -16,7 +16,7 @@ import pandas as pd
 
 # Local Imports
 import metworkpy
-from ._script_utils import _parse_samples, _parse_aggregation_method
+from ._script_utils import _parse_samples, _parse_aggregation_method, _parse_sample_groups_and_names
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
@@ -207,9 +207,8 @@ def run(arg_list: list[str] | None = None) -> None:
     if args.verbose:
         print("Converting remaining samples gene expression to reaction weights")
     if args.sample_groups:
-        group_pattern = re.compile(r"\(([\d,:]+)\)")
-        sample_groups = [_parse_samples(m) for m in group_pattern.findall(args.sample_groups)]
-        sample_names = args.sample_group_names.split(",")
+        sample_groups, sample_names = _parse_sample_groups_and_names(args.sample_groups,
+                                                                     args.sample_group_names)
     else:
         sample_groups = [[i] for i in range(len(gene_expression.index)) if i not in wt_samples]
         sample_names = list(gene_expression.index[list(itertools.chain.from_iterable(sample_groups))])

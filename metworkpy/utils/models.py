@@ -1,6 +1,10 @@
 """
 Module for model utilities
 """
+# Standard Library Imports
+from __future__ import annotations
+import pathlib
+
 # External Imports
 import cobra
 import optlang.container
@@ -8,14 +12,14 @@ from sympy import parse_expr
 
 
 # region Model IO
-def read_model(model_path, file_type=None):
+def read_model(model_path: str | pathlib.Path, file_type: str | None = None):
     """
     Read a model from a file
 
     :param model_path: Path to the model file
     :type model_path: str | pathlib.Path
     :param file_type: Type of the file
-    :type file_type: str
+    :type file_type: str | None
     :return: The model
     """
     if file_type is None:
@@ -50,16 +54,16 @@ def read_model(model_path, file_type=None):
     return model
 
 
-def write_model(model, model_path, file_type=None):
+def write_model(model: cobra.Model, model_path: str | pathlib.Path, file_type: str | None = None):
     """
     Write a model to a file
 
     :param model: Model to write
     :type model: cobra.Model
     :param model_path: Path to the model file
-    :type model_path: str
+    :type model_path: str | pathlib.Path
     :param file_type: Type of the file
-    :type file_type: str
+    :type file_type: str|None
     :return: Nothing
     """
     if file_type is None:

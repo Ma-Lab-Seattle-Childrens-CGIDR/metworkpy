@@ -19,8 +19,7 @@ from metworkpy.scripts import imatgen, _script_utils
 
 BASE_PATH = pathlib.Path(__file__).parent.parent
 
-
-class TestRun(unittest.TestCase):
+class TestRunSingle(unittest.TestCase):
     default_dict = {
         "model_file": BASE_PATH / "data" / "test_model.json",
         "gene_expression_file": BASE_PATH / "data" / "test_model_gene_expression.csv",
@@ -41,6 +40,7 @@ class TestRun(unittest.TestCase):
         "sep": ",",
         "loopless": False,
         "processes": None,
+        "func": imatgen.run_single
     }
 
     @classmethod
@@ -73,7 +73,8 @@ class TestRun(unittest.TestCase):
         namespace_dict = self.default_dict | kwargs
         with mock.patch('argparse.ArgumentParser.parse_args',
                         return_value=argparse.Namespace(**namespace_dict)):
-            imatgen.run()
+
+            imatgen.main_run()
             # Test that it created the expected file
             self.assertTrue(os.path.exists(argparse.ArgumentParser.parse_args().output_file))
             # Test that the output model is the same that would be created by running the IMAT algorithm by hand
@@ -144,6 +145,8 @@ class TestRun(unittest.TestCase):
     def test_model_format_mat(self):
         self.cli_tester(model_file=BASE_PATH / "data" / "test_model.mat",
                         model_format="mat")
+
+
 
 
 if __name__ == '__main__':

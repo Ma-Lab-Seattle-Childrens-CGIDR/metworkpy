@@ -239,14 +239,14 @@ class TestHelperFunctions(unittest.TestCase):
     def test_milp_eval(self):
         test_df = pd.DataFrame(
             {
-                "inactive": [np.NaN, 1, 3, 3, 2, 1],
+                "inactive": [np.nan, 1, 3, 3, 2, 1],
                 "forward":       [1, 2, 3, 2, 3, 1],
                 "reverse":       [2, 3, 2, 2, 2, 2],
             },
             index=["A", "B", "C", "D", "E", "F"],
         )
         actual_results = test_df.apply(_milp_eval, axis=1).replace(
-            {np.NaN: -2}
+            {np.nan: -2}
         )
         expected_results = pd.Series(
             [-2, -1, -2, 0, 1, -1], index=["A", "B", "C", "D", "E", "F"]

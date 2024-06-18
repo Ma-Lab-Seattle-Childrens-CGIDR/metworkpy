@@ -2,7 +2,7 @@
 Utility functions for command line scripts
 """
 from __future__ import annotations
-
+import re
 from typing import Callable
 
 import numpy as np
@@ -27,8 +27,36 @@ def _parse_samples(samples_str: str) -> list[int]:
             sample_list.append(int(val))
             continue
         start, stop = val.split(":")
-        sample_list += list(range(int(start), int(stop)+1))
+        sample_list += list(range(int(start), int(stop) + 1))
     return sample_list
+
+
+def _parse_sample_groups_and_names(groups_str: str, names_str: str | None = None) -> tuple[list[list[int]], list[str]]:
+    """
+    Parse a sample groups specification string to a list of sample groups, and parse a group names specification
+        string to
+
+    :param groups_str: Sample group specification string
+    :type groups_str: str
+    :param names_str: Sample group names specification string
+    :type names_str: str
+    :return: A tuple, where the first value is the sample groups (list of lists of sample rows),
+        and the second value is the sample group names (list of strings)
+    :rtype: tuple[list[list[int]],list[str]]
+    """
+    if not groups_str:
+        return []
+    group_pattern = re.compile(r"\(([\d,:]+)\)")
+    sample_groups = [_parse_samples(m) for m in group_pattern.findall(groups_str)]
+    if names_str:
+        group_names = names_str.split(",")
+    else:
+        group_names = [f"s{i}" for i in range(1, len(sample_groups) + 1)]
+    if len(sample_groups) != len(group_names):
+        raise ValueError(f"Number of provided sample group names must match number of sample groups, "
+                         f"but {len(sample_groups)} sample groups were provided, and {len(group_names)} "
+                         f"group names were provided.")
+    return sample_groups, group_names
 
 
 def _parse_quantile(quantile_str: str) -> tuple[float, float]:
@@ -65,3 +93,13 @@ def _parse_aggregation_method(aggregation_method_str: str) -> Callable[[ArrayLik
     else:
         raise ValueError(f"Couldn't Parse Aggregation Method: {aggregation_method_str}, please use "
                          f"min, max, median, or mean")
+
+
+def _parse_format_to_extension(format_str: str) -> str:
+    extension = _parse_str_args_dict(format_str, {
+        "json": ["json"],
+        "yml": ["yaml", "yml"],
+        "xml": ["xml", "sbml"],
+        "mat": ["matlab"]
+    })
+    return extension
