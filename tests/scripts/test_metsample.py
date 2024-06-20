@@ -126,6 +126,9 @@ class TestMetsampleRun(unittest.TestCase):
     def test_batch_parquet(self):
         res = self.run_cli(batches=2, output_format="parquet",
                            output_file=BASE_PATH / "tmp_metsample" / "metsample_res.parquet")
+        self.assertEqual(len(res), 10)
+        self.assertEqual(len(res.columns), len(self.test_model.reactions))
+        self.assertFalse(res.isna().any(axis=None))
 
 
 if __name__ == '__main__':

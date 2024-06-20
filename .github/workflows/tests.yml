@@ -44,7 +44,7 @@ jobs:
       if: steps.cache-deps.outputs.cache-hit != 'true'
     - name: Install Package with Poetry
       run: |
-        if [["${{ matrix.python-version }}" == "3.9" || "${{ matrix.python-version }}" == "3.10"]]; then
+        if [[ "${{ matrix.python-version }}" == "3.9" || "${{ matrix.python-version }}" == "3.10" ]]; then
           poetry install --no-interaction --with test,dev --extras "gurobipy cplex excel fastparquet"
         else
           poetry install --no-interaction --with test,dev --extras "gurobipy excel fastparquet"
