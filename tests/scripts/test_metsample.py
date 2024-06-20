@@ -71,16 +71,16 @@ class TestMetsampleRun(unittest.TestCase):
             # Test expected file created
             args = argparse.ArgumentParser.parse_args()
             self.assertTrue(os.path.exists(args.output_file))
-            format = metsample._parse_format(args.output_format)
-            if format == "csv":
+            format_str = metsample._parse_format(args.output_format)
+            if format_str == "csv":
                 sample_results = pd.read_csv(args.output_file, index_col=None, header=0)
-            elif format == "parquet":
+            elif format_str == "parquet":
                 sample_results = pd.read_parquet(args.output_file)
-            elif format == "feather":
+            elif format_str == "feather":
                 sample_results = pd.read_feather(args.output_file)
-            elif format == "excel":
+            elif format_str == "excel":
                 sample_results = pd.read_excel(args.output_file, index_col=None, sheet_name="Flux Samples")
-            elif format == "json":
+            elif format_str == "json":
                 sample_results = pd.read_json(args.output_file)
         return sample_results
 
