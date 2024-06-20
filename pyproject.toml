@@ -13,6 +13,7 @@ keywords = ["FBA", "metabolism", "IMAT", "metchange"]
 [tool.poetry.scripts]
 imatgen = 'metworkpy.scripts.imatgen:main_run'
 metchange = 'metworkpy.scripts.metchange:run'
+metsample = 'metworkpy.scripts.metsample:main_run'
 
 [tool.poetry.dependencies]
 python = "<3.13,>=3.9"
@@ -27,6 +28,8 @@ cplex = { version = "^22.1.1.1", optional = true }
 gurobipy = { version = "^11.0.0", optional = true }
 pyarrow = "^16.1.0"
 tqdm = "^4.66.4"
+fastparquet = { version="^2024.5.0", optional=true }
+openpyxl = { version = "^3.1.4", optional=true}
 
 [tool.poetry.group.dev]
 optional = true
@@ -53,6 +56,8 @@ jupyter = "^1.0.0"
 [tool.poetry.extras]
 gurobipy = ["gurobipy"]
 cplex = ["cplex"]
+fastparquet = ["fastparquet"]
+excel = ["openpyxl"]
 
 [build-system]
 requires = ["poetry-core"]

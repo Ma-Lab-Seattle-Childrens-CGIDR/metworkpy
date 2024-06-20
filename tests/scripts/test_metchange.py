@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import importlib
+import importlib.util
 import itertools
 import os
 import pathlib

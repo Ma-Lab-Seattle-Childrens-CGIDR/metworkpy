@@ -4,9 +4,9 @@ Script for running Metchange from the command line
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-import itertools
-
 import argparse
+import itertools
+import pathlib
 import re
 
 # External Imports
@@ -23,7 +23,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """
     Parse Command line arguments
 
-    :param arg_list: List of command line strings (defaults to reading from stin)
+    :param arg_list: List of command line strings (defaults to reading from stdin)
     :type arg_list: list[str]|None
     :return: Parsed arguments
     :rtype: argparse.Namespace
@@ -143,6 +143,8 @@ def run(arg_list: list[str] | None = None) -> None:
     """
     # Parse args
     args = parse_args(arg_list)
+    out_file = pathlib.Path(args.output_file)
+    out_file.parent.mkdir(parents=True, exist_ok=True)
     # GPR function dict for metchange
     METCHANGE_FUNC_DICT = {"AND": max, "OR": min}
     METABOLITE_SEPERATOR = re.compile(r"[\s,;]+")
@@ -256,7 +258,7 @@ def run(arg_list: list[str] | None = None) -> None:
         metchange_res.loc[name, res.index] = res
     metchange_res = metchange_res.transpose()
     if not args.extra_info:
-        metchange_res.to_csv(args.output_file)
+        metchange_res.to_csv(out_file)
         return None
     # Add additional information
     name = []
@@ -273,7 +275,7 @@ def run(arg_list: list[str] | None = None) -> None:
     metchange_res["formula"] = formula
     metchange_res["compartment"] = compartment
     metchange_res["charge"] = charge
-    metchange_res.to_csv(args.output_file)
+    metchange_res.to_csv(out_file)
     return None
 
 
