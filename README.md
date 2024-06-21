@@ -1,4 +1,5 @@
-# Welcome to Metworkpy
+# Welcome to Metworkpy 
+![Metworkpy Logo](metworkpy_logo.png "Metworkpy Logo")
 
 Metworkpy is a Python library containing tools for working with and analyzing metabolic networks.
 This functionality includes:
@@ -8,11 +9,11 @@ This functionality includes:
 
 # Issues and Pull Requests
 If you experience any problems while using Metworkpy (including the documentation), please 
-create a GitHub issue in this repository. 
+create a GitHub issue in this repository. When creating an issue, a minimal reproducible example of the issue will make getting you help much easier.
 You can also create issues for any enhancements you would like to see in Metworkpy.  
 Contributions are welcome! Feel free to open a pull request. Currently, the contribution 
 guidelines are still being worked out, but for enhanced functionality, please include an 
-explanation of the functionality, any needed citations, and testcases (tests are run using 
+explanation of the functionality, any needed citations, and test cases (tests are run using 
 pytest during continuous integration). 
 
 # Licensing
