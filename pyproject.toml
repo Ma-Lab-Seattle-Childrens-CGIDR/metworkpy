@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "metworkpy"
-version = "0.0.1"
+version = "0.1.0"
 description = "Tools for creating and working with network models of metabolism."
 authors = ["Braden Griebel <bgriebel@uw.edu>"]
 license = "MIT"
@@ -14,6 +14,7 @@ keywords = ["FBA", "metabolism", "IMAT", "metchange"]
 imatgen = 'metworkpy.scripts.imatgen:main_run'
 metchange = 'metworkpy.scripts.metchange:run'
 metsample = 'metworkpy.scripts.metsample:main_run'
+metdivergence = 'metworkpy.scripts.metdivergence:main_run'
 
 [tool.poetry.dependencies]
 python = "<3.13,>=3.9"
@@ -64,6 +65,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 # Stopping Gurobi warning originating from optlang
+# This has been updated in more recent versions, but keeping for 3.9, 3.10 compatability
 [tool.pytest.ini_options]
 filterwarnings = [
     'ignore:.+pass a TempConstr or use Model.addLConstr:DeprecationWarning'

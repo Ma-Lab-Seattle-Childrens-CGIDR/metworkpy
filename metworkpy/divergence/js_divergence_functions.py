@@ -38,7 +38,7 @@ def js_divergence(
         one dimensional, it will be reshaped to (n_samples,1). If it is not a np.ndarray, this function will attempt to
         coerce it into one.
     :type q: ArrayLike
-    :param n_neighbors: Number of neighbors to use for computing mutual information. Will attempt to coerce into an
+    :param n_neighbors: Number of neighbors to use for computing divergence. Will attempt to coerce into an
         integer. Must be at least 1. Default 5.
     :type n_neighbors: int
     :param discrete: Whether the samples are from discrete distributions

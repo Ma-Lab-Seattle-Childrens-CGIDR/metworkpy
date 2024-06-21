@@ -3,16 +3,13 @@
 from __future__ import annotations
 import argparse
 import importlib.util
-import itertools
 import os
 import pathlib
-import re
 import unittest
 from unittest import mock, skipIf
 
 # External Imports
 import cobra
-import numpy as np
 import pandas as pd
 
 # Local Imports
@@ -129,6 +126,29 @@ class TestMetsampleRun(unittest.TestCase):
         self.assertEqual(len(res), 10)
         self.assertEqual(len(res.columns), len(self.test_model.reactions))
         self.assertFalse(res.isna().any(axis=None))
+
+    def test_sample_number(self):
+        res = self.run_cli(num_samples=100)
+        self.assertEqual(len(res), 100)
+
+
+class TestHelperFunctions(unittest.TestCase):
+    def test_parse_method(self):
+        self.assertEqual(metsample._parse_method("achr"), "achr")
+        self.assertEqual(metsample._parse_method("Automatic-Centering-Hit-and-Run"), "achr")
+        self.assertEqual(metsample._parse_method("optgp"), "optgp")
+        self.assertEqual(metsample._parse_method("optGP"), "optgp")
+
+    def test_parse_format(self):
+        self.assertEqual(metsample._parse_format("csv"), "csv")
+        self.assertEqual(metsample._parse_format("comma seperated values"), "csv")
+        self.assertEqual(metsample._parse_format("parquet"), "parquet")
+        self.assertEqual(metsample._parse_format("Parquet"), "parquet")
+        self.assertEqual(metsample._parse_format("feather"), "feather")
+        self.assertEqual(metsample._parse_format("Feather"), "feather")
+        self.assertEqual(metsample._parse_format("xlsx"), "excel")
+        self.assertEqual(metsample._parse_format("Excel"), "excel")
+        self.assertEqual(metsample._parse_format("json"), "json")
 
 
 if __name__ == '__main__':
