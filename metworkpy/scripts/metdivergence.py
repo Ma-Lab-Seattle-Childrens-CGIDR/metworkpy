@@ -38,7 +38,9 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                              "reactions, and rows representing samples. Should NOT include an index column.",
                         type=str)
     parser.add_argument("-w", "--wildtype-distribution", dest="wildtype_distribution_file", required=True,
-                        help="Path to file containing flux sample results for wildtype", type=str)
+                        help="Path to file containing flux sample results for wildtype. Should have columns "
+                             "representing reactions, and rows representing samples. Should NOT include an index "
+                             "column.", type=str)
     parser.add_argument("-o", "--output-file", dest="output_file", required=False,
                         default="divergence_results.csv", type=str,
                         help="Path to desired output file. Will be formatted as a csv. Defaults to a file in the "

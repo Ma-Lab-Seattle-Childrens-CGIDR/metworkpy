@@ -5,6 +5,7 @@ on: push
 jobs:
   test:
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') # only publish on tags
     strategy:
       fail-fast: false
       matrix:
