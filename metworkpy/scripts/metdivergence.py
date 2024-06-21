@@ -63,7 +63,8 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                              "including reaction name, "
                              "gene association, subsystem, etc. If not provided, no additional information will be "
                              "added to the divergence results. If this additional information is desired, the input "
-                             "distributions column names must reflect the reaction ids in the models.")
+                             "distributions column names must reflect the reaction ids in the models.",
+                        type=str)
     parser.add_argument("--model-format", dest="model_format", required=False, default=None,
                         help="Format of the optional cobra model")
     parser.add_argument("--sheet-name", dest="sheet_name", required=False, default="Flux Samples",
