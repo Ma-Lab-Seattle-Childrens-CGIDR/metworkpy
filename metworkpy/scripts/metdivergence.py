@@ -6,12 +6,10 @@ Script for calculating divergence between flux distributions
 from __future__ import annotations
 import argparse
 import importlib.util
-import pathlib
 import sys
 import warnings
 
 # External imports
-import cobra
 import pandas as pd
 from tqdm import tqdm
 
