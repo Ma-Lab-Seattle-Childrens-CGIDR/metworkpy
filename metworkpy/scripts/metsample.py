@@ -61,7 +61,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--validate", dest="validate", action="store_true",
                         help="Whether to validate that the samples represent feasible solutions to the model. "
                              "Will only record valid samples if this flag is set. ")
-    parser.add_argument("--b", "--batches", default=None, dest="batches",
+    parser.add_argument("-b", "--batches", default=None, dest="batches",
                         help="Number of batches to break up the sampling into. The default behavior is to "
                              "sample all the points, and then write that out to the output file. This can take "
                              "up a lot of ram, so this option allows for batches of samples to be taken, "
