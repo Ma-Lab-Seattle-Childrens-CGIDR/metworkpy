@@ -269,7 +269,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                                dest="output_file", default="imat_model.json",
                                help="Path to output the generated IMAT model file. Will output to"
                                     "imat_model.json in current directory if not specified",
-                               required=False)
+                               required=False, type=str)
     single_parser.add_argument("-s", "--samples", dest="samples",  ### UNIQUE
                                default=None, help="Which samples from the gene expression data "
                                                   "should be used to generate the IMAT model. These"
@@ -299,7 +299,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                                    "'imatgen_results' in working directory. In this directory will "
                                    "be the output model files with names <prefix->sample-group-name.<ext> "
                                    "if sample group names are provided, or s1.<ext>, s2.<ext>,... "
-                                   "will be used if no sample names provided.")
+                                   "will be used if no sample names provided.", type=str)
     multi_parser.add_argument("-p", "--prefix", dest="prefix", required=False,
                               default=None, help="Prefix for the output model files. Output model file names "
                                                  "will include the prefix before the group names.")
@@ -368,7 +368,7 @@ def _add_common_args(parser: argparse.ArgumentParser):
     parser.add_argument("-M", "--model",
                         dest="model_file", default=None,
                         help="Path to cobra model file (json, sbml, yaml)",
-                        required=True)
+                        required=True, type=str)
     parser.add_argument("-g", "--gene-expression",
                         dest="gene_expression_file", default=None,
                         help="Path to normalized gene expression file (csv format). Columns should "
@@ -378,17 +378,17 @@ def _add_common_args(parser: argparse.ArgumentParser):
                              "sample name. The --transpose argument can be used to specify the orientation "
                              "if other than the default. Data should be read depth and length normalized "
                              "such as TPM, or RPKM.",
-                        required=True)
+                        required=True, type=str)
     parser.add_argument("-m", "--method",
                         dest="method", default="subset",
                         help="Method used to generate the IMAT model, can be "
                              "one of the following: subset, fva, milp, imat-restrictions, simple. "
                              "Defaults to subset.",
-                        required=False)
+                        required=False, type=str)
     parser.add_argument("-e", "--epsilon",
                         dest="epsilon", default=1.,
                         help="Cutoff, above which a reaction is considered active",
-                        required=False)
+                        required=False, type=float)
     parser.add_argument("-t", "--threshold",
                         dest="threshold", default=0.001,
                         help="Cutoff, below which a reaction is considered inactive",
@@ -404,16 +404,17 @@ def _add_common_args(parser: argparse.ArgumentParser):
                         help="The format of the input model file ("
                              "can be json, yaml, or sbml). If not provided, "
                              "it will be inferred from the models file extension.",
-                        required=False)
+                        required=False, type=str)
     parser.add_argument("--output-format", dest="output_format",
                         default="json", help="The format of the output model file ("
                                              "can be json, yaml, or sbml). If not provided, "
                                              "it will default to json.",
-                        required=False)
+                        required=False, type=str)
     parser.add_argument("--aggregation-method", dest="aggregation_method",
                         default="median", help="Method used to aggregate multiple samples from "
                                                "biological replicates into a single value for each gene. "
-                                               "Can be median, mean, min, max. Defaults to median. ")
+                                               "Can be median, mean, min, max. Defaults to median. ",
+                        type=str)
     parser.add_argument("--quantile", dest="quantile",  ### UNIQUE
                         default="0.15",
                         help="Quantile for determining which genes are highly expressed, and lowly "
@@ -452,7 +453,7 @@ def _add_common_args(parser: argparse.ArgumentParser):
     parser.add_argument("--solver", dest="solver",
                         default="glpk", help="Which solver to use for solving the IMAT optimazation problem. "
                                              "Can be 'glpk', 'cplex', or 'gurobi'. Defaults to glpk.",
-                        required=False)
+                        required=False, type=str)
     parser.add_argument("--seperator", dest="sep",
                         default=",",
                         help="Which seperator is used in the gene expression file (such as ',' for "
@@ -466,7 +467,7 @@ def _add_common_args(parser: argparse.ArgumentParser):
                         help="How many processes should be used for performing the calculations associated "
                              "with model generation. Defaults to cobrapy default, currently all hyperthreads "
                              "minus 1."
-                             " Only impacts FVA currently.", required=False)
+                             " Only impacts FVA currently.", required=False, type=int)
     # endregion Common Args
 
 # endregion Helper Functions

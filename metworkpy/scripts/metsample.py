@@ -33,31 +33,31 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         prog="metsample",
         description="Flux sample a Cobra metabolic model"
     )
-    parser.add_argument("-M", "--model",
+    parser.add_argument("-M", "--model", type=str,
                         dest="model_file",
                         required=True, help="Path to the input cobra model file (json, sbml, yaml)")
     parser.add_argument("-n", "--num-samples", dest="num_samples", default=10_000,
-                        help="Number of samples to generate. Defaults to 10,000.")
+                        help="Number of samples to generate. Defaults to 10,000.", type=int)
     parser.add_argument("-o", "--output",
-                        dest="output_file", default=pathlib.Path("./flux_sampling_results.csv"))
+                        dest="output_file", default=pathlib.Path("./flux_sampling_results.csv"), type=str)
     parser.add_argument("-f", "--output-format", dest="output_format",
                         default="csv", help="Format for output file, can be csv, parquet, feather, excel, or json. "
                                             "No index column will be included with any of the methods. Writing to "
-                                            "excel requires openpyxl or xlxswriter to be installed.")
+                                            "excel requires openpyxl or xlxswriter to be installed.", type=str)
     parser.add_argument("-m", "--method", dest="method", default="optgp",
                         help="Desired sampling method, can be achr or optgp (not case sensitive). "
-                             "Defaults to optgp")
+                             "Defaults to optgp", type=str)
     parser.add_argument("--model-format", dest="model_format", default=None,
                         help="Optional input model format (json, yaml, sbml, or mat), indicating what "
-                             "format the model is in.")
+                             "format the model is in.", type=str)
     parser.add_argument("-p", "--processes", default=1, dest="processes",
                         help="Number of processes to use for sampling (only applied to optgp method). Defaults to "
-                             "using a single process.")
+                             "using a single process.", type=int)
     parser.add_argument("-t", "--thinning", default=100, dest="thinning",
-                        help="Thinning factor of the sampling chain")
+                        help="Thinning factor of the sampling chain", type=int)
     parser.add_argument("--seed", dest="seed", default=None,
                         help="Desired random number seed (cobra initializes this to current time stamp if "
-                             "not provided)")
+                             "not provided)", type=int)
     parser.add_argument("--validate", dest="validate", action="store_true",
                         help="Whether to validate that the samples represent feasible solutions to the model. "
                              "Will only record valid samples if this flag is set. ")
@@ -68,7 +68,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                              "to reduce this issue. Batches are only allowed with csv and parquet file types. "
                              "If samples is not a multiple of batches (so it can't be cleanly broken up into batches) "
                              "the number of samples taken will be increased to the closest multiple of batches. "
-                             "Batch sampling with a parquet file requires fastparquet.")
+                             "Batch sampling with a parquet file requires fastparquet.", type=int)
     parser.add_argument("-v", "--versbose", dest="verbose", action="store_true",
                         help="Whether a verbose output is desired.")
     return parser.parse_args(arg_list)

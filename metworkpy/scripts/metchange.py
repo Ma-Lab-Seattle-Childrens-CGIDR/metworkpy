@@ -35,7 +35,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     parser.add_argument("-M", "--model",
                         dest="model_file", default=None,
                         help="Path to cobra model file (json, sbml, yaml)",
-                        required=True
+                        required=True, type=str
                         )
     parser.add_argument("-g", "--gene-expression",
                         dest="gene_expression_file", default=None,
@@ -44,7 +44,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                              "Rows should represent samples, with the first column being the sample name. "
                              "The --transpose argument can be used to specify the orientation if other than the "
                              "default. Data should be read depth and length normalized such as TPM, or RPKM",
-                        required=True)
+                        required=True, type=str)
     parser.add_argument("-w", "--wildtype", dest="wildtype", default=None,
                         help="A list of samples which represent the wildtype, or negative control condition. "
                              "Represented by a set of numbers, seperated by commas (no spaces) that represent the "
@@ -65,30 +65,30 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                         help="Path to output the results of metchange algorithm. Will be a csv of normalized "
                              "inconsistency scores, with the first column being metabolite ids from the model, "
                              "the next columns will be , and remaining columns being information"
-                             "about the metabolites if --extra-info flag is used.", required=False)
+                             "about the metabolites if --extra-info flag is used.", required=False, type=str)
     parser.add_argument("-f", "--model-format",
                         dest="model_format", default=None,
                         help="The format of the input model file ("
                              "can be json, yaml, or sbml). If not provided, "
                              "it will be inferred from the models file extension.",
-                        required=False)
+                        required=False, type=str)
     parser.add_argument("--metabolites", dest="metabolites_list", default=None,
                         help="List of metabolites to include in metchange algorithm, defaults to using all metabolites"
                              "in model. Should be id strings matching the metabolite ids in the cobra model. "
                              "If both --metabolites and --metabolites-file are passed, will only include "
-                             "the metabolites passed to the --metabolites argument.", required=False)
+                             "the metabolites passed to the --metabolites argument.", required=False, type=str)
     parser.add_argument("--metabolites-file", dest="metabolites_file", default=None,
                         help="A file containing a list of metabolites to include in the metchange algorithm. Should"
                              "be a text file, with each metabolite on a newline. Metabolites must be "
                              "id strings matching"
                              " the metabolite ids in the cobra model.If both --metabolites and "
                              "--metabolites-file are passed, the metabolites from the --metabolites argument will"
-                             "be the only ones included.", required=False)
+                             "be the only ones included.", required=False, type=str)
     parser.add_argument("--sample-group-names", dest="sample_group_names", default=None,
                         help="Names for the sample groups identified in --sample-groups argument. Should "
                              "be comma seperated list of names (no spaces between, or in any of the names). "
                              "Must have one name for each sample group if provided. ",
-                        required=False)
+                        required=False, type=str)
     parser.add_argument("-q", "--quantile-cutoff", dest="quantile_cutoff", default=0.15,
                         type=float, help="Quantile cutoff for converting gene expression values into gene weights. "
                                          "Genes with expression values above this cutoff will have a weight of 0, "
@@ -107,7 +107,8 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                                          "objective value. Defaults to 0.05.")
     parser.add_argument("--aggregation-method", dest="aggregation_method", default="median",
                         help="Method used to aggregate sample groups into a single value for each gene. "
-                             "Can be 'median', 'mean', 'min', or 'max'. Defaults to median.", required=False)
+                             "Can be 'median', 'mean', 'min', or 'max'. Defaults to median.", required=False,
+                        type=str)
     parser.add_argument("--transpose", dest="transpose", action="store_true",
                         help="Specify that the gene expression input data is transposed from the default (i.e. "
                              "this flag indicates the rows represent genes, and the columns samples)",
@@ -125,11 +126,11 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                              "formula, compartment, and annotations.")
     parser.add_argument("--solver", dest="solver", default="glpk",
                         help="Which solver to use for solving the metabolite optimizations in metchange. Can be "
-                             "'glpk', 'gurobi', or 'cplex'. Defaults to 'glpk'", required=False)
+                             "'glpk', 'gurobi', or 'cplex'. Defaults to 'glpk'", required=False, type=str)
     parser.add_argument("--seperator", dest="sep",
                         default=",", help="Which seperator is used in the gene expression file (such as ',' for "
                                           "comma seperated files, or '\\t' for tab seperated files. Defaults to ','",
-                        required=False)
+                        required=False, type=str)
     return parser.parse_args(arg_list)
 
 

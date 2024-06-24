@@ -66,9 +66,9 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                              "distributions column names must reflect the reaction ids in the models.",
                         type=str)
     parser.add_argument("--model-format", dest="model_format", required=False, default=None,
-                        help="Format of the optional cobra model")
+                        help="Format of the optional cobra model", type=str)
     parser.add_argument("--sheet-name", dest="sheet_name", required=False, default="Flux Samples",
-                        help="Sheet name of the flux samples if Excel is the input format.")
+                        help="Sheet name of the flux samples if Excel is the input format.", type=str)
     parser.add_argument("-v", "--verbose", dest="verbose", action="store_true",
                         help="Flag for verbose output")
     return parser.parse_args(arg_list)
