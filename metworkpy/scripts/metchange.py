@@ -54,9 +54,11 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                         required=True, type=str)
     parser.add_argument("--sample-groups", dest="sample_groups", default=None,
                         help="Groups of samples to aggregate. Should be lists of comma seperated row numbers "
-                             "(0-indexed), seperated by parentheses (no spaces, optional commas). Colons can be used "
-                             "to describe inclusive ranges. For example, (1:3,4)(5,6) would represent two groups of "
-                             "samples '1,2,3,4' and '5,6. These groups of samples should represent replicates, "
+                             "(0-indexed), seperated by parentheses (no spaces, optional commas) wrapped in quotes. "
+                             "Colons can be used "
+                             "to describe inclusive ranges. For example, \"(1:3,4)(5,6)\" would represent two groups "
+                             "of "
+                             "samples '1,2,3,4' and '5,6'. These groups of samples should represent replicates, "
                              "as they will be aggregated by the --aggregate method. If no aggregation is "
                              "required, leave this argument blank. Defaults to every sample being its own "
                              "group (so no aggregation).",

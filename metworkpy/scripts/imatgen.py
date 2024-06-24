@@ -307,8 +307,10 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
                               dest="sample_groups", default=None,
                               help="Groups of samples representing biological replicates. Samples within a group "
                                    "will be aggregated using 'aggregation-method'. Should be lists of comma seperated "
-                                   "row numbers (0-indexed), seperated by parentheses (no spaces, optional commas). "
-                                   "Colons can be used to describe inclusive ranges. For example (1:3,4)(5,6) would "
+                                   "row numbers (0-indexed), seperated by parentheses (no spaces, optional commas), "
+                                   "wrapped in quotes. "
+                                   "Colons can be used to describe inclusive ranges. For example \"(1:3,4)(5,6)\" "
+                                   "would "
                                    "represent two groups of samples, '1,2,3,4' and '5,6'. Defaults to every sample "
                                    "being its own group.", required=False)
     multi_parser.add_argument("--fold-change", type=float,
