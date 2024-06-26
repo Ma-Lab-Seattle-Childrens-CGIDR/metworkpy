@@ -17,13 +17,13 @@ from metworkpy.divergence._main_wrapper import _wrap_divergence_functions
 
 # region Main Function
 def kl_divergence(
-        p: ArrayLike,
-        q: ArrayLike,
-        n_neighbors: int = 5,
-        discrete: bool = False,
-        jitter: float = None,
-        jitter_seed: int = None,
-        distance_metric: Union[float, str] = "euclidean",
+    p: ArrayLike,
+    q: ArrayLike,
+    n_neighbors: int = 5,
+    discrete: bool = False,
+    jitter: float = None,
+    jitter_seed: int = None,
+    distance_metric: Union[float, str] = "euclidean",
 ) -> float:
     """
     Calculate the Kulback-Leibler divergence between two distributions represented by samples p and q
@@ -119,9 +119,7 @@ def _kl_disc(p: np.ndarray, q: np.ndarray):
 
 
 # region Continuous Divergence
-def _kl_cont(
-        p: np.ndarray, q: np.ndarray, n_neighbors: int = 5, metric: float = 2.0
-):
+def _kl_cont(p: np.ndarray, q: np.ndarray, n_neighbors: int = 5, metric: float = 2.0):
     """
     Calculate the Kullback-Leibler divergence for two samples from two continuous distributions
 
@@ -152,9 +150,9 @@ def _kl_cont(
 
     # Find the KL-divergence estimate using equation (5) from Wang and Kulkarni, 2009
     return (
-            (p.shape[1] / p.shape[0]) * np.sum(
-        np.log(np.divide(q_dist, p_dist)))
-            + np.log(q.shape[0] / (p.shape[0] - 1))
+        (p.shape[1] / p.shape[0]) * np.sum(np.log(np.divide(q_dist, p_dist)))
+        + np.log(q.shape[0] / (p.shape[0] - 1))
     ).item()
+
 
 # endregion Continuous Divergence

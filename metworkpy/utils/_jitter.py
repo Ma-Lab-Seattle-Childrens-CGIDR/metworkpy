@@ -11,9 +11,7 @@ import numpy as np
 # Local Imports
 
 
-def _jitter_single(
-        arr: np.ndarray, jitter: float, generator: np.random.Generator
-):
+def _jitter_single(arr: np.ndarray, jitter: float, generator: np.random.Generator):
     """
     Add jitter to single array
 
@@ -30,12 +28,12 @@ def _jitter_single(
 
 
 def _jitter(
-        x: np.ndarray,
-        y: np.ndarray,
-        jitter: Union[float, tuple[float, float]],
-        jitter_seed: int,
-        discrete_x: bool,
-        discrete_y: bool,
+    x: np.ndarray,
+    y: np.ndarray,
+    jitter: Union[float, tuple[float, float]],
+    jitter_seed: int,
+    discrete_x: bool,
+    discrete_y: bool,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Add noise to two arrays based on whether they are discrete

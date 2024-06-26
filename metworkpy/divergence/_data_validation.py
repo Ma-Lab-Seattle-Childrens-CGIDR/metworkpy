@@ -18,9 +18,7 @@ def _validate_sample(arr: ArrayLike) -> np.ndarray:
     return arr
 
 
-def _validate_samples(
-        p: ArrayLike, q: ArrayLike
-) -> tuple[np.ndarray, np.ndarray]:
+def _validate_samples(p: ArrayLike, q: ArrayLike) -> tuple[np.ndarray, np.ndarray]:
     # Coerce
     try:
         p = _validate_sample(p)

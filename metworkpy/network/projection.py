@@ -16,13 +16,14 @@ from metworkpy.utils._arguments import _parse_str_args_dict
 
 
 # region Main Function
-def bipartite_project(network: nx.Graph | nx.DiGraph,
-                      node_set: Iterable,
-                      directed: bool | None = None,
-                      weight: str | Callable[[float, float], float] | None = None,
-                      weight_attribute: str = "weight",
-                      reciprocal: bool = False
-                      ) -> nx.Graph | nx.DiGraph:
+def bipartite_project(
+    network: nx.Graph | nx.DiGraph,
+    node_set: Iterable,
+    directed: bool | None = None,
+    weight: str | Callable[[float, float], float] | None = None,
+    weight_attribute: str = "weight",
+    reciprocal: bool = False,
+) -> nx.Graph | nx.DiGraph:
     """
     Function to project a bipartite graph onto the specified set of nodes
 
@@ -57,12 +58,9 @@ def bipartite_project(network: nx.Graph | nx.DiGraph,
     if weight is None:
         return projected_graph(network, nodes=node_set)
     if isinstance(weight, str):
-        weight = _parse_str_args_dict(weight,
-                                      {
-                                          "ratio": ["ratio", "proportion"],
-                                          "count": ["count", "number"]
-                                      }
-                                      )
+        weight = _parse_str_args_dict(
+            weight, {"ratio": ["ratio", "proportion"], "count": ["count", "number"]}
+        )
         if weight == "ratio":
             ratio = True
         elif weight == "count":
@@ -71,22 +69,24 @@ def bipartite_project(network: nx.Graph | nx.DiGraph,
             raise ValueError("Couldn't parse weight string")
         return weighted_projected_graph(network, nodes=node_set, ratio=ratio)
     if isinstance(network, nx.DiGraph):
-        return _directed_projection(network=network,
-                                    node_set=node_set,
-                                    weight=weight,
-                                    attr=weight_attribute)
-    return _unirected_projection(network=network,
-                                 node_set=node_set,
-                                 weight=weight,
-                                 attr=weight_attribute)
+        return _directed_projection(
+            network=network, node_set=node_set, weight=weight, attr=weight_attribute
+        )
+    return _unirected_projection(
+        network=network, node_set=node_set, weight=weight, attr=weight_attribute
+    )
+
 
 # endregion Main Function
 
+
 # region Directed Projection
-def _directed_projection(network: nx.DiGraph,
-                         node_set: Iterable,
-                         weight: Callable[[float, float], float],
-                         attr: str = "weight") -> nx.DiGraph:
+def _directed_projection(
+    network: nx.DiGraph,
+    node_set: Iterable,
+    weight: Callable[[float, float], float],
+    attr: str = "weight",
+) -> nx.DiGraph:
     res_graph = network.subgraph(nodes=node_set).copy()
     for node in network.nodes():
         if node in res_graph:
@@ -97,12 +97,11 @@ def _directed_projection(network: nx.DiGraph,
                     continue
                 new_weight = weight(
                     network.get_edge_data(pred, node)[attr],
-                    network.get_edge_data(node, suc)[attr]
+                    network.get_edge_data(node, suc)[attr],
                 )
                 if res_graph.has_edge(pred, suc):
                     new_weight = weight(
-                        new_weight,
-                        res_graph.get_edge_data(pred, suc)[attr]
+                        new_weight, res_graph.get_edge_data(pred, suc)[attr]
                     )
                 res_graph.add_edge(pred, suc, **{attr: new_weight})
     return res_graph
@@ -110,11 +109,14 @@ def _directed_projection(network: nx.DiGraph,
 
 # endregion Directed Projection
 
+
 # region Undirected Projection
-def _unirected_projection(network: nx.Graph,
-                          node_set: Iterable,
-                          weight: Callable[[float, float], float],
-                          attr: str = "weight") -> nx.Graph:
+def _unirected_projection(
+    network: nx.Graph,
+    node_set: Iterable,
+    weight: Callable[[float, float], float],
+    attr: str = "weight",
+) -> nx.Graph:
     res_graph = network.subgraph(nodes=node_set).copy()
     for node in network.nodes():
         if node in res_graph:
@@ -125,14 +127,14 @@ def _unirected_projection(network: nx.Graph,
                     continue
                 new_weight = weight(
                     network.get_edge_data(pred, node)[attr],
-                    network.get_edge_data(node, suc)[attr]
+                    network.get_edge_data(node, suc)[attr],
                 )
                 if res_graph.has_edge(pred, suc):
                     new_weight = weight(
-                        new_weight,
-                        res_graph.get_edge_data(pred, suc)[attr]
+                        new_weight, res_graph.get_edge_data(pred, suc)[attr]
                     )
-                res_graph.add_edge(pred, suc, **{attr:new_weight})
+                res_graph.add_edge(pred, suc, **{attr: new_weight})
     return res_graph
+
 
 # endregion Undirected Projection

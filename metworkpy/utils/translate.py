@@ -16,6 +16,7 @@ import pandas as pd
 
 # endregion Imports
 
+
 # region Translate List
 def gene_to_reaction_list(model: cobra.Model, gene_list: list[str]) -> list[str]:
     """
@@ -54,6 +55,7 @@ def reaction_to_gene_list(model: cobra.Model, reaction_list: list[str]) -> list[
 
 
 # endregion Translate List
+
 
 # region Translate to Dict
 def gene_to_reaction_dict(model: cobra.Model, gene_list: list[str]):
@@ -97,11 +99,12 @@ def reaction_to_gene_dict(model: cobra.Model, reaction_list: list[str]):
 
 # region Translate DataFrame
 
-def gene_to_reaction_df(model: cobra.Model,
-                        gene_df: pd.DataFrame,
-                        how: Literal[
-                            "left", "right", "outer", "inner", "cross"] = "left"
-                        ) -> pd.DataFrame:
+
+def gene_to_reaction_df(
+    model: cobra.Model,
+    gene_df: pd.DataFrame,
+    how: Literal["left", "right", "outer", "inner", "cross"] = "left",
+) -> pd.DataFrame:
     """
     Translate from a dataframe indexed by gene symbols to one indexed by reaction ids
 
@@ -128,11 +131,11 @@ def gene_to_reaction_df(model: cobra.Model,
     return gene_reaction_df.merge(gene_df, left_on="genes", right_index=True, how=how)
 
 
-def reaction_to_gene_df(model: cobra.Model,
-                        reaction_df: pd.DataFrame,
-                        how: Literal[
-                            "left", "right", "outer", "inner", "cross"] = "left"
-                        ) -> pd.DataFrame:
+def reaction_to_gene_df(
+    model: cobra.Model,
+    reaction_df: pd.DataFrame,
+    how: Literal["left", "right", "outer", "inner", "cross"] = "left",
+) -> pd.DataFrame:
     """
     Translate from a dataframe indexed by reaction ids to one indexed by gene symbols
 
@@ -156,7 +159,9 @@ def reaction_to_gene_df(model: cobra.Model,
             rxn_gene_dict["reactions"] += [rxn]
             rxn_gene_dict["genes"] += [gene.id]
     rxn_gene_dict = pd.DataFrame(rxn_gene_dict).set_index("genes")
-    return rxn_gene_dict.merge(reaction_df, left_on="reactions", right_index=True,
-                               how=how)
+    return rxn_gene_dict.merge(
+        reaction_df, left_on="reactions", right_index=True, how=how
+    )
+
 
 # endregion Translate DataFrame

@@ -6,8 +6,12 @@ name: Tests
 on:
   push:
     branches: [ "main", "dev" ]
+    tags-ignore:
+      - '**' # Don't run on tags, since those are tested in the build and publish pipeline
   pull_request:
     branches: [ "main" ]
+    tags-ignore:
+      - '**'
 
 jobs:
   test:

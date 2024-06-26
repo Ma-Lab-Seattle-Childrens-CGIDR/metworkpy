@@ -8,9 +8,10 @@ API Reference for Metworkpy
    :caption: Contents:
 
    divergence
+   gpr
    metabolites
    imat
    information
    network
-   parse
+   synleth
    utils

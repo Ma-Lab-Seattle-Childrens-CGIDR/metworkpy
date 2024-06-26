@@ -5,6 +5,7 @@ Utility methods for array manipulation for creating adjacency matrices
 # Imports
 # Future
 from __future__ import annotations
+
 # Standard Library Imports
 import functools
 
@@ -17,8 +18,10 @@ from scipy.sparse import csc_array, csr_array, dok_array
 
 # Local Imports
 
-def _split_arr_col(arr: ArrayLike | csc_array | csr_array,
-                   into: int = 2) -> tuple[ArrayLike | csc_array | csr_array, ...]:
+
+def _split_arr_col(
+    arr: ArrayLike | csc_array | csr_array, into: int = 2
+) -> tuple[ArrayLike | csc_array | csr_array, ...]:
     """
     Splits an interleaved array by column
 
@@ -37,8 +40,9 @@ def _split_arr_col(arr: ArrayLike | csc_array | csr_array,
     return tuple(arr[:, i::into] for i in range(into))
 
 
-def _split_arr_row(arr: ArrayLike | csc_array | csr_array,
-                   into: int = 2) -> tuple[ArrayLike | csc_array | csr_array, ...]:
+def _split_arr_row(
+    arr: ArrayLike | csc_array | csr_array, into: int = 2
+) -> tuple[ArrayLike | csc_array | csr_array, ...]:
     """
     Splits an interleaved array by row
 
@@ -58,9 +62,8 @@ def _split_arr_row(arr: ArrayLike | csc_array | csr_array,
 
 
 def _split_arr_sign(
-        arr: ArrayLike | csc_array | csr_array
-) -> tuple[ArrayLike | csc_array | csr_array,
-           ArrayLike | csc_array | csr_array]:
+    arr: ArrayLike | csc_array | csr_array,
+) -> tuple[ArrayLike | csc_array | csr_array, ArrayLike | csc_array | csr_array]:
     """
     Split an array based on signs of entries
 
@@ -76,11 +79,11 @@ def _split_arr_sign(
         neg_arr = sparse.dok_array(arr.shape)
 
         # Set positive elements
-        pos_elem = (arr.sign() == 1)
+        pos_elem = arr.sign() == 1
         pos_arr[pos_elem] = arr[pos_elem]
 
         # Set negative elements
-        neg_elem = (arr.sign() == -1)
+        neg_elem = arr.sign() == -1
         neg_arr[neg_elem] = arr[neg_elem]
         return pos_arr.asformat(arr.format), neg_arr.asformat(arr.format)
     # Convert

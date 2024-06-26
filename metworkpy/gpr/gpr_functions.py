@@ -15,10 +15,10 @@ IMAT_FUNC_DICT = {"AND": min, "OR": max}
 
 
 def gene_to_rxn_weights(
-        model: cobra.Model,
-        gene_weights: pd.Series,
-        fn_dict: dict = None,
-        fill_val: Any = 0,
+    model: cobra.Model,
+    gene_weights: pd.Series,
+    fn_dict: dict = None,
+    fill_val: Any = 0,
 ) -> pd.Series:
     """
     Convert a gene weights series to a reaction weights series using the
@@ -34,21 +34,23 @@ def gene_to_rxn_weights(
     :type fill_val: Any
     :return: A series of reaction weights
     :rtype: pd.Series
-    
+
     .. note:
        The fill value is applied to fill NaN values after the GPR rules have been
-       applied.  
+       applied.
        If there are genes missing from the expression data, they will silently be
-       assigned a value of 0 before the GPR processing is performed. 
+       assigned a value of 0 before the GPR processing is performed.
     """
-    # Check that all genes in the model are in the gene expression data, 
+    # Check that all genes in the model are in the gene expression data,
     # and if not add them with a weight of 0
     model_genes = set(model.genes.list_attr("id"))
     expr_genes = set(gene_weights.index)
     missing_genes = list(model_genes - expr_genes)
     if missing_genes:
-        warnings.warn(f"Genes {missing_genes} are in model but not in gene weights, "
-                      f"setting their weight to {fill_val}.")
+        warnings.warn(
+            f"Genes {missing_genes} are in model but not in gene weights, "
+            f"setting their weight to {fill_val}."
+        )
         missing_genes_series = pd.Series(0, index=missing_genes)
         gene_weights = pd.concat([gene_weights, missing_genes_series])
 
@@ -63,9 +65,7 @@ def gene_to_rxn_weights(
     return rxn_weights
 
 
-def eval_gpr(
-        gpr: str, gene_weights: pd.Series, fn_dict: dict = None
-) -> Any | None:
+def eval_gpr(gpr: str, gene_weights: pd.Series, fn_dict: dict = None) -> Any | None:
     """
     Evaluate a single GPR string using the provided gene weights and
     function dictionary.
@@ -124,10 +124,9 @@ def _str_to_deque(in_string: str, replacements: dict = None) -> deque[str]:
     return deque(in_string.split())
 
 
-def _process_token(token: str,
-                   postfix: deque[str],
-                   operator_stack: deque[str],
-                   precedence):
+def _process_token(
+    token: str, postfix: deque[str], operator_stack: deque[str], precedence
+):
     """
     The process_token function takes in a token, the postfix list, the
     operator stack and precedence dictionary. It performs the shunting
@@ -152,9 +151,9 @@ def _process_token(token: str,
     # output, then add the operator itself to the postfix expression
     if token in precedence:
         while (
-                (len(operator_stack) > 0)
-                and (operator_stack[-1] != "(")
-                and (precedence[operator_stack[-1]] >= precedence[token])
+            (len(operator_stack) > 0)
+            and (operator_stack[-1] != "(")
+            and (precedence[operator_stack[-1]] >= precedence[token])
         ):
             op = operator_stack.pop()
             postfix.append(op)
@@ -173,7 +172,7 @@ def _process_token(token: str,
             op = operator_stack.pop()
             postfix.append(op)
         if (
-                len(operator_stack) == 0 or operator_stack[-1] != "("
+            len(operator_stack) == 0 or operator_stack[-1] != "("
         ):  # Check for mismatch in parentheses
             raise ValueError("Mismatched Parenthesis in Expression")
         _ = operator_stack.pop()  # Remove left paren from stack

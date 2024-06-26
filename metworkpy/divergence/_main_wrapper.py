@@ -19,16 +19,15 @@ from metworkpy.utils._jitter import _jitter_single
 
 
 def _wrap_divergence_functions(
-        p: ArrayLike,
-        q: ArrayLike,
-        discrete_method: Callable[[np.ndarray, np.ndarray], float],
-        continuous_method: Callable[
-            [np.ndarray, np.ndarray, int, float], float],
-        n_neighbors: int = 5,
-        discrete: bool = False,
-        jitter: float = None,
-        jitter_seed: int = None,
-        distance_metric: Union[float, str] = "euclidean",
+    p: ArrayLike,
+    q: ArrayLike,
+    discrete_method: Callable[[np.ndarray, np.ndarray], float],
+    continuous_method: Callable[[np.ndarray, np.ndarray, int, float], float],
+    n_neighbors: int = 5,
+    discrete: bool = False,
+    jitter: float = None,
+    jitter_seed: int = None,
+    distance_metric: Union[float, str] = "euclidean",
 ) -> float:
     """
     Calculate the divergence between two distributions represented by samples p and q
@@ -86,6 +85,4 @@ def _wrap_divergence_functions(
             ) from err
         return discrete_method(p, q)
 
-    return continuous_method(
-        p, q, n_neighbors=n_neighbors, metric=distance_metric
-    )
+    return continuous_method(p, q, n_neighbors=n_neighbors, metric=distance_metric)

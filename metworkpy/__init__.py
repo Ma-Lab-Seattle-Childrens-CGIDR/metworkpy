@@ -7,6 +7,7 @@ __all__ = [
     "information",
     "divergence",
     "network",
+    "synleth",
     "read_model",
     "write_model",
     "model_eq",
@@ -31,28 +32,50 @@ __all__ = [
     "MetchangeObjectiveConstraint",
     "metabolites",
     "eval_gpr",
-    "gene_to_rxn_weights"
+    "gene_to_rxn_weights",
 ]
 
-from metworkpy import utils, imat, gpr, information, divergence, network, metabolites
+from metworkpy import (
+    utils,
+    imat,
+    gpr,
+    information,
+    divergence,
+    network,
+    metabolites,
+    synleth,
+)
 
-from metworkpy.utils import (read_model, write_model, model_eq,
-                             gene_to_reaction_dict, gene_to_reaction_df,
-                             gene_to_reaction_list, reaction_to_gene_list,
-                             reaction_to_gene_dict, reaction_to_gene_df)
+from metworkpy.utils import (
+    read_model,
+    write_model,
+    model_eq,
+    gene_to_reaction_dict,
+    gene_to_reaction_df,
+    gene_to_reaction_list,
+    reaction_to_gene_list,
+    reaction_to_gene_dict,
+    reaction_to_gene_df,
+)
 
 from metworkpy.information import mutual_information
 
 from metworkpy.divergence import kl_divergence, js_divergence
 
-from metworkpy.network import (create_network, create_adjacency_matrix,
-                               label_density, find_dense_clusters,
-                               bipartite_project)
+from metworkpy.network import (
+    create_network,
+    create_adjacency_matrix,
+    label_density,
+    find_dense_clusters,
+    bipartite_project,
+)
 
-from metworkpy.metabolites import (find_metabolite_network_reactions,
-                                   find_metabolite_network_genes,
-                                   MetaboliteObjective,
-                                   MetchangeObjectiveConstraint,
-                                   metchange)
+from metworkpy.metabolites import (
+    find_metabolite_network_reactions,
+    find_metabolite_network_genes,
+    MetaboliteObjective,
+    MetchangeObjectiveConstraint,
+    metchange,
+)
 
-from metworkpy.gpr import (eval_gpr, gene_to_rxn_weights)
+from metworkpy.gpr import eval_gpr, gene_to_rxn_weights

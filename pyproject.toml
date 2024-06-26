@@ -59,6 +59,7 @@ gurobipy = ["gurobipy"]
 cplex = ["cplex"]
 fastparquet = ["fastparquet"]
 excel = ["openpyxl"]
+all = ["gurobipy", "cplex", "fastparquet", "openpyxl"]
 
 [build-system]
 requires = ["poetry-core"]

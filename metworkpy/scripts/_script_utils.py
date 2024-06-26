@@ -31,7 +31,9 @@ def _parse_samples(samples_str: str) -> list[int]:
     return sample_list
 
 
-def _parse_sample_groups_and_names(groups_str: str, names_str: str | None = None) -> tuple[list[list[int]], list[str]]:
+def _parse_sample_groups_and_names(
+    groups_str: str, names_str: str | None = None
+) -> tuple[list[list[int]], list[str]]:
     """
     Parse a sample groups specification string to a list of sample groups, and parse a group names specification
         string to
@@ -53,9 +55,11 @@ def _parse_sample_groups_and_names(groups_str: str, names_str: str | None = None
     else:
         group_names = [f"s{i}" for i in range(1, len(sample_groups) + 1)]
     if len(sample_groups) != len(group_names):
-        raise ValueError(f"Number of provided sample group names must match number of sample groups, "
-                         f"but {len(sample_groups)} sample groups were provided, and {len(group_names)} "
-                         f"group names were provided.")
+        raise ValueError(
+            f"Number of provided sample group names must match number of sample groups, "
+            f"but {len(sample_groups)} sample groups were provided, and {len(group_names)} "
+            f"group names were provided."
+        )
     return sample_groups, group_names
 
 
@@ -74,14 +78,18 @@ def _parse_quantile(quantile_str: str) -> tuple[float, float]:
     return float(low_q), float(high_q)
 
 
-def _parse_aggregation_method(aggregation_method_str: str) -> Callable[[ArrayLike], float]:
-    aggregation_method_str = _parse_str_args_dict(aggregation_method_str,
-                                                  {
-                                                      "min": ["minimum"],
-                                                      "max": ["maximum"],
-                                                      "median": ["median"],
-                                                      "mean": ["mean", "average"]
-                                                  })
+def _parse_aggregation_method(
+    aggregation_method_str: str,
+) -> Callable[[ArrayLike], float]:
+    aggregation_method_str = _parse_str_args_dict(
+        aggregation_method_str,
+        {
+            "min": ["minimum"],
+            "max": ["maximum"],
+            "median": ["median"],
+            "mean": ["mean", "average"],
+        },
+    )
     if aggregation_method_str == "min":
         return np.min
     elif aggregation_method_str == "max":
@@ -91,15 +99,20 @@ def _parse_aggregation_method(aggregation_method_str: str) -> Callable[[ArrayLik
     elif aggregation_method_str == "mean":
         return np.mean
     else:
-        raise ValueError(f"Couldn't Parse Aggregation Method: {aggregation_method_str}, please use "
-                         f"min, max, median, or mean")
+        raise ValueError(
+            f"Couldn't Parse Aggregation Method: {aggregation_method_str}, please use "
+            f"min, max, median, or mean"
+        )
 
 
 def _parse_format_to_extension(format_str: str) -> str:
-    extension = _parse_str_args_dict(format_str, {
-        "json": ["json"],
-        "yml": ["yaml", "yml"],
-        "xml": ["xml", "sbml"],
-        "mat": ["matlab"]
-    })
+    extension = _parse_str_args_dict(
+        format_str,
+        {
+            "json": ["json"],
+            "yml": ["yaml", "yml"],
+            "xml": ["xml", "sbml"],
+            "mat": ["matlab"],
+        },
+    )
     return extension

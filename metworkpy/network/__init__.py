@@ -7,5 +7,5 @@ __all__ = [
     "create_adjacency_matrix",
     "label_density",
     "find_dense_clusters",
-    "bipartite_project"
+    "bipartite_project",
 ]

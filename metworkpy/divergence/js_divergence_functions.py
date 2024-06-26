@@ -19,13 +19,13 @@ from metworkpy.divergence._main_wrapper import _wrap_divergence_functions
 
 # region Main Function
 def js_divergence(
-        p: ArrayLike,
-        q: ArrayLike,
-        n_neighbors: int = 5,
-        discrete: bool = False,
-        jitter: float = None,
-        jitter_seed: int = None,
-        distance_metric: Union[float, str] = "euclidean",
+    p: ArrayLike,
+    q: ArrayLike,
+    n_neighbors: int = 5,
+    discrete: bool = False,
+    jitter: float = None,
+    jitter_seed: int = None,
+    distance_metric: Union[float, str] = "euclidean",
 ) -> float:
     """
     Calculate the Jensen-Shannon divergence between two distributions represented by samples p and q
@@ -79,11 +79,11 @@ def js_divergence(
 # Because this method is similar to mutual information between a continuous and discrete distribution
 # This method is also inspired by sklearn
 def _js_cont(
-        p: np.ndarray,
-        q: np.ndarray,
-        n_neighbors: int = 5,
-        metric: float = 2.0,
-        **kwargs,
+    p: np.ndarray,
+    q: np.ndarray,
+    n_neighbors: int = 5,
+    metric: float = 2.0,
+    **kwargs,
 ) -> float:
     """
     Calculate the Jensen-Shannon divergence between samples from two continuous distributions using the
@@ -137,23 +137,21 @@ def _js_cont(
         radius_array[same_class_index] = np.nextafter(dist, np.inf)
 
     neighbors_within_radius = (
-            full_tree.query_ball_point(
-                combined, radius_array, p=metric, return_length=True
-            )
-            - 1
+        full_tree.query_ball_point(combined, radius_array, p=metric, return_length=True)
+        - 1
     )
 
     # Use formula 9 from Ross, 2014
     return (
-            digamma(n_data_points)
-            + digamma(n_neighbors)
-            - np.sum(
-        np.divide(
-            digamma(count_array) + digamma(neighbors_within_radius),
-            count_array,
+        digamma(n_data_points)
+        + digamma(n_neighbors)
+        - np.sum(
+            np.divide(
+                digamma(count_array) + digamma(neighbors_within_radius),
+                count_array,
+            )
         )
-    )
-            / len(discrete_classes)
+        / len(discrete_classes)
     )
 
 
@@ -184,29 +182,26 @@ def _js_disc(p: np.ndarray, q: np.ndarray):
     comb_elements = np.union1d(p_elements, q_elements)
 
     p_freq = (
-            np.array(
-                [
-                    p_counts[p_elements == elem].item()
-                    if elem in p_elements
-                    else 0.0
-                    for elem in comb_elements
-                ]
-            )
-            / p_total
+        np.array(
+            [
+                p_counts[p_elements == elem].item() if elem in p_elements else 0.0
+                for elem in comb_elements
+            ]
+        )
+        / p_total
     )
 
     q_freq = (
-            np.array(
-                [
-                    q_counts[q_elements == elem].item()
-                    if elem in q_elements
-                    else 0.0
-                    for elem in comb_elements
-                ]
-            )
-            / q_total
+        np.array(
+            [
+                q_counts[q_elements == elem].item() if elem in q_elements else 0.0
+                for elem in comb_elements
+            ]
+        )
+        / q_total
     )
 
     return jensenshannon(p_freq, q_freq, base=np.e) ** 2
+
 
 # endregion Discrete Case

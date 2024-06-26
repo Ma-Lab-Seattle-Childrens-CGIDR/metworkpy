@@ -26,16 +26,16 @@ from metworkpy.utils._jitter import _jitter
 
 # region Main Mutual Information Function
 def mutual_information(
-        x: ArrayLike,
-        y: ArrayLike,
-        discrete_x: bool = False,
-        discrete_y: bool = False,
-        n_neighbors: int = 5,
-        jitter: Union[None, float] = None,
-        jitter_seed: Union[None, int] = None,
-        metric_x: Union[str, float] = "euclidean",
-        metric_y: Union[str, float] = "euclidean",
-        truncate: bool = False,
+    x: ArrayLike,
+    y: ArrayLike,
+    discrete_x: bool = False,
+    discrete_y: bool = False,
+    n_neighbors: int = 5,
+    jitter: Union[None, float] = None,
+    jitter_seed: Union[None, int] = None,
+    metric_x: Union[str, float] = "euclidean",
+    metric_y: Union[str, float] = "euclidean",
+    truncate: bool = False,
 ) -> float:
     """
     :param x: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If ``x`` is
@@ -76,7 +76,7 @@ def mutual_information(
          representing the name of a metric such as 'Manhattan', 'Chebyshev', or 'Euclidean'.
        - For scalar samples (samples from a 1-D distribution), all the metrics are the same.
        - In the case of two continuous distributions, the distance in the z space (i.e. the joint (X,Y) space), is
-         determined by the maximum norm (||z-z\`|| = max{||x-x\`||, ||y-y\`||}), see [1] for more details.
+         determined by the maximum norm (||z-z\\`|| = max{||x-x\\`||, ||y-y\\`||}), see [1] for more details.
        - Always returns value in nats (i.e. mutual information is calculated using the natural logarithm.
 
     .. seealso::
@@ -161,11 +161,11 @@ def mutual_information(
 
 
 def _mi_cont_cont(
-        x: np.ndarray,
-        y: np.ndarray,
-        n_neighbors: int,
-        metric_x: float,
-        metric_y: float,
+    x: np.ndarray,
+    y: np.ndarray,
+    n_neighbors: int,
+    metric_x: float,
+    metric_y: float,
 ):
     """
     Calculate the mutual information between two continuous distributions using the nearest neighbor method.
@@ -187,7 +187,7 @@ def _mi_cont_cont(
     :rtype: float
     """
     if ((metric_x == np.inf) and (metric_y == np.inf)) or (
-            x.shape[1] == 1 and y.shape[1] == 1
+        x.shape[1] == 1 and y.shape[1] == 1
     ):
         return _mi_cont_cont_cheb_only(x=x, y=y, n_neighbors=n_neighbors)
     return _mi_cont_cont_gen(
@@ -224,27 +224,23 @@ def _mi_cont_cont_cheb_only(x: np.ndarray, y: np.ndarray, n_neighbors: int):
     r = np.nextafter(
         r, 0
     )  # Shrink r barely, to ensure it doesn't include the kth neighbor
-    x_neighbors = (
-            x_tree.query_ball_point(x=x, r=r, p=np.inf, return_length=True) - 1
-    )
-    y_neighbors = (
-            y_tree.query_ball_point(x=y, r=r, p=np.inf, return_length=True) - 1
-    )
+    x_neighbors = x_tree.query_ball_point(x=x, r=r, p=np.inf, return_length=True) - 1
+    y_neighbors = y_tree.query_ball_point(x=y, r=r, p=np.inf, return_length=True) - 1
 
     # Now use equation (8) from Kraskov, Stogbauer, and Grassberger 2004
     return (
-            digamma(n_neighbors)
-            - np.mean(digamma(x_neighbors + 1) + digamma(y_neighbors + 1))
-            + digamma(z.shape[0])
+        digamma(n_neighbors)
+        - np.mean(digamma(x_neighbors + 1) + digamma(y_neighbors + 1))
+        + digamma(z.shape[0])
     )
 
 
 def _mi_cont_cont_gen(
-        x: np.ndarray,
-        y: np.ndarray,
-        n_neighbors: int,
-        metric_x: float,
-        metric_y: float,
+    x: np.ndarray,
+    y: np.ndarray,
+    n_neighbors: int,
+    metric_x: float,
+    metric_y: float,
 ):
     """
     Calculate the mutual information between two continuous distributions using the nearest neighbor method.
@@ -266,9 +262,7 @@ def _mi_cont_cont_gen(
     """
     x_dist = distance_matrix(x, x, p=metric_x)  # Distance in x space
     y_dist = distance_matrix(y, y, p=metric_y)  # Distance in y space
-    z_dist = np.maximum(
-        x_dist, y_dist
-    )  # Equivalent to p=np.inf Minkosky p-norm
+    z_dist = np.maximum(x_dist, y_dist)  # Equivalent to p=np.inf Minkosky p-norm
     # For finding the kth neighbor, things to note:
     # - We are using the numpy partition function, which sorts the kth element into the sorted position
     #   with kth=0 sorting the first element, kth=1 sorting the second, etc.
@@ -284,9 +278,9 @@ def _mi_cont_cont_gen(
     y_neighbors = (y_dist < neighbor_distances).sum(axis=1) - 1
     # Now use equation (8) from Kraskov, Stogbauer, and Grassberger 2004
     return (
-            digamma(n_neighbors)
-            - np.mean(digamma(x_neighbors + 1) + digamma(y_neighbors + 1))
-            + digamma(x.shape[0])
+        digamma(n_neighbors)
+        - np.mean(digamma(x_neighbors + 1) + digamma(y_neighbors + 1))
+        + digamma(x.shape[0])
     )
 
 
@@ -296,11 +290,11 @@ def _mi_cont_cont_gen(
 
 
 def _mi_disc_cont(
-        discrete: np.ndarray,
-        continuous: np.ndarray,
-        n_neighbors: int,
-        metric_cont: float = 2.0,
-        **kwargs,
+    discrete: np.ndarray,
+    continuous: np.ndarray,
+    n_neighbors: int,
+    metric_cont: float = 2.0,
+    **kwargs,
 ) -> float:
     """
     Calculate the mutual information between a discrete and continuous distribution using the nearest neighbor method.
@@ -361,16 +355,16 @@ def _mi_disc_cont(
 
     # Find the number of neighbors within the radius, subtract 1 since it will include the point itself
     neighbors_within_radius = (
-            full_tree.query_ball_point(
-                continuous, radius_array, p=metric_cont, return_length=True
-            )
-            - 1
+        full_tree.query_ball_point(
+            continuous, radius_array, p=metric_cont, return_length=True
+        )
+        - 1
     )
     return (
-            digamma(n_data_points)
-            - digamma(count_array).mean()
-            + digamma(n_neighbors)
-            - digamma(neighbors_within_radius).mean()
+        digamma(n_data_points)
+        - digamma(count_array).mean()
+        + digamma(n_neighbors)
+        - digamma(neighbors_within_radius).mean()
     )  # See equation 2 of Ross, 2014
 
 
@@ -407,7 +401,7 @@ def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
             if not joint.size > 0:
                 continue
             mi += (
-                    joint * np.log(joint / (x_f * y_f))
+                joint * np.log(joint / (x_f * y_f))
             ).item()  # NOTE: Log is base e (i.e. natural)
     return mi
 
@@ -451,7 +445,7 @@ def _check_discrete(sample, is_discrete):
         raise ValueError("discrete_* arguments must be boolean")
     if is_discrete:
         if (
-                len(sample.shape) == 1
+            len(sample.shape) == 1
         ):  # if x is 1 dimensional, reshape it into a column vector
             sample = sample.reshape(-1, 1)
         if sample.shape[1] != 1:
@@ -461,5 +455,6 @@ def _check_discrete(sample, is_discrete):
                 "multiple dimensions into one."
             )
     return sample
+
 
 # endregion Helper Functions

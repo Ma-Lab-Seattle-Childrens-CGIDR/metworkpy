@@ -14,25 +14,30 @@ from scipy import sparse
 from scipy.sparse import sparray, csr_array, csc_array
 
 # Local Imports
-from metworkpy.network._array_utils import (_split_arr_col, _split_arr_sign,
-                                            _split_arr_row, _sparse_max,
-                                            _broadcast_mult_arr_vec)
+from metworkpy.network._array_utils import (
+    _split_arr_col,
+    _split_arr_sign,
+    _split_arr_row,
+    _sparse_max,
+    _broadcast_mult_arr_vec,
+)
 from metworkpy.utils._arguments import _parse_str_args_dict
 
 
 # region Main Function
-def create_network(model: cobra,
-                   weighted: bool,
-                   directed: bool,
-                   weight_by: str = "stoichiometry",
-                   nodes_to_remove: list[str] | None = None,
-                   reaction_data: list[str] | None = None,
-                   metabolite_data: list[str] | None = None,
-                   reciprocal_weights: bool = False,
-                   threshold: float = 1e-4,
-                   loopless: bool = False,
-                   fva_proportion: float = 1.0
-                   ) -> nx.Graph | nx.DiGraph:
+def create_network(
+    model: cobra,
+    weighted: bool,
+    directed: bool,
+    weight_by: str = "stoichiometry",
+    nodes_to_remove: list[str] | None = None,
+    reaction_data: list[str] | None = None,
+    metabolite_data: list[str] | None = None,
+    reciprocal_weights: bool = False,
+    threshold: float = 1e-4,
+    loopless: bool = False,
+    fva_proportion: float = 1.0,
+) -> nx.Graph | nx.DiGraph:
     """
     Create a metabolic network from a cobrapy Model
 
@@ -99,7 +104,8 @@ def create_network(model: cobra,
         threshold=threshold,
         loopless=loopless,
         fva_proportion=fva_proportion,
-        out_format="frame")
+        out_format="frame",
+    )
 
     if reciprocal_weights:
         adjacency_frame.data = np.reciprocal(adjacency_frame.data)
@@ -113,9 +119,12 @@ def create_network(model: cobra,
     # Add node information if needed
     if reaction_data:
         # Create information dataframe for the Reactions
-        node_info_rxn = pd.DataFrame(None, index=model.reactions.list_attr("id"),
-                                     columns=["node_type"] + reaction_data,
-                                     dtype="string")
+        node_info_rxn = pd.DataFrame(
+            None,
+            index=model.reactions.list_attr("id"),
+            columns=["node_type"] + reaction_data,
+            dtype="string",
+        )
         for data_type in reaction_data:
             node_info_rxn[data_type] = model.reactions.list_attr(data_type)
         node_info_rxn["node_type"] = "reaction"
@@ -124,9 +133,12 @@ def create_network(model: cobra,
 
     if metabolite_data:
         # Create information dataframe for the Metabolites
-        node_info_met = pd.DataFrame(None, index=model.metabolites.list_attr("id"),
-                                     columns=["node_type"] + metabolite_data,
-                                     dtype="string")
+        node_info_met = pd.DataFrame(
+            None,
+            index=model.metabolites.list_attr("id"),
+            columns=["node_type"] + metabolite_data,
+            dtype="string",
+        )
         for data_type in metabolite_data:
             node_info_met[data_type] = model.metabolites.list_attr(data_type)
         node_info_met["node_type"] = "metabolite"
@@ -137,15 +149,16 @@ def create_network(model: cobra,
     return out_network
 
 
-def create_adjacency_matrix(model: cobra.Model,
-                            weighted: bool,
-                            directed: bool,
-                            weight_by: str = "stoichiometry",
-                            threshold: float = 1e-4,
-                            loopless: bool = False,
-                            fva_proportion: float = 1.0,
-                            out_format: str = "Frame"
-                            ) -> tuple[ArrayLike | sparray, list[str], dict[str, str]]:
+def create_adjacency_matrix(
+    model: cobra.Model,
+    weighted: bool,
+    directed: bool,
+    weight_by: str = "stoichiometry",
+    threshold: float = 1e-4,
+    loopless: bool = False,
+    fva_proportion: float = 1.0,
+    out_format: str = "Frame",
+) -> tuple[ArrayLike | sparray, list[str], dict[str, str]]:
     """
     Create an adjacency matrix representing the metabolic network of a provided
         cobra Model
@@ -196,27 +209,51 @@ def create_adjacency_matrix(model: cobra.Model,
        and the reverse flux is used instead.
     """
     if not isinstance(model, cobra.Model):
-        raise ValueError(f"Model must be a cobra.Model, received a "
-                         f"{type(model)} instead")
+        raise ValueError(
+            f"Model must be a cobra.Model, received a " f"{type(model)} instead"
+        )
     try:
-        out_format = _parse_str_args_dict(out_format, {
-            "frame": ["dataframe", "frame"],
-            "dok": ["dok", "dictionary of keys", "dictionary_of_keys",
-                    "dictionary-of-keys"],
-            "lil": ["lil", "list of lists", "list-of-lists", "list_of_lists"],
-            "csc": ["csc", "condensed sparse columns", "condensed-sparse-columns",
-                    "condensed_sparse_columns"],
-            "csr": ["csr", "condensed sparse rows", "condensed-sparse-rows",
-                    "condensed_sparse_rows"]
-        })
+        out_format = _parse_str_args_dict(
+            out_format,
+            {
+                "frame": ["dataframe", "frame"],
+                "dok": [
+                    "dok",
+                    "dictionary of keys",
+                    "dictionary_of_keys",
+                    "dictionary-of-keys",
+                ],
+                "lil": ["lil", "list of lists", "list-of-lists", "list_of_lists"],
+                "csc": [
+                    "csc",
+                    "condensed sparse columns",
+                    "condensed-sparse-columns",
+                    "condensed_sparse_columns",
+                ],
+                "csr": [
+                    "csr",
+                    "condensed sparse rows",
+                    "condensed-sparse-rows",
+                    "condensed_sparse_rows",
+                ],
+            },
+        )
     except ValueError as err:
         raise ValueError("Couldn't parse format") from err
     try:
-        weight_by = _parse_str_args_dict(weight_by, {
-            "flux": ["flux", "fva", "flux-variability-analysis",
-                     "flux variability analysis", "flux_variability_analysis"],
-            "stoichiometry": ["stoichiometry"]
-        })
+        weight_by = _parse_str_args_dict(
+            weight_by,
+            {
+                "flux": [
+                    "flux",
+                    "fva",
+                    "flux-variability-analysis",
+                    "flux variability analysis",
+                    "flux_variability_analysis",
+                ],
+                "stoichiometry": ["stoichiometry"],
+            },
+        )
     except ValueError as err:
         raise ValueError("Couldn't parse weight_by") from err
 
@@ -229,18 +266,18 @@ def create_adjacency_matrix(model: cobra.Model,
             fva_max = csc_array(fva_res["maximum"].values.reshape(-1, 1))
             fva_bounds = (fva_min, fva_max)
             if directed:
-                adj_mat = _adj_mat_d_w_flux(model=model, rxn_bounds=fva_bounds,
-                                            threshold=threshold)
+                adj_mat = _adj_mat_d_w_flux(
+                    model=model, rxn_bounds=fva_bounds, threshold=threshold
+                )
             else:
-                adj_mat = _adj_mat_ud_w_flux(model=model, rxn_bounds=fva_bounds,
-                                             threshold=threshold)
+                adj_mat = _adj_mat_ud_w_flux(
+                    model=model, rxn_bounds=fva_bounds, threshold=threshold
+                )
         elif weight_by == "stoichiometry":
             if directed:
-                adj_mat = _adj_mat_d_w_stoichiometry(model=model,
-                                                     threshold=threshold)
+                adj_mat = _adj_mat_d_w_stoichiometry(model=model, threshold=threshold)
             else:
-                adj_mat = _adj_mat_ud_w_stoichiometry(model=model,
-                                                      threshold=threshold)
+                adj_mat = _adj_mat_ud_w_stoichiometry(model=model, threshold=threshold)
         else:
             raise ValueError("Invalid weight_by")
     else:
@@ -251,12 +288,12 @@ def create_adjacency_matrix(model: cobra.Model,
     index = model.metabolites.list_attr("id") + model.reactions.list_attr("id")
     index_dict = {
         "reactions": model.reactions.list_attr("id"),
-        "metabolites": model.metabolites.list_attr("id")
+        "metabolites": model.metabolites.list_attr("id"),
     }
     if out_format == "frame":
-        adj_frame = pd.DataFrame.sparse.from_spmatrix(data=adj_mat,
-                                                      index=index,
-                                                      columns=index)
+        adj_frame = pd.DataFrame.sparse.from_spmatrix(
+            data=adj_mat, index=index, columns=index
+        )
         return adj_frame, index, index_dict
     return adj_mat.asformat(out_format), index, index_dict
 
@@ -265,8 +302,8 @@ def create_adjacency_matrix(model: cobra.Model,
 
 # region Undirected Unweighted
 
-def _adj_mat_ud_uw(model: cobra.Model,
-                   threshold: float = 1e-4) -> csr_array:
+
+def _adj_mat_ud_uw(model: cobra.Model, threshold: float = 1e-4) -> csr_array:
     """
     Create an unweighted undirected adjacency matrix from a given model
 
@@ -287,15 +324,17 @@ def _adj_mat_ud_uw(model: cobra.Model,
 
     bounds = const_mat.variable_bounds.tocsr()[:, 1]
 
-    bounds.data[bounds.data <= threshold] = 0.
+    bounds.data[bounds.data <= threshold] = 0.0
     bounds.eliminate_zeros()
 
     for_bound, rev_bound = _split_arr_row(bounds, into=2)
 
-    adj_block = _sparse_max(_broadcast_mult_arr_vec(for_sub.tocsr(), for_bound),
-                            _broadcast_mult_arr_vec(for_prod.tocsr(), for_bound),
-                            _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound),
-                            _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound))
+    adj_block = _sparse_max(
+        _broadcast_mult_arr_vec(for_sub.tocsr(), for_bound),
+        _broadcast_mult_arr_vec(for_prod.tocsr(), for_bound),
+        _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound),
+        _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound),
+    )
 
     adj_block.data.fill(1)
 
@@ -304,9 +343,12 @@ def _adj_mat_ud_uw(model: cobra.Model,
     zero_block_rxn = csr_array((nrxn, nrxn))
     zero_block_met = csr_array((nmet, nmet))
 
-    adjacency_matrix = sparse.hstack([sparse.vstack([zero_block_met, adj_block.T]),
-                                      sparse.vstack(
-                                          [adj_block, zero_block_rxn])]).tocsr()
+    adjacency_matrix = sparse.hstack(
+        [
+            sparse.vstack([zero_block_met, adj_block.T]),
+            sparse.vstack([adj_block, zero_block_rxn]),
+        ]
+    ).tocsr()
 
     return adjacency_matrix
 
@@ -315,8 +357,8 @@ def _adj_mat_ud_uw(model: cobra.Model,
 
 # region Directed Unweighted
 
-def _adj_mat_d_uw(model: cobra.Model,
-                  threshold: float = 1e-4) -> csr_array:
+
+def _adj_mat_d_uw(model: cobra.Model, threshold: float = 1e-4) -> csr_array:
     """
     Create an unweighted directed adjacency matrix from a given model
 
@@ -336,20 +378,20 @@ def _adj_mat_d_uw(model: cobra.Model,
     # Get the bounds, and split them
     bounds = const_mat.variable_bounds.tocsc()[:, 1]
 
-    bounds.data[bounds.data <= threshold] = 0.
+    bounds.data[bounds.data <= threshold] = 0.0
     bounds.eliminate_zeros()
 
     for_bound, rev_bound = _split_arr_row(bounds, into=2)
 
     consume_mat = _sparse_max(
         _broadcast_mult_arr_vec(for_sub.tocsr(), for_bound),
-        _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound)
+        _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound),
     )
     consume_mat.data.fill(1)
 
     generate_mat = _sparse_max(
         _broadcast_mult_arr_vec(for_prod.tocsr(), for_bound),
-        _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound)
+        _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound),
     )
     generate_mat.data.fill(1)
 
@@ -359,10 +401,12 @@ def _adj_mat_d_uw(model: cobra.Model,
     zero_block_met = csr_array((nmet, nmet))
     zero_block_rxn = csr_array((nrxn, nrxn))
 
-    adj_matrix = sparse.hstack([sparse.vstack([zero_block_met,
-                                               generate_mat.transpose()]),
-                                sparse.vstack([consume_mat, zero_block_rxn])
-                                ]).tocsr()
+    adj_matrix = sparse.hstack(
+        [
+            sparse.vstack([zero_block_met, generate_mat.transpose()]),
+            sparse.vstack([consume_mat, zero_block_rxn]),
+        ]
+    ).tocsr()
 
     return adj_matrix
 
@@ -371,128 +415,10 @@ def _adj_mat_d_uw(model: cobra.Model,
 
 # region Undirected Weighted by flux
 
-def _adj_mat_ud_w_flux(model: cobra.Model,
-                       rxn_bounds: tuple[csc_array, csc_array],
-                       threshold: float = 1e-4) -> csr_array:
-    """
-   Create a weighted directed adjacency matrix from a given model
 
-   :param model: Model to create the adjacency matrix from
-   :type model: cobra.Model
-   :param rxn_bounds: Bounds for the reactions, used to determine weights. Should
-       be tuple with first element being the minimum, and the second element
-       being the maximum.
-   :type rxn_bounds: tuple[csr_array, csr_array]
-   :param threshold: Threshold for a bound to be taken as a 0
-   :type threshold: float
-   :return: Adjacency Matrix, weighted using the bounds (higher bound translates
-       to higher weight)
-   :rtype: csr_array
-
-   .. note:
-      The index of the adjacency matrix is the metabolites followed by the reactions
-      for both the rows and columns.
-
-      The reaction bounds must have the same order as the reactions in the cobra
-      model.
-   """
-    const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(model)
-
-    # Get the bounds, and split them
-    rxn_min, rxn_max = rxn_bounds
-
-    # Convert reaction bounds into forward and reverse bounds
-    for_bound, _ = _split_arr_sign(rxn_max)
-    _, rev_bound = _split_arr_sign(rxn_min)
-    rev_bound *= -1
-
-    # Eliminate any values below threshold
-    for_bound.data[for_bound.data <= threshold] = 0.
-    for_bound.eliminate_zeros()
-
-    rev_bound.data[rev_bound.data <= threshold] = 0.
-    rev_bound.eliminate_zeros()
-
-    adj_block = _sparse_max(
-        _broadcast_mult_arr_vec(for_sub.tocsr(), for_bound),
-        _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound),
-        _broadcast_mult_arr_vec(for_prod.tocsr(), for_bound),
-        _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound)
-    )
-
-    nmet = len(model.metabolites)
-    nrxn = len(model.reactions)
-
-    zero_block_met = csr_array((nmet, nmet))
-    zero_block_rxn = csr_array((nrxn, nrxn))
-
-    adj_matrix = sparse.hstack([sparse.vstack([zero_block_met,
-                                               adj_block.transpose()]),
-                                sparse.vstack([adj_block, zero_block_rxn])
-                                ]).tocsr()
-
-    return adj_matrix
-
-
-# endregion Undirected Weighted by flux
-
-# region Undirected Weighted by stoichiometry
-
-def _adj_mat_ud_w_stoichiometry(model: cobra.Model,
-                                threshold: float = 1e-4) -> csr_array:
-    """
-    Create an undirected adjacency matrix from a given model, with edge weights
-    corresponding to stoichiometry
-
-    :param model: Model to create the adjacency matrix from
-    :type model: cobra.Model
-    :param threshold: Threshold for a bound to be taken as a 0
-    :type threshold: float
-    :return: Adjacency Matrix
-    :rtype: csr_array
-
-    .. note:
-       The index of the adjacency matrix is the metabolites followed by the reactions
-       for both the rows and columns.
-    """
-    const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(model)
-
-    # Get the bounds, and split them
-
-    bounds = const_mat.variable_bounds.tocsr()[:, 1]
-
-    bounds.data[bounds.data <= threshold] = 0.
-    bounds.eliminate_zeros()
-
-    # Change all the non-zero bounds to 1.
-    bounds.data.fill(1)
-
-    for_bound, rev_bound = _split_arr_row(bounds, into=2)
-
-    adj_block = _sparse_max(_broadcast_mult_arr_vec(for_sub.tocsr(), for_bound),
-                            _broadcast_mult_arr_vec(for_prod.tocsr(), for_bound),
-                            _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound),
-                            _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound))
-
-    nmet, nrxn = adj_block.shape
-
-    zero_block_rxn = csr_array((nrxn, nrxn))
-    zero_block_met = csr_array((nmet, nmet))
-
-    adjacency_matrix = sparse.hstack([sparse.vstack([zero_block_met, adj_block.T]),
-                                      sparse.vstack(
-                                          [adj_block, zero_block_rxn])]).tocsr()
-
-    return adjacency_matrix
-
-
-# endregion Undirected Weighted by stoichiometry
-
-# region Directed Weighted by flux
-
-def _adj_mat_d_w_flux(model: cobra.Model,
-                      rxn_bounds: tuple[csc_array, csc_array],
-                      threshold: float = 1e-4) -> csr_array:
+def _adj_mat_ud_w_flux(
+    model: cobra.Model, rxn_bounds: tuple[csc_array, csc_array], threshold: float = 1e-4
+) -> csr_array:
     """
     Create a weighted directed adjacency matrix from a given model
 
@@ -526,20 +452,17 @@ def _adj_mat_d_w_flux(model: cobra.Model,
     rev_bound *= -1
 
     # Eliminate any values below threshold
-    for_bound.data[for_bound.data <= threshold] = 0.
+    for_bound.data[for_bound.data <= threshold] = 0.0
     for_bound.eliminate_zeros()
 
-    rev_bound.data[rev_bound.data <= threshold] = 0.
+    rev_bound.data[rev_bound.data <= threshold] = 0.0
     rev_bound.eliminate_zeros()
 
-    consume_mat = _sparse_max(
+    adj_block = _sparse_max(
         _broadcast_mult_arr_vec(for_sub.tocsr(), for_bound),
-        _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound)
-    )
-
-    generate_mat = _sparse_max(
+        _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound),
         _broadcast_mult_arr_vec(for_prod.tocsr(), for_bound),
-        _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound)
+        _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound),
     )
 
     nmet = len(model.metabolites)
@@ -548,10 +471,144 @@ def _adj_mat_d_w_flux(model: cobra.Model,
     zero_block_met = csr_array((nmet, nmet))
     zero_block_rxn = csr_array((nrxn, nrxn))
 
-    adj_matrix = sparse.hstack([sparse.vstack([zero_block_met,
-                                               generate_mat.transpose()]),
-                                sparse.vstack([consume_mat, zero_block_rxn])
-                                ]).tocsr()
+    adj_matrix = sparse.hstack(
+        [
+            sparse.vstack([zero_block_met, adj_block.transpose()]),
+            sparse.vstack([adj_block, zero_block_rxn]),
+        ]
+    ).tocsr()
+
+    return adj_matrix
+
+
+# endregion Undirected Weighted by flux
+
+# region Undirected Weighted by stoichiometry
+
+
+def _adj_mat_ud_w_stoichiometry(
+    model: cobra.Model, threshold: float = 1e-4
+) -> csr_array:
+    """
+    Create an undirected adjacency matrix from a given model, with edge weights
+    corresponding to stoichiometry
+
+    :param model: Model to create the adjacency matrix from
+    :type model: cobra.Model
+    :param threshold: Threshold for a bound to be taken as a 0
+    :type threshold: float
+    :return: Adjacency Matrix
+    :rtype: csr_array
+
+    .. note:
+       The index of the adjacency matrix is the metabolites followed by the reactions
+       for both the rows and columns.
+    """
+    const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(model)
+
+    # Get the bounds, and split them
+
+    bounds = const_mat.variable_bounds.tocsr()[:, 1]
+
+    bounds.data[bounds.data <= threshold] = 0.0
+    bounds.eliminate_zeros()
+
+    # Change all the non-zero bounds to 1.
+    bounds.data.fill(1)
+
+    for_bound, rev_bound = _split_arr_row(bounds, into=2)
+
+    adj_block = _sparse_max(
+        _broadcast_mult_arr_vec(for_sub.tocsr(), for_bound),
+        _broadcast_mult_arr_vec(for_prod.tocsr(), for_bound),
+        _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound),
+        _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound),
+    )
+
+    nmet, nrxn = adj_block.shape
+
+    zero_block_rxn = csr_array((nrxn, nrxn))
+    zero_block_met = csr_array((nmet, nmet))
+
+    adjacency_matrix = sparse.hstack(
+        [
+            sparse.vstack([zero_block_met, adj_block.T]),
+            sparse.vstack([adj_block, zero_block_rxn]),
+        ]
+    ).tocsr()
+
+    return adjacency_matrix
+
+
+# endregion Undirected Weighted by stoichiometry
+
+# region Directed Weighted by flux
+
+
+def _adj_mat_d_w_flux(
+    model: cobra.Model, rxn_bounds: tuple[csc_array, csc_array], threshold: float = 1e-4
+) -> csr_array:
+    """
+    Create a weighted directed adjacency matrix from a given model
+
+    :param model: Model to create the adjacency matrix from
+    :type model: cobra.Model
+    :param rxn_bounds: Bounds for the reactions, used to determine weights. Should
+        be tuple with first element being the minimum, and the second element
+        being the maximum.
+    :type rxn_bounds: tuple[csr_array, csr_array]
+    :param threshold: Threshold for a bound to be taken as a 0
+    :type threshold: float
+    :return: Adjacency Matrix, weighted using the bounds (higher bound translates
+        to higher weight)
+    :rtype: csr_array
+
+    .. note:
+       The index of the adjacency matrix is the metabolites followed by the reactions
+       for both the rows and columns.
+
+       The reaction bounds must have the same order as the reactions in the cobra
+       model.
+    """
+    const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(model)
+
+    # Get the bounds, and split them
+    rxn_min, rxn_max = rxn_bounds
+
+    # Convert reaction bounds into forward and reverse bounds
+    for_bound, _ = _split_arr_sign(rxn_max)
+    _, rev_bound = _split_arr_sign(rxn_min)
+    rev_bound *= -1
+
+    # Eliminate any values below threshold
+    for_bound.data[for_bound.data <= threshold] = 0.0
+    for_bound.eliminate_zeros()
+
+    rev_bound.data[rev_bound.data <= threshold] = 0.0
+    rev_bound.eliminate_zeros()
+
+    consume_mat = _sparse_max(
+        _broadcast_mult_arr_vec(for_sub.tocsr(), for_bound),
+        _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound),
+    )
+
+    generate_mat = _sparse_max(
+        _broadcast_mult_arr_vec(for_prod.tocsr(), for_bound),
+        _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound),
+    )
+
+    nmet = len(model.metabolites)
+    nrxn = len(model.reactions)
+
+    zero_block_met = csr_array((nmet, nmet))
+    zero_block_rxn = csr_array((nrxn, nrxn))
+
+    adj_matrix = sparse.hstack(
+        [
+            sparse.vstack([zero_block_met, generate_mat.transpose()]),
+            sparse.vstack([consume_mat, zero_block_rxn]),
+        ]
+    ).tocsr()
 
     return adj_matrix
 
@@ -560,8 +617,10 @@ def _adj_mat_d_w_flux(model: cobra.Model,
 
 # region Directed Weighted by stoichiometry
 
-def _adj_mat_d_w_stoichiometry(model: cobra.Model,
-                               threshold: float = 1e-4) -> csr_array:
+
+def _adj_mat_d_w_stoichiometry(
+    model: cobra.Model, threshold: float = 1e-4
+) -> csr_array:
     """
     Create a directed adjacency matrix from a given model, with edge weights
     corresponding to stoichiometry
@@ -582,22 +641,22 @@ def _adj_mat_d_w_stoichiometry(model: cobra.Model,
     # Get the bounds, and split them
     bounds = const_mat.variable_bounds.tocsc()[:, 1]
 
-    bounds.data[bounds.data <= threshold] = 0.
+    bounds.data[bounds.data <= threshold] = 0.0
     bounds.eliminate_zeros()
 
     # Change all the non-zero bounds to 1
-    bounds.data.fill(1.)
+    bounds.data.fill(1.0)
 
     for_bound, rev_bound = _split_arr_row(bounds, into=2)
 
     consume_mat = _sparse_max(
         _broadcast_mult_arr_vec(for_sub.tocsr(), for_bound),
-        _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound)
+        _broadcast_mult_arr_vec(rev_sub.tocsr(), rev_bound),
     )
 
     generate_mat = _sparse_max(
         _broadcast_mult_arr_vec(for_prod.tocsr(), for_bound),
-        _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound)
+        _broadcast_mult_arr_vec(rev_prod.tocsr(), rev_bound),
     )
 
     nmet = len(model.metabolites)
@@ -606,10 +665,12 @@ def _adj_mat_d_w_stoichiometry(model: cobra.Model,
     zero_block_met = csr_array((nmet, nmet))
     zero_block_rxn = csr_array((nrxn, nrxn))
 
-    adj_matrix = sparse.hstack([sparse.vstack([zero_block_met,
-                                               generate_mat.transpose()]),
-                                sparse.vstack([consume_mat, zero_block_rxn])
-                                ]).tocsr()
+    adj_matrix = sparse.hstack(
+        [
+            sparse.vstack([zero_block_met, generate_mat.transpose()]),
+            sparse.vstack([consume_mat, zero_block_rxn]),
+        ]
+    ).tocsr()
 
     return adj_matrix
 
@@ -618,14 +679,14 @@ def _adj_mat_d_w_stoichiometry(model: cobra.Model,
 
 # region Helper Functions
 
-def _split_model_arrays(model: cobra.Model) -> tuple[NamedTuple,
-csc_array,
-csc_array,
-csc_array,
-csc_array]:
-    const_mat = cobra.util.array.constraint_matrices(model,
-                                                     array_type="lil",
-                                                     )
+
+def _split_model_arrays(
+    model: cobra.Model,
+) -> tuple[NamedTuple, csc_array, csc_array, csc_array, csc_array]:
+    const_mat = cobra.util.array.constraint_matrices(
+        model,
+        array_type="lil",
+    )
     # Get the stoichiometric matrix
     equalities = const_mat.equalities.tocsc()
 
@@ -641,5 +702,6 @@ csc_array]:
     rev_sub *= -1
 
     return const_mat, for_prod, for_sub, rev_prod, rev_sub
+
 
 # endregion Helper Functions

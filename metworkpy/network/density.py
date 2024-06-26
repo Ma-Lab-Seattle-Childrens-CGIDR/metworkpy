@@ -19,9 +19,12 @@ import pandas as pd
 
 # region Main Functions
 
-def label_density(network: nx.Graph | nx.DiGraph,
-                  labels: list[Hashable] | dict[Hashable, float | int] | pd.Series,
-                  radius: int = 3) -> pd.Series:
+
+def label_density(
+    network: nx.Graph | nx.DiGraph,
+    labels: list[Hashable] | dict[Hashable, float | int] | pd.Series,
+    radius: int = 3,
+) -> pd.Series:
     """
     Find the label density for different nodes in the graph. See note for details.
 
@@ -54,23 +57,26 @@ def label_density(network: nx.Graph | nx.DiGraph,
         network = network.to_undirected()
     if not isinstance(network, nx.Graph):
         raise ValueError(
-            f"Network must be a networkx network, but received {type(network)}")
+            f"Network must be a networkx network, but received {type(network)}"
+        )
     if isinstance(labels, list):
         labels = pd.Series(1, index=list)
     elif isinstance(labels, dict):
         labels = pd.Series(labels)
     density_dict = dict()
     for node in network:
-        density_dict[node] = _node_density(network=network, labels=labels,
-                                           node=node, radius=radius)
+        density_dict[node] = _node_density(
+            network=network, labels=labels, node=node, radius=radius
+        )
     return pd.Series(density_dict)
 
 
 def find_dense_clusters(
-        network: nx.Graph | nx.DiGraph,
-        labels: list[Hashable] | dict[Hashable, float | int] | pd.Series,
-        radius: int = 3,
-        quantile_cutoff: float = 0.20) -> pd.DataFrame:
+    network: nx.Graph | nx.DiGraph,
+    labels: list[Hashable] | dict[Hashable, float | int] | pd.Series,
+    radius: int = 3,
+    quantile_cutoff: float = 0.20,
+) -> pd.DataFrame:
     """
     Find the clusters within a network with high label density
 
@@ -108,7 +114,8 @@ def find_dense_clusters(
         network = network.to_undirected()
     if not isinstance(network, nx.Graph):
         raise ValueError(
-            f"Network must be a networkx network, but received {type(network)}")
+            f"Network must be a networkx network, but received {type(network)}"
+        )
     density = label_density(network=network, labels=labels, radius=radius)
     # Find which nodes are below the quantile density cutoff
     cutoff = np.quantile(density, 1 - quantile_cutoff)
@@ -117,9 +124,12 @@ def find_dense_clusters(
     high_density_network = network.copy()
     high_density_network.remove_nodes_from(low_density)
     # Create a dataframe for the results
-    res_df = pd.DataFrame(None, index=density[density >= cutoff].index,
-                          columns=["density", "cluster"],
-                          dtype="float")
+    res_df = pd.DataFrame(
+        None,
+        index=density[density >= cutoff].index,
+        columns=["density", "cluster"],
+        dtype="float",
+    )
     # Find the connected components, and assign each to a cluster
     current_cluster = 0
     for comp in nx.connected_components(high_density_network):
@@ -133,25 +143,26 @@ def find_dense_clusters(
 
 # endregion Main Functions
 
+
 # region Node Density
-def _node_density(network: nx.Graph,
-                  labels: pd.Series,
-                  node: Hashable,
-                  radius: int) -> float:
+def _node_density(
+    network: nx.Graph, labels: pd.Series, node: Hashable, radius: int
+) -> float:
     node_count = 1
     if node in labels.index:
         label_sum = float(labels[node])
     else:
-        label_sum = 0.
+        label_sum = 0.0
     # Iterate through connected nodes
     # bfs_successors used as it allows for depth limit, and
-    for predecessors, successors in nx.bfs_successors(network,
-                                                      source=node,
-                                                      depth_limit=radius):
+    for predecessors, successors in nx.bfs_successors(
+        network, source=node, depth_limit=radius
+    ):
         for n in successors:
             node_count += 1
             if n in labels.index:
                 label_sum += labels[n]
     return label_sum / node_count
+
 
 # endregion Node Density

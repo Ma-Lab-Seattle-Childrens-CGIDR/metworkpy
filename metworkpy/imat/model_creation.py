@@ -20,7 +20,7 @@ from metworkpy.utils import _arguments
 
 # define defaults for the iMAT functions
 DEFAULTS = {
-    "epsilon": 1.,
+    "epsilon": 1.0,
     "objective_tolerance": 5e-2,
     "threshold": 1e-1,
     "tolerance": 1e-7,
@@ -29,13 +29,13 @@ DEFAULTS = {
 
 # region: Main Model Creation Function
 def generate_model(
-        model: cobra.Model,
-        rxn_weights: Union[pd.Series, dict],
-        method: str = "imat_restrictions",
-        epsilon: float = DEFAULTS["epsilon"],
-        threshold: float = DEFAULTS["threshold"],
-        objective_tolerance: float = DEFAULTS["objective_tolerance"],
-        **kwargs,
+    model: cobra.Model,
+    rxn_weights: Union[pd.Series, dict],
+    method: str = "imat_restrictions",
+    epsilon: float = DEFAULTS["epsilon"],
+    threshold: float = DEFAULTS["threshold"],
+    objective_tolerance: float = DEFAULTS["objective_tolerance"],
+    **kwargs,
 ):
     """
     Generate a context specific model using iMAT.
@@ -100,9 +100,7 @@ def generate_model(
 
 
 # region: Model Creation methods
-def imat_constraint_model(
-        model, rxn_weights, epsilon, threshold, objective_tolerance
-):
+def imat_constraint_model(model, rxn_weights, epsilon, threshold, objective_tolerance):
     """
     Generate a context specific model by adding iMAT constraints, and
     ensuring iMAT objective value is near optimal.
@@ -151,9 +149,7 @@ def imat_constraint_model(
         rh_obj += [forward_variable, reverse_variable]
     for rxn in rl:  # For each lowly expressed reaction
         variable = imat_model.solver.variables[f"y_pos_{rxn}"]
-        rl_obj += [
-            variable
-        ]  # Note: Only one variable for lowly expressed reactions
+        rl_obj += [variable]  # Note: Only one variable for lowly expressed reactions
     imat_obj_constraint = imat_model.solver.interface.Constraint(
         sym.Add(*rh_obj) + sym.Add(*rl_obj),
         lb=imat_obj_val - objective_tolerance * imat_obj_val,
@@ -197,20 +193,14 @@ def simple_bounds_model(model, rxn_weights, epsilon, threshold):
     """
     updated_model = model.copy()
     imat_solution = imat(model, rxn_weights, epsilon, threshold)
-    if imat_solution.status != 'optimal':
+    if imat_solution.status != "optimal":
         raise ValueError("No optimal solution found for IMAT problem")
     fluxes = imat_solution.fluxes
     rl = rxn_weights[rxn_weights < 0].index.tolist()
     rh = rxn_weights[rxn_weights > 0].index.tolist()
-    inactive_reactions = fluxes[
-        (fluxes.abs() <= threshold) & (fluxes.index.isin(rl))
-        ]
-    forward_active_reactions = fluxes[
-        (fluxes >= epsilon) & (fluxes.index.isin(rh))
-        ]
-    reverse_active_reactions = fluxes[
-        (fluxes <= -epsilon) & (fluxes.index.isin(rh))
-        ]
+    inactive_reactions = fluxes[(fluxes.abs() <= threshold) & (fluxes.index.isin(rl))]
+    forward_active_reactions = fluxes[(fluxes >= epsilon) & (fluxes.index.isin(rh))]
+    reverse_active_reactions = fluxes[(fluxes <= -epsilon) & (fluxes.index.isin(rh))]
     for rxn in inactive_reactions.index:
         reaction = updated_model.reactions.get_by_id(rxn)
         reaction.bounds = _inactive_bounds(
@@ -255,30 +245,26 @@ def subset_model(model, rxn_weights, epsilon, threshold):
     """
     updated_model = model.copy()
     imat_solution = imat(model, rxn_weights, epsilon, threshold)
-    if imat_solution.status != 'optimal':
+    if imat_solution.status != "optimal":
         raise ValueError("No optimal solution found for IMAT problem")
     fluxes = imat_solution.fluxes
     rl = rxn_weights[rxn_weights < 0].index.tolist()
-    inactive_reactions = fluxes[
-        (fluxes.abs() <= threshold) & (fluxes.index.isin(rl))
-        ]
+    inactive_reactions = fluxes[(fluxes.abs() <= threshold) & (fluxes.index.isin(rl))]
     for rxn in inactive_reactions.index:
         reaction = updated_model.reactions.get_by_id(rxn)
         # Force reaction to be below threshold
-        reaction.bounds = _inactive_bounds(
-            *reaction.bounds, threshold=threshold
-        )
+        reaction.bounds = _inactive_bounds(*reaction.bounds, threshold=threshold)
     return updated_model
 
 
 def fva_model(
-        model,
-        rxn_weights,
-        epsilon,
-        threshold,
-        objective_tolerance,
-        loopless: bool = True,
-        **kwargs
+    model,
+    rxn_weights,
+    epsilon,
+    threshold,
+    objective_tolerance,
+    loopless: bool = True,
+    **kwargs,
 ):
     """
     Generate a context specific model by setting bounds on reactions based on
@@ -323,7 +309,7 @@ def fva_model(
         fraction_of_optimum=(1 - objective_tolerance),
         loopless=loopless,
         reaction_list=reactions,
-        **kwargs
+        **kwargs,
     ).dropna()
     for rxn in reactions:
         reaction = updated_model.reactions.get_by_id(rxn)
@@ -375,10 +361,7 @@ def milp_model(model, rxn_weights, epsilon, threshold):
     for rxn in reactions:
         with imat_model as ko_model:  # Knock out the reaction
             reaction = ko_model.reactions.get_by_id(rxn)
-            if (
-                    reaction.lower_bound > threshold
-                    or reaction.upper_bound < -threshold
-            ):
+            if reaction.lower_bound > threshold or reaction.upper_bound < -threshold:
                 # Reaction can't be inactive, so skip
                 ko_solution = -1
             else:
@@ -398,9 +381,7 @@ def milp_model(model, rxn_weights, epsilon, threshold):
                     epsilon,
                     forward=True,
                 )
-                forward_solution = forward_model.slim_optimize(
-                    error_value=-1.
-                )
+                forward_solution = forward_model.slim_optimize(error_value=-1.0)
         with imat_model as reverse_model:
             reaction = reverse_model.reactions.get_by_id(rxn)
             if reaction.lower_bound > -epsilon:
@@ -413,9 +394,7 @@ def milp_model(model, rxn_weights, epsilon, threshold):
                     epsilon,
                     forward=False,
                 )
-                reverse_solution = reverse_model.slim_optimize(
-                    error_value=-1.
-                )
+                reverse_solution = reverse_model.slim_optimize(error_value=-1.0)
         milp_results.loc[rxn, :] = [
             ko_solution,
             forward_solution,
@@ -424,9 +403,7 @@ def milp_model(model, rxn_weights, epsilon, threshold):
     final_results = milp_results.apply(_milp_eval, axis=1).dropna()
     # Now 0 is inactive, 1 is forward, -1 is reverse, nan is under determined
     for rxn in reactions:
-        if pd.isna(
-                final_results[rxn]
-        ):  # skip under-determined reactions
+        if pd.isna(final_results[rxn]):  # skip under-determined reactions
             # should never actually happen due to drop na, but here for safety
             continue
         reaction = updated_model.reactions.get_by_id(rxn)
@@ -492,7 +469,7 @@ def _parse_method(method: str) -> str:
                     "eliminate_below_threshold",
                     "subset-model",
                     "subset_model",
-                    "subset model"
+                    "subset model",
                 ],
                 "fva": [
                     "fva",
@@ -501,14 +478,13 @@ def _parse_method(method: str) -> str:
                     "flux variability analysis",
                     "fva_model",
                     "fva-model",
-                    "fva model"
+                    "fva model",
                 ],
                 "milp": [
                     "milp",
                     "milp-model",
                     "milp_model",
-                    "milp model"
-                    "mixed_integer_linear_programming",
+                    "milp model" "mixed_integer_linear_programming",
                     "mixed integer linear programming",
                     "mixed-integer-linear-programming",
                 ],
@@ -522,9 +498,7 @@ def _parse_method(method: str) -> str:
         ) from err
 
 
-def _inactive_bounds(
-        lb: float, ub: float, threshold: float
-) -> tuple[float, float]:
+def _inactive_bounds(lb: float, ub: float, threshold: float) -> tuple[float, float]:
     """
     Find the new bounds for the reaction if it is inactive.
     """
@@ -546,7 +520,7 @@ def _inactive_bounds(
 
 
 def _active_bounds(
-        lb: float, ub: float, epsilon: float, forward: bool
+    lb: float, ub: float, epsilon: float, forward: bool
 ) -> tuple[float, float]:
     """
     Find the new bounds for the reaction if it is active.
@@ -582,9 +556,7 @@ def _milp_eval(milp_res: pd.Series) -> float:
     """
     if pd.isna(milp_res).any():
         return np.nan
-    if (
-            len(np.unique(milp_res)) == 3
-    ):  # Find which is max, then return based on that
+    if len(np.unique(milp_res)) == 3:  # Find which is max, then return based on that
         max_ind = np.argmax(milp_res)
         if max_ind > 1:
             res = -1  # reverse is the max
@@ -592,19 +564,19 @@ def _milp_eval(milp_res: pd.Series) -> float:
             res = max_ind  # Index corresponds to which is max
         return res
     elif (milp_res["forward"] == milp_res["reverse"]) and (
-            milp_res["inactive"] > milp_res["forward"]
+        milp_res["inactive"] > milp_res["forward"]
     ):
         # Forced forward, and reverse are the same, and inactive is
         # greater than both, so inactive
         return 0
     elif (milp_res["inactive"] == milp_res["reverse"]) and (
-            milp_res["forward"] > milp_res["inactive"]
+        milp_res["forward"] > milp_res["inactive"]
     ):
         # Forced reverse, and inactive are the same, and forward is
         # greater than both, so forward
         return 1
     elif (milp_res["inactive"] == milp_res["forward"]) and (
-            milp_res["reverse"] > milp_res["inactive"]
+        milp_res["reverse"] > milp_res["inactive"]
     ):
         # Forced inactive, and forward are the same, and reverse is
         # greater than both, so reverse
@@ -612,5 +584,6 @@ def _milp_eval(milp_res: pd.Series) -> float:
     else:
         # Under-determined case, return nan
         return np.nan
+
 
 # endregion Helper Functions

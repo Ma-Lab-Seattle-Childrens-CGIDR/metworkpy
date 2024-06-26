@@ -19,12 +19,14 @@ from tqdm import tqdm
 
 # region Metchange
 
-def metchange(model: cobra.Model,
-              reaction_weights: dict[str, float] | pd.Series,
-              metabolites: Iterable[str] = None,
-              objective_tolerance: float = 0.05,
-              progress_bar: bool = False
-              ) -> pd.Series:
+
+def metchange(
+    model: cobra.Model,
+    reaction_weights: dict[str, float] | pd.Series,
+    metabolites: Iterable[str] = None,
+    objective_tolerance: float = 0.05,
+    progress_bar: bool = False,
+) -> pd.Series:
     """
     Use the Metchange algorithm to find the inconsistency scores for a set of
     metabolites based on reaction weights.
@@ -74,10 +76,12 @@ def metchange(model: cobra.Model,
         metabolites = metabolites.split(sep=",")
     res_series = pd.Series(np.nan, index=metabolites)
     for metabolite in tqdm(metabolites, disable=not progress_bar):
-        with MetchangeObjectiveConstraint(model=model,
-                                          metabolite=metabolite,
-                                          reaction_weights=reaction_weights,
-                                          objective_tolerance=objective_tolerance) as m:
+        with MetchangeObjectiveConstraint(
+            model=model,
+            metabolite=metabolite,
+            reaction_weights=reaction_weights,
+            objective_tolerance=objective_tolerance,
+        ) as m:
             res_series[metabolite] = m.slim_optimize()
     return res_series
 
@@ -85,6 +89,7 @@ def metchange(model: cobra.Model,
 # endregion Metchange
 
 # region Context Manager
+
 
 class MetchangeObjectiveConstraint:
     """
@@ -107,13 +112,18 @@ class MetchangeObjectiveConstraint:
     :type objectove_tolerance: float
     """
 
-    def __init__(self, model: cobra.Model,
-                 metabolite: str,
-                 reaction_weights: pd.Series,
-                 objective_tolerance: float = 0.05):
-        if (reaction_weights == 0.).all():
-            raise ValueError("At least one weight must be non-zero, but all weights "
-                             "in reaction_weights are zero.")
+    def __init__(
+        self,
+        model: cobra.Model,
+        metabolite: str,
+        reaction_weights: pd.Series,
+        objective_tolerance: float = 0.05,
+    ):
+        if (reaction_weights == 0.0).all():
+            raise ValueError(
+                "At least one weight must be non-zero, but all weights "
+                "in reaction_weights are zero."
+            )
         self.added_sink = f"tmp_{metabolite}_sink"
         self.metabolite = metabolite
         self.model = model
@@ -124,30 +134,32 @@ class MetchangeObjectiveConstraint:
     def __enter__(self):
         self.original_objective = self.model.objective
         self.original_objective_direction = self.model.objective_direction
-        met_sink_reaction = cobra.Reaction(id=self.added_sink,
-                                           name=f"Temporary {self.metabolite} sink",
-                                           lower_bound=0.)
-        met_sink_reaction.add_metabolites({
-            self.model.metabolites.get_by_id(self.metabolite): -1
-        })
+        met_sink_reaction = cobra.Reaction(
+            id=self.added_sink,
+            name=f"Temporary {self.metabolite} sink",
+            lower_bound=0.0,
+        )
+        met_sink_reaction.add_metabolites(
+            {self.model.metabolites.get_by_id(self.metabolite): -1}
+        )
         self.model.add_reactions([met_sink_reaction])
         self.model.objective = self.added_sink
-        self.model.objective_direction = 'max'
+        self.model.objective_direction = "max"
         obj_max = self.model.slim_optimize()
-        self.model.reactions.get_by_id(self.added_sink).lower_bound = obj_max - (obj_max *
-                                                                       self.objective_tolerance)
+        self.model.reactions.get_by_id(self.added_sink).lower_bound = obj_max - (
+            obj_max * self.objective_tolerance
+        )
         rxn_vars = []
         for rxn, weight in self.rxn_weights.items():
             # If the weight is 0., doesn't need to be added
-            if weight == 0.:
+            if weight == 0.0:
                 continue
-            abs_var, *constr = (cobra.util.solver
-            .add_absolute_expression(
+            abs_var, *constr = cobra.util.solver.add_absolute_expression(
                 model=self.model,
                 expression=self.model.reactions.get_by_id(rxn).flux_expression,
                 name=f"abs_var_{rxn}_{self.metabolite}",
-                add=False
-            ))
+                add=False,
+            )
             self.to_add.append(abs_var)
             self.to_add.extend(constr)
             rxn_vars.append(abs_var * weight)
@@ -163,5 +175,6 @@ class MetchangeObjectiveConstraint:
         self.model.objective_direction = self.original_objective_direction
         self.model.remove_reactions([self.added_sink])
         cobra.util.solver.remove_cons_vars_from_problem(self.model, self.to_add)
+
 
 # endregion Context Manager

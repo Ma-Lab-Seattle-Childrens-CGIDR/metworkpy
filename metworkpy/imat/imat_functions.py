@@ -28,10 +28,10 @@ BINARY_REGEX = re.compile(r"y_(pos|neg)_(.+)")
 
 # region: Main iMat Function
 def imat(
-        model: cobra.Model,
-        rxn_weights: Union[pd.Series, dict],
-        epsilon: float = DEFAULTS["epsilon"],
-        threshold: float = DEFAULTS["threshold"],
+    model: cobra.Model,
+    rxn_weights: Union[pd.Series, dict],
+    epsilon: float = DEFAULTS["epsilon"],
+    threshold: float = DEFAULTS["threshold"],
 ) -> cobra.Solution:
     """
     Function for performing iMAT analysis. Returns a cobra Solution object,
@@ -60,11 +60,11 @@ def imat(
 
 # region: iMAT extension functions
 def flux_to_binary(
-        fluxes: pd.Series,
-        which_reactions: str = "active",
-        epsilon: float = DEFAULTS["epsilon"],
-        threshold: float = DEFAULTS["threshold"],
-        tolerance=DEFAULTS["tolerance"],
+    fluxes: pd.Series,
+    which_reactions: str = "active",
+    epsilon: float = DEFAULTS["epsilon"],
+    threshold: float = DEFAULTS["threshold"],
+    tolerance=DEFAULTS["tolerance"],
 ) -> pd.Series:
     """
     Convert a pandas series of fluxes to a pandas series of binary values.
@@ -100,13 +100,11 @@ def flux_to_binary(
         return (fluxes <= (-epsilon + tolerance)).astype(int)
     elif which_reactions == "active":
         return (
-                (fluxes >= epsilon - tolerance) | (
-                fluxes <= -epsilon + tolerance)
+            (fluxes >= epsilon - tolerance) | (fluxes <= -epsilon + tolerance)
         ).astype(int)
     elif which_reactions == "inactive":
         return (
-                (fluxes <= threshold + tolerance)
-                & (fluxes >= -threshold - tolerance)
+            (fluxes <= threshold + tolerance) & (fluxes >= -threshold - tolerance)
         ).astype(int)
     else:
         raise ValueError(
@@ -116,10 +114,10 @@ def flux_to_binary(
 
 
 def compute_imat_objective(
-        fluxes: pd.Series,
-        rxn_weights,
-        epsilon: float = DEFAULTS["epsilon"],
-        threshold: float = DEFAULTS["threshold"],
+    fluxes: pd.Series,
+    rxn_weights,
+    epsilon: float = DEFAULTS["epsilon"],
+    threshold: float = DEFAULTS["threshold"],
 ):
     """
     Compute the iMAT objective value for a given set of fluxes.
@@ -155,10 +153,10 @@ def compute_imat_objective(
 
 # region: iMAT Helper Functions
 def add_imat_constraints_(
-        model: cobra.Model,
-        rxn_weights: Union[pd.Series, dict],
-        epsilon: float = DEFAULTS["epsilon"],
-        threshold: float = DEFAULTS["threshold"],
+    model: cobra.Model,
+    rxn_weights: Union[pd.Series, dict],
+    epsilon: float = DEFAULTS["epsilon"],
+    threshold: float = DEFAULTS["threshold"],
 ) -> cobra.Model:
     """
     Add the IMAT constraints to the model (updates the model in place).
@@ -188,7 +186,7 @@ def add_imat_constraints_(
 
 
 def add_imat_constraints(
-        model, rxn_weights, epsilon: float = 1e-3, threshold: float = 1e-4
+    model, rxn_weights, epsilon: float = 1e-3, threshold: float = 1e-4
 ) -> cobra.Model:
     """
     Add the IMAT constraints to the model (returns new model, doesn't
@@ -213,7 +211,7 @@ def add_imat_constraints(
 
 
 def add_imat_objective_(
-        model: cobra.Model, rxn_weights: Union[pd.Series, dict]
+    model: cobra.Model, rxn_weights: Union[pd.Series, dict]
 ) -> None:
     """
     Add the IMAT objective to the model (updates the model in place).
@@ -248,7 +246,7 @@ def add_imat_objective_(
 
 
 def add_imat_objective(
-        model: cobra.Model, rxn_weights: Union[pd.Series, dict]
+    model: cobra.Model, rxn_weights: Union[pd.Series, dict]
 ) -> cobra.Model:
     """
     Add the IMAT objective to the model (doesn't change passed model).
@@ -287,9 +285,7 @@ def _imat_pos_weight_(model: cobra.Model, rxn: str, epsilon: float) -> None:
     lb = reaction.lower_bound
     ub = reaction.upper_bound
     reaction_flux = reaction.forward_variable - reaction.reverse_variable
-    y_pos = model.solver.interface.Variable(
-        f"y_pos_{reaction.id}", type="binary"
-    )
+    y_pos = model.solver.interface.Variable(f"y_pos_{reaction.id}", type="binary")
     model.solver.add(y_pos)
     forward_constraint = model.solver.interface.Constraint(
         reaction_flux + (y_pos * (lb - epsilon)),
@@ -297,9 +293,7 @@ def _imat_pos_weight_(model: cobra.Model, rxn: str, epsilon: float) -> None:
         name=f"forward_constraint_{reaction.id}",
     )
     model.solver.add(forward_constraint)
-    y_neg = model.solver.interface.Variable(
-        f"y_neg_{reaction.id}", type="binary"
-    )
+    y_neg = model.solver.interface.Variable(f"y_neg_{reaction.id}", type="binary")
     model.solver.add(y_neg)
     reverse_constraint = model.solver.interface.Constraint(
         reaction_flux + y_neg * (ub + epsilon),
@@ -326,9 +320,7 @@ def _imat_neg_weight_(model: cobra.Model, rxn: str, threshold: float) -> None:
     lb = reaction.lower_bound
     ub = reaction.upper_bound
     reaction_flux = reaction.forward_variable - reaction.reverse_variable
-    y_pos = model.solver.interface.Variable(
-        f"y_pos_{reaction.id}", type="binary"
-    )
+    y_pos = model.solver.interface.Variable(f"y_pos_{reaction.id}", type="binary")
     model.solver.add(y_pos)
     forward_constraint = model.solver.interface.Constraint(
         reaction_flux - ub * (1 - y_pos) - threshold * y_pos,
@@ -367,5 +359,6 @@ def _parse_which_reactions(which_reactions: str) -> str:
             "Couldn't Parse which_reactions, should be one of: \
                          active, inactive, forward, reverse"
         )
+
 
 # endregion: Internal Methods
