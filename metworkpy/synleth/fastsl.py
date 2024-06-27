@@ -23,6 +23,7 @@ import numpy as np
 def find_synthetic_lethal_genes(
     model: cobra.Model,
     max_depth: int = 3,
+    genes_of_interest: None | Iterable = None,
     active_cutoff: float = cobra.core.configuration.Configuration().tolerance,
     pfba_fraction_of_optimum: float = 0.95,
     essential_proportion: float = 0.01,
@@ -36,6 +37,12 @@ def find_synthetic_lethal_genes(
     :type model: cobra.Model
     :param max_depth: Maximum number of genes in a synthetic lethal group
     :type max_depth: int
+    :param genes_of_interest: Set of genes of interest, this method will only find synthetic lethal groups
+        which include at least one of these genes. Should be an iterable (list, set, etc.) of
+        gene id strings, which match the gene ids in the model. If None, will default to all
+        genes in the model. This filtering is done after the synthetic lethal sets are already found
+        (see note for reason) and so is for convenience rather than speed.
+    :type genes_of_interest: None | Iterable
     :param active_cutoff: Minimum (absolute value of) flux through a reaction to be considered active. All
         reactions found to have a flux below this during pFBA will be ignored when finding essential genes.
     :type active_cutoff: float
@@ -52,11 +59,26 @@ def find_synthetic_lethal_genes(
     :param show_queue_size: If True will print the approximate current queue size each time a job is taken from
         the queue during calculations. Default False.
     :type show_queue_size: bool
-    :return: List of synethetically lethal groups of genes, recorded as sets of gene ids
+    :return: List of synthetically lethal groups of genes, recorded as sets of gene ids
     :rtype: list[set[str]]
+
+    .. note:
+       For the genes_of_interest argument, this function still needs to check all synthetic lethal groups
+       exhaustively, so it will actually take longer than if this is not provided. The reason all groups
+       have to be checked exhaustively is to ensure that no subsets of the group are already synthetically
+       lethal. Take for example a set of genes A, B, C, D, E, F. If A and B together are essential,
+       and you are interested in the gene set D,E,F, then the knock out of A,B,D would be essential.
+       Even though you are interested in D, the essentiality of this gene set is caused by A and B alone.
+       To ensure that all synthetic lethal gene sets are actually synthetically lethal (rather than a
+       superset including irrelevant genes), the gene sets are filtered for any sets that are supersets of other
+       sets. This means that it is impossible to only check sets that include genes of interest, since (like
+       in the example), the genes causing the essentiality maybe outside the genes of interest.
     """
     # Find the essential cutoff
     essential_cutoff = essential_proportion * model.slim_optimize()
+    # Get genes of interest, create set
+    if genes_of_interest:
+        genes_of_interest = {g for g in genes_of_interest}
     # Create manager
     with multiprocessing.Manager() as manager:
         gene_queue = manager.Queue()
@@ -85,7 +107,11 @@ def find_synthetic_lethal_genes(
             for future in concurrent.futures.as_completed(futures):
                 future.result()
             synleth_list = list(results_list)
-        return synleth_list
+        # Now need to filter sets
+        synleth_list = _filter_supersets(synleth_list)
+        if not genes_of_interest:
+            return synleth_list
+        return [s for s in synleth_list if len(s & genes_of_interest) > 0]
 
 
 # endregion Synthetic Lethal Genes
@@ -113,7 +139,6 @@ def _process_gene_set_worker(
             knock_out_model_genes(m, list(gene_set))
             # Case where the gene set is currently essential
             # Should only happen genes, since they are added without being checked
-
             objective_value = m.slim_optimize(error_value=np.nan)
             if np.isnan(objective_value) or (objective_value <= essential_cutoff):
                 results_list.append(gene_set)
@@ -161,6 +186,17 @@ def _get_potentially_active_genes(
     ).fluxes
     active_reactions = pfba_res[np.abs(pfba_res) > active_cutoff].index
     return _rxns_to_genes(model=model, rxns=active_reactions)
+
+
+def _filter_supersets(sets: list[set[str]]) -> list[set[str]]:
+    sets.sort(key=len)  # Sort sets by length
+    filtered_sets = []
+    while len(sets) > 0:
+        elem = sets.pop(0)
+        filtered_sets.append(elem)
+        if sets:
+            sets = [s for s in sets if not elem.issubset(s)]  # Filter out all supersets
+    return filtered_sets
 
 
 # endregion Helper Functions
