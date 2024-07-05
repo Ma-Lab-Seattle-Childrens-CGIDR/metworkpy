@@ -33,7 +33,7 @@ DEFAULTS = {
 def generate_model(
     model: cobra.Model,
     rxn_weights: Union[pd.Series, dict],
-    imat_solution: cobra.Solution,
+    imat_solution: cobra.Solution = None,
     method: str = "imat_restrictions",
     epsilon: float = DEFAULTS["epsilon"],
     threshold: float = DEFAULTS["threshold"],
