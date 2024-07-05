@@ -225,10 +225,13 @@ class TestRun(unittest.TestCase):
     def test_metabolites_file(self):
         with open(BASE_PATH / "data" / "met_list.txt", "r") as f:
             met_file = f.read()
+        met_file_metabolites = [
+            met.strip() for met in met_file.split(",") if met.strip()
+        ]
         metchange_res = self.run_cli(
             metabolites_file=BASE_PATH / "data" / "met_list.txt"
         )
-        self.assertListEqual(list(metchange_res.index), met_file.split(","))
+        self.assertListEqual(list(metchange_res.index), met_file_metabolites)
 
     def test_extra_info(self):
         metchange_res = self.run_cli(extra_info=True)

@@ -257,10 +257,11 @@ class TestRunMulti(unittest.TestCase):
             else:
                 extension = "json"
             if args.sample_groups:
-                sample_groups, sample_names = (
-                    _script_utils._parse_sample_groups_and_names(
-                        args.sample_groups, args.sample_group_names
-                    )
+                (
+                    sample_groups,
+                    sample_names,
+                ) = _script_utils._parse_sample_groups_and_names(
+                    args.sample_groups, args.sample_group_names
                 )
             else:
                 sample_groups = [
