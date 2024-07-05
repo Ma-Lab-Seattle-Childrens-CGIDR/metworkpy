@@ -32,5 +32,5 @@ html_static_path = ["_static"]
 
 # Stop expansion of ArrayLike
 autodoc_type_aliases = {
-    'ArrayLike':'ArrayLike',
+    "ArrayLike": "ArrayLike",
 }

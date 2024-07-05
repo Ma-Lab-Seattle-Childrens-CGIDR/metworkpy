@@ -18,4 +18,3 @@ metabolite\_network
    :members:
    :undoc-members:
    :show-inheritance:
-

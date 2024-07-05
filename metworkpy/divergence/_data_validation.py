@@ -1,6 +1,7 @@
 """
 Functions for validating arguments provided to the divergence functions in this module
 """
+
 import numpy as np
 from numpy._typing import ArrayLike
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "metworkpy"
-version = "0.1.9"
+version = "0.1.10"
 description = "Tools for creating and working with network models of metabolism."
 authors = ["Braden Griebel <bgriebel@uw.edu>"]
 license = "MIT"
@@ -37,6 +37,7 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.2.2"
+pre-commit = "^3.7.1"
 
 [tool.poetry.group.test]
 optional = true
@@ -75,4 +76,3 @@ filterwarnings = [
 # Setup ruff
 [tool.ruff]
 line-length=88
-

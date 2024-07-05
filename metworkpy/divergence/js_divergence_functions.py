@@ -1,6 +1,7 @@
 """
 Functions for calculating the Jenson-Shannon divergence between two sampled distributions
 """
+
 # Imports
 # Standard Library Imports
 from __future__ import annotations

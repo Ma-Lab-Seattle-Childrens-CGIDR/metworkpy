@@ -1,6 +1,7 @@
 """
 Script for generating IMAT models from the command line
 """
+
 # Imports
 # Standard Library Imports
 from __future__ import annotations

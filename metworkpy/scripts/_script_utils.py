@@ -1,6 +1,7 @@
 """
 Utility functions for command line scripts
 """
+
 from __future__ import annotations
 import re
 from typing import Callable

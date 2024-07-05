@@ -1,6 +1,7 @@
 """
 Script for calculating divergence between flux distributions
 """
+
 # Imports
 # Standard Library Imports
 from __future__ import annotations

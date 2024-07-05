@@ -2,6 +2,7 @@
 Module containing utility functions for working with gene expression
 data, and converting it into qualitative weights
 """
+
 from __future__ import annotations
 
 # Standard library imports

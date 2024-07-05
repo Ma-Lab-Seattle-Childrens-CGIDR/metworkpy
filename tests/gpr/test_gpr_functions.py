@@ -181,9 +181,7 @@ class TestGeneToRxnWeights(unittest.TestCase):
         )
 
     def test_simple_model(self):
-        rxn_weights = gene_to_rxn_weights(
-            self.test_model, self.test_model_weights
-        )
+        rxn_weights = gene_to_rxn_weights(self.test_model, self.test_model_weights)
         self.assertTrue(rxn_weights.__eq__(self.test_model_rxn_weights).all())
 
     def test_larger_model(self):

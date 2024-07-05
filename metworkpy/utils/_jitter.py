@@ -1,6 +1,7 @@
 """
 Functions to add noise to arrays to avoid ties
 """
+
 # Standard Library Imports
 from typing import Union
 

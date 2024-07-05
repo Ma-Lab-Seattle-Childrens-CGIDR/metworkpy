@@ -1,6 +1,7 @@
 """
 Module for model utilities
 """
+
 # Standard Library Imports
 from __future__ import annotations
 import pathlib

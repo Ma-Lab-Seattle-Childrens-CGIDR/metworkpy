@@ -33,7 +33,7 @@ class TestMetsampleRun(unittest.TestCase):
         "seed": None,
         "validate": False,
         "batches": None,
-        "verbose": False
+        "verbose": False,
     }
 
     @classmethod
@@ -62,8 +62,10 @@ class TestMetsampleRun(unittest.TestCase):
 
     def run_cli(self, **kwargs) -> pd.DataFrame:
         namespace_dict = self.default_dict | kwargs
-        with mock.patch("argparse.ArgumentParser.parse_args",
-                        return_value=argparse.Namespace(**namespace_dict)):
+        with mock.patch(
+            "argparse.ArgumentParser.parse_args",
+            return_value=argparse.Namespace(**namespace_dict),
+        ):
             metsample.main_run()
             # Test expected file created
             args = argparse.ArgumentParser.parse_args()
@@ -76,7 +78,9 @@ class TestMetsampleRun(unittest.TestCase):
             elif format_str == "feather":
                 sample_results = pd.read_feather(args.output_file)
             elif format_str == "excel":
-                sample_results = pd.read_excel(args.output_file, index_col=None, sheet_name="Flux Samples")
+                sample_results = pd.read_excel(
+                    args.output_file, index_col=None, sheet_name="Flux Samples"
+                )
             elif format_str == "json":
                 sample_results = pd.read_json(args.output_file)
         return sample_results
@@ -94,8 +98,10 @@ class TestMetsampleRun(unittest.TestCase):
         self.assertFalse(res.isna().any(axis=None))
 
     def format_tester(self, format):
-        res = self.run_cli(output_file=BASE_PATH / "tmp_metsample" / f"metsample_res.{format}",
-                           output_format=format)
+        res = self.run_cli(
+            output_file=BASE_PATH / "tmp_metsample" / f"metsample_res.{format}",
+            output_format=format,
+        )
         self.assertEqual(len(res), 10)
         self.assertEqual(len(res.columns), len(self.test_model.reactions))
         self.assertFalse(res.isna().any(axis=None))
@@ -109,7 +115,10 @@ class TestMetsampleRun(unittest.TestCase):
     def test_json(self):
         self.format_tester("json")
 
-    @skipIf(importlib.util.find_spec("openpyxl") is None, "Openpyxl not installed, can't read excel")
+    @skipIf(
+        importlib.util.find_spec("openpyxl") is None,
+        "Openpyxl not installed, can't read excel",
+    )
     def test_excel(self):
         self.format_tester("xlsx")
 
@@ -119,10 +128,16 @@ class TestMetsampleRun(unittest.TestCase):
         self.assertEqual(len(res.columns), len(self.test_model.reactions))
         self.assertFalse(res.isna().any(axis=None))
 
-    @skipIf(importlib.util.find_spec("fastparquet") is None, "fastparquet not installed, can't append to parquet")
+    @skipIf(
+        importlib.util.find_spec("fastparquet") is None,
+        "fastparquet not installed, can't append to parquet",
+    )
     def test_batch_parquet(self):
-        res = self.run_cli(batches=2, output_format="parquet",
-                           output_file=BASE_PATH / "tmp_metsample" / "metsample_res.parquet")
+        res = self.run_cli(
+            batches=2,
+            output_format="parquet",
+            output_file=BASE_PATH / "tmp_metsample" / "metsample_res.parquet",
+        )
         self.assertEqual(len(res), 10)
         self.assertEqual(len(res.columns), len(self.test_model.reactions))
         self.assertFalse(res.isna().any(axis=None))
@@ -135,7 +150,9 @@ class TestMetsampleRun(unittest.TestCase):
 class TestHelperFunctions(unittest.TestCase):
     def test_parse_method(self):
         self.assertEqual(metsample._parse_method("achr"), "achr")
-        self.assertEqual(metsample._parse_method("Automatic-Centering-Hit-and-Run"), "achr")
+        self.assertEqual(
+            metsample._parse_method("Automatic-Centering-Hit-and-Run"), "achr"
+        )
         self.assertEqual(metsample._parse_method("optgp"), "optgp")
         self.assertEqual(metsample._parse_method("optGP"), "optgp")
 
@@ -151,5 +168,5 @@ class TestHelperFunctions(unittest.TestCase):
         self.assertEqual(metsample._parse_format("json"), "json")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

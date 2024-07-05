@@ -7,7 +7,6 @@ between a continuous and discrete distribution.
 # Inspired by the implementation in scikit-learn, although the implementations differ so any errors are
 # Braden Griebel's.
 
-
 # Imports
 # Standard Library Imports
 from __future__ import annotations

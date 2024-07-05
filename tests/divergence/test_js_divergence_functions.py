@@ -7,8 +7,11 @@ import scipy.stats
 from scipy.spatial.distance import jensenshannon
 
 # Local imports
-from metworkpy.divergence.js_divergence_functions import _js_cont, _js_disc, \
-    js_divergence
+from metworkpy.divergence.js_divergence_functions import (
+    _js_cont,
+    _js_disc,
+    js_divergence,
+)
 
 
 class TestMainKL(unittest.TestCase):
@@ -33,28 +36,45 @@ class TestMainKL(unittest.TestCase):
 
         cls.theory_js = jensenshannon(p_weights, q_weights, base=np.e) ** 2
 
-        cls.p_sample = generator.choice([0, 1, 2, 3], size=5000, replace=True,
-                                        p=p_weights)
-        cls.q_sample = generator.choice([0, 1, 2, 3], size=5000, replace=True,
-                                        p=q_weights)
+        cls.p_sample = generator.choice(
+            [0, 1, 2, 3], size=5000, replace=True, p=p_weights
+        )
+        cls.q_sample = generator.choice(
+            [0, 1, 2, 3], size=5000, replace=True, p=q_weights
+        )
 
     def test_symetry(self):
         # Continuous
-        self.assertTrue(np.isclose(js_divergence(self.norm_2_10, self.norm_0_3),
-                                   js_divergence(self.norm_0_3, self.norm_2_10)))
+        self.assertTrue(
+            np.isclose(
+                js_divergence(self.norm_2_10, self.norm_0_3),
+                js_divergence(self.norm_0_3, self.norm_2_10),
+            )
+        )
         # Discrete
         self.assertTrue(
-            np.isclose(js_divergence(self.p_sample, self.q_sample, discrete=True),
-                       js_divergence(self.q_sample, self.p_sample, discrete=True)))
+            np.isclose(
+                js_divergence(self.p_sample, self.q_sample, discrete=True),
+                js_divergence(self.q_sample, self.p_sample, discrete=True),
+            )
+        )
 
     def test_identical_distributions(self):
         # Continuous
         self.assertTrue(
-            np.isclose(0., js_divergence(self.norm_2_10, self.norm_2_10_rep),
-                       atol=1e-1))
-        self.assertTrue(np.isclose(
-            js_divergence(self.uniform_choice, self.uniform_choice_rep, discrete=True),
-            0., atol=5e-2))
+            np.isclose(
+                0.0, js_divergence(self.norm_2_10, self.norm_2_10_rep), atol=1e-1
+            )
+        )
+        self.assertTrue(
+            np.isclose(
+                js_divergence(
+                    self.uniform_choice, self.uniform_choice_rep, discrete=True
+                ),
+                0.0,
+                atol=5e-2,
+            )
+        )
 
     def test_greater_sd(self):
         # JS should increase when the difference in Standard deviations between the
@@ -74,27 +94,42 @@ class TestMainKL(unittest.TestCase):
         self.assertTrue(np.isclose(comp_js, self.theory_js, atol=5e-3))
 
     def test_input_handling(self):
-        self.assertTrue(np.isclose(js_divergence(self.norm_0_3, self.norm_2_10),
-                                   js_divergence(self.norm_0_3.ravel(),
-                                                 self.norm_2_10.ravel())))
-        self.assertTrue(np.isclose(js_divergence(self.norm_0_3, self.norm_2_10),
-                                   js_divergence(list(self.norm_0_3),
-                                                 list(self.norm_2_10))))
+        self.assertTrue(
+            np.isclose(
+                js_divergence(self.norm_0_3, self.norm_2_10),
+                js_divergence(self.norm_0_3.ravel(), self.norm_2_10.ravel()),
+            )
+        )
+        self.assertTrue(
+            np.isclose(
+                js_divergence(self.norm_0_3, self.norm_2_10),
+                js_divergence(list(self.norm_0_3), list(self.norm_2_10)),
+            )
+        )
 
         self.assertTrue(
-            np.isclose(js_divergence(self.p_sample, self.q_sample, discrete=True),
-                       js_divergence(list(self.p_sample), list(self.q_sample),
-                                     discrete=True)))
+            np.isclose(
+                js_divergence(self.p_sample, self.q_sample, discrete=True),
+                js_divergence(list(self.p_sample), list(self.q_sample), discrete=True),
+            )
+        )
 
         self.assertTrue(
-            np.isclose(js_divergence(self.p_sample, self.q_sample, discrete=True),
-                       js_divergence(self.p_sample.reshape(-1, 1),
-                                     self.q_sample.reshape(-1, 1), discrete=True)))
+            np.isclose(
+                js_divergence(self.p_sample, self.q_sample, discrete=True),
+                js_divergence(
+                    self.p_sample.reshape(-1, 1),
+                    self.q_sample.reshape(-1, 1),
+                    discrete=True,
+                ),
+            )
+        )
 
     def test_jitter(self):
         js_no_jitter = js_divergence(self.norm_0_3, self.norm_2_10)
-        js_jitter = js_divergence(self.norm_0_3, self.norm_2_10, jitter_seed=42,
-                                  jitter=1e-10)
+        js_jitter = js_divergence(
+            self.norm_0_3, self.norm_2_10, jitter_seed=42, jitter=1e-10
+        )
         self.assertTrue(np.isclose(js_jitter, js_no_jitter))
 
 
@@ -110,23 +145,32 @@ class TestContinuousJS(unittest.TestCase):
         cls.norm_2_10_rep = generator.normal(loc=2, scale=10, size=500).reshape(-1, 1)
 
         # Multidimensional case
-        norm_2d_2d_0_3_0_6 = scipy.stats.multivariate_normal(mean=[0, 0, 0, 0],
-                                                             cov=[[1, 0.3, 0.6, 0.6],
-                                                                  [0.3, 1, 0.6, 0.6],
-                                                                  [0.6, 0.6, 1, 0.3],
-                                                                  [0.6, 0.6, 0.3, 1]],
-                                                             seed=314)
+        norm_2d_2d_0_3_0_6 = scipy.stats.multivariate_normal(
+            mean=[0, 0, 0, 0],
+            cov=[
+                [1, 0.3, 0.6, 0.6],
+                [0.3, 1, 0.6, 0.6],
+                [0.6, 0.6, 1, 0.3],
+                [0.6, 0.6, 0.3, 1],
+            ],
+            seed=314,
+        )
         cls.norm_2d_2d_0_3_0_6_sample_1000 = norm_2d_2d_0_3_0_6.rvs(size=1000)
 
     def test_symetry(self):
         # JS should be symmetric, so the estimates should be symmetric
-        self.assertTrue(np.isclose(_js_cont(self.norm_2_10, self.norm_0_3),
-                                   _js_cont(self.norm_0_3, self.norm_2_10)))
+        self.assertTrue(
+            np.isclose(
+                _js_cont(self.norm_2_10, self.norm_0_3),
+                _js_cont(self.norm_0_3, self.norm_2_10),
+            )
+        )
 
     def test_identical_distributions(self):
         # JS should be close to 0 for identical distributions
         self.assertTrue(
-            np.isclose(0., _js_cont(self.norm_2_10, self.norm_2_10_rep), atol=1e-1))
+            np.isclose(0.0, _js_cont(self.norm_2_10, self.norm_2_10_rep), atol=1e-1)
+        )
 
     def test_greater_sd(self):
         # JS should increase when the difference in Standard deviations between the
@@ -142,8 +186,10 @@ class TestContinuousJS(unittest.TestCase):
         self.assertLess(small_mean_diff, large_mean_diff)
 
     def test_multidimensional(self):
-        _ = _js_cont(self.norm_2d_2d_0_3_0_6_sample_1000[:, [0, 1]],
-                     self.norm_2d_2d_0_3_0_6_sample_1000[:, [2, 3]])
+        _ = _js_cont(
+            self.norm_2d_2d_0_3_0_6_sample_1000[:, [0, 1]],
+            self.norm_2d_2d_0_3_0_6_sample_1000[:, [2, 3]],
+        )
 
 
 class TestDiscreteJS(unittest.TestCase):
@@ -159,25 +205,33 @@ class TestDiscreteJS(unittest.TestCase):
 
         cls.theory_js = jensenshannon(p_weights, q_weights, base=np.e) ** 2
 
-        cls.p_sample = generator.choice([0, 1, 2, 3], size=5000, replace=True,
-                                        p=p_weights)
-        cls.q_sample = generator.choice([0, 1, 2, 3], size=5000, replace=True,
-                                        p=q_weights)
+        cls.p_sample = generator.choice(
+            [0, 1, 2, 3], size=5000, replace=True, p=p_weights
+        )
+        cls.q_sample = generator.choice(
+            [0, 1, 2, 3], size=5000, replace=True, p=q_weights
+        )
 
     def test_identical_distributions(self):
         # JS estimate for identical distributions should be close to 0
         self.assertTrue(
-            np.isclose(_js_disc(self.uniform_choice, self.uniform_choice_rep), 0.,
-                       atol=5e-2))
+            np.isclose(
+                _js_disc(self.uniform_choice, self.uniform_choice_rep), 0.0, atol=5e-2
+            )
+        )
 
     def test_symetry(self):
-        self.assertTrue(np.isclose(_js_disc(self.p_sample, self.q_sample),
-                                   _js_disc(self.q_sample, self.p_sample)))
+        self.assertTrue(
+            np.isclose(
+                _js_disc(self.p_sample, self.q_sample),
+                _js_disc(self.q_sample, self.p_sample),
+            )
+        )
 
     def test_known_js(self):
         comp_js = _js_disc(self.p_sample, self.q_sample)
         self.assertTrue(np.isclose(comp_js, self.theory_js, atol=5e-3))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

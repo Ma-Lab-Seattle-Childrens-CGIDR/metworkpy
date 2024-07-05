@@ -1,6 +1,7 @@
 """
 Submodule with functions for creating a context specific model using iMAT
 """
+
 # Standard Library Imports
 from typing import Union
 

@@ -1,6 +1,7 @@
 """
 Module to project bipartite graphs onto the node sets
 """
+
 # Imports
 # Standard Library Imports
 from __future__ import annotations

@@ -1,12 +1,20 @@
 # Standard Library Imports
 import unittest
+
 # External imports
 import numpy as np
 import pandas as pd
+
 # Local imports
-from metworkpy.utils.expression_utils import (count_to_rpkm, count_to_fpkm, count_to_tpm,
-                                              rpkm_to_tpm, fpkm_to_tpm, count_to_cpm,
-                                              expr_to_imat_gene_weights)
+from metworkpy.utils.expression_utils import (
+    count_to_rpkm,
+    count_to_fpkm,
+    count_to_tpm,
+    rpkm_to_tpm,
+    fpkm_to_tpm,
+    count_to_cpm,
+    expr_to_imat_gene_weights,
+)
 
 
 class TestConversionFunctions(unittest.TestCase):
@@ -23,22 +31,26 @@ class TestConversionFunctions(unittest.TestCase):
         rng = np.random.default_rng(42)
         # Generate random count values of the right size
         count_values = rng.integers(low=0, high=500_000, size=(5, 100))
-        cls.count_data = pd.DataFrame(count_values, index=sample_list,
-                                      columns=gene_list)
+        cls.count_data = pd.DataFrame(
+            count_values, index=sample_list, columns=gene_list
+        )
         # create feature length data
         feature_length_data = rng.integers(low=20, high=500, size=100)
         cls.feature_length = pd.Series(feature_length_data, index=gene_list)
         # Create feature_length with missing genes
         cls.feature_length_missing = cls.feature_length.iloc[0:90]
         # Also create small examples with known values
-        cls.small_counts = pd.DataFrame({
-            "A": [83, 50, 85, 17, 91],
-            "B": [20, 6, 23, 45, 75],
-            "C": [54, 65, 53, 97, 38],
-            "D": [58, 79, 77, 32, 64],
-        })
-        cls.small_feature_length = pd.Series([10, 50, 25, 60],
-                                             index=["A", "B", "C", "D"])
+        cls.small_counts = pd.DataFrame(
+            {
+                "A": [83, 50, 85, 17, 91],
+                "B": [20, 6, 23, 45, 75],
+                "C": [54, 65, 53, 97, 38],
+                "D": [58, 79, 77, 32, 64],
+            }
+        )
+        cls.small_feature_length = pd.Series(
+            [10, 50, 25, 60], index=["A", "B", "C", "D"]
+        )
 
     def test_count_to_rpkm(self):
         """
@@ -55,18 +67,15 @@ class TestConversionFunctions(unittest.TestCase):
         # Should have the same index as count data
         self.assertTrue(rpkm.index.equals(self.count_data.index))
         # Use known values for the small examples
-        small_rpkm = count_to_rpkm(self.small_counts,
-                                   self.small_feature_length)
-        known_rpkm = pd.DataFrame({
-            "A": [3.860465e+07, 2.500000e+07, 3.571429e+07, 8.900524e+06,
-                  3.395522e+07],
-            "B": [1.860465e+06, 6.000000e+05, 1.932773e+06, 4.712042e+06,
-                  5.597015e+06],
-            "C": [1.004651e+07, 1.300000e+07, 8.907563e+06, 2.031414e+07,
-                  5.671642e+06],
-            "D": [4.496124e+06, 6.583333e+06, 5.392157e+06, 2.792321e+06,
-                  3.980100e+06],
-        })
+        small_rpkm = count_to_rpkm(self.small_counts, self.small_feature_length)
+        known_rpkm = pd.DataFrame(
+            {
+                "A": [3.860465e07, 2.500000e07, 3.571429e07, 8.900524e06, 3.395522e07],
+                "B": [1.860465e06, 6.000000e05, 1.932773e06, 4.712042e06, 5.597015e06],
+                "C": [1.004651e07, 1.300000e07, 8.907563e06, 2.031414e07, 5.671642e06],
+                "D": [4.496124e06, 6.583333e06, 5.392157e06, 2.792321e06, 3.980100e06],
+            }
+        )
         self.assertTrue(np.all(np.isclose(known_rpkm, small_rpkm)))
         # Check that it throws a warning when given incomplete gene data
         with self.assertWarns(Warning):
@@ -99,19 +108,46 @@ class TestConversionFunctions(unittest.TestCase):
             count_to_tpm(self.count_data, self.feature_length_missing)
         # Test that the sum of each row is 1e6
         self.assertTrue(np.all(np.isclose(tpm.sum(axis=1), 1e6)))
-        known_tpm = pd.DataFrame({
-            "A": [701803.833145, 553301.364810, 687516.850903, 242395.437262,
-                  690091.001011],
-            "B": [33821.871477, 13279.232755, 37206.794284, 128326.996198,
-                  113751.263903],
-            "C": [182638.105975, 287716.709701, 171474.791049, 553231.939163,
-                  115267.947422],
-            "D": [81736.189402, 145702.692733, 103801.563764, 76045.627376,
-                  80889.787664],
-        })
-        self.assertTrue(np.all(
-            np.isclose(known_tpm, count_to_tpm(self.small_counts,
-                                               self.small_feature_length))))
+        known_tpm = pd.DataFrame(
+            {
+                "A": [
+                    701803.833145,
+                    553301.364810,
+                    687516.850903,
+                    242395.437262,
+                    690091.001011,
+                ],
+                "B": [
+                    33821.871477,
+                    13279.232755,
+                    37206.794284,
+                    128326.996198,
+                    113751.263903,
+                ],
+                "C": [
+                    182638.105975,
+                    287716.709701,
+                    171474.791049,
+                    553231.939163,
+                    115267.947422,
+                ],
+                "D": [
+                    81736.189402,
+                    145702.692733,
+                    103801.563764,
+                    76045.627376,
+                    80889.787664,
+                ],
+            }
+        )
+        self.assertTrue(
+            np.all(
+                np.isclose(
+                    known_tpm,
+                    count_to_tpm(self.small_counts, self.small_feature_length),
+                )
+            )
+        )
 
     def test_count_to_cpm(self):
         """
@@ -155,28 +191,52 @@ class TestConversionToWeights(unittest.TestCase):
         self.assertTrue(np.all(actual == expected))
 
     def test_dataframe_conversion(self):
-        test_frame = pd.DataFrame({
-            "A": [-4, -4, -3, -2, -1, 0, 2, 2, 3, 5, 5],
-            "B": [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
-            "C": [-6, -4, -3, -2, -1, 0, 0, 2, 3, 3, 5],
-        })
+        test_frame = pd.DataFrame(
+            {
+                "A": [-4, -4, -3, -2, -1, 0, 2, 2, 3, 5, 5],
+                "B": [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
+                "C": [-6, -4, -3, -2, -1, 0, 0, 2, 3, 3, 5],
+            }
+        )
         expected = pd.Series([-1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1])
-        actual = expr_to_imat_gene_weights(test_frame, quantile=(0.1, 0.9), sample_axis=1)
+        actual = expr_to_imat_gene_weights(
+            test_frame, quantile=(0.1, 0.9), sample_axis=1
+        )
         self.assertTrue(np.all(actual == expected))
 
     def test_subset_genes(self):
         test_series = pd.Series(
             [-1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
-            index=["A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
-                   "K", "L", "M", "N", "O", "P", "Q", "R", "S"]
+            index=[
+                "A",
+                "B",
+                "C",
+                "D",
+                "E",
+                "F",
+                "G",
+                "H",
+                "I",
+                "J",
+                "K",
+                "L",
+                "M",
+                "N",
+                "O",
+                "P",
+                "Q",
+                "R",
+                "S",
+            ],
         )
         subset = ["A", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "S", "Z"]
-        result_series = expr_to_imat_gene_weights(test_series, quantile=(0.1, 0.9),
-                                                  subset=subset)
+        result_series = expr_to_imat_gene_weights(
+            test_series, quantile=(0.1, 0.9), subset=subset
+        )
         self.assertEqual(result_series["Z"], 0)
         self.assertEqual(result_series["A"], -1)
         self.assertEqual(result_series["S"], 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

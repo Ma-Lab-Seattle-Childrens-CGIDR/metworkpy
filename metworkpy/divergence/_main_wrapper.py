@@ -1,6 +1,7 @@
 """
 A wrapper function around methods which can calculate divergences for continuous and discrete distributions
 """
+
 # Imports
 # Standard Library Imports
 from typing import Union, Callable
