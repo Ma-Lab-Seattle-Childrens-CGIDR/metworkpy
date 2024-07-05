@@ -86,9 +86,23 @@ def generate_model(
             model, rxn_weights, epsilon, threshold, objective_tolerance, **kwargs
         )
     elif method == "simple_bounds":
-        return simple_bounds_model(model, rxn_weights, epsilon, threshold, **kwargs)
+        return simple_bounds_model(
+            model=model,
+            rxn_weights=rxn_weights,
+            epsilon=epsilon,
+            threshold=threshold,
+            imat_solution=imat_solution,
+            **kwargs,
+        )
     elif method == "subset":
-        return subset_model(model, rxn_weights, epsilon, threshold, **kwargs)
+        return subset_model(
+            model=model,
+            rxn_weights=rxn_weights,
+            epsilon=epsilon,
+            threshold=threshold,
+            imat_solution=imat_solution,
+            **kwargs,
+        )
     elif method == "fva":
         return fva_model(
             model, rxn_weights, epsilon, threshold, objective_tolerance, **kwargs
@@ -107,7 +121,9 @@ def generate_model(
 
 
 # region: Model Creation methods
-def imat_constraint_model(model, rxn_weights, epsilon, threshold, objective_tolerance):
+def imat_constraint_model(
+    model, rxn_weights, epsilon, threshold, objective_tolerance, **kwargs
+):
     """
     Generate a context specific model by adding iMAT constraints, and
     ensuring iMAT objective value is near optimal.
@@ -173,6 +189,7 @@ def simple_bounds_model(
     epsilon: float,
     threshold: float,
     imat_solution: cobra.Solution = None,
+    **kwargs,
 ):
     """
     Generate a context specific model by setting bounds on reactions based on
@@ -241,6 +258,7 @@ def subset_model(
     epsilon: float,
     threshold: float,
     imat_solution: cobra.Solution = None,
+    **kwargs,
 ):
     """
     Generate a context specific model by knocking out reactions found to
@@ -345,7 +363,7 @@ def fva_model(
     return updated_model
 
 
-def milp_model(model, rxn_weights, epsilon, threshold):
+def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
     """
     Generate a context specific model by setting bounds on reactions based on
     a set of mixed integer linear programming problems.
