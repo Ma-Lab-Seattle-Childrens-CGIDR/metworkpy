@@ -41,6 +41,22 @@ class TestListTranslate(unittest.TestCase):
             rxn_list_expected
         )
 
+    def test_reactions_to_gene_essential(self):
+        model = read_model(pathlib.Path(__file__).parent.parent.absolute() / "data" / "translate_model.json")
+        rxn_list = ["r_A_B"]
+        expected_gene_list = []
+        self.assertCountEqual(reaction_to_gene_list(reaction_list=rxn_list, model=model,
+                                                   essential=True), expected_gene_list)
+        rxn_list = ["r_B_C"]
+        expected_gene_list = ['m']
+        self.assertCountEqual(reaction_to_gene_list(reaction_list=rxn_list, model=model,
+                                                   essential=True), expected_gene_list)
+        rxn_list = ["r_C_D"]
+        expected_gene_list = ['m', 'n']
+        self.assertCountEqual(reaction_to_gene_list(reaction_list=rxn_list, model=model,
+                                                   essential=True), expected_gene_list)
+
+
 
 class TestDictTranslate(unittest.TestCase):
     test_model = None

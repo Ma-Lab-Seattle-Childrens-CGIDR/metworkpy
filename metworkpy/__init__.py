@@ -1,5 +1,7 @@
+from importlib.metadata import version
+
 __author__ = "Braden Griebel"
-__version__ = "0.0.1"
+__version__ = version("metworkpy")
 __all__ = [
     "utils",
     "imat",

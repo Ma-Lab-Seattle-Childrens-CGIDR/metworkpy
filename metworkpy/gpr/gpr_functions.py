@@ -15,10 +15,10 @@ IMAT_FUNC_DICT = {"AND": min, "OR": max}
 
 
 def gene_to_rxn_weights(
-    model: cobra.Model,
-    gene_weights: pd.Series,
-    fn_dict: dict = None,
-    fill_val: Any = 0,
+        model: cobra.Model,
+        gene_weights: pd.Series,
+        fn_dict: dict = None,
+        fill_val: Any = 0,
 ) -> pd.Series:
     """
     Convert a gene weights series to a reaction weights series using the
@@ -74,7 +74,9 @@ def eval_gpr(gpr: str, gene_weights: pd.Series, fn_dict: dict = None) -> Any | N
     :type gpr: str
     :param gene_weights: pd.Series: A series of gene weights
     :type gene_weights: pd.Series
-    :param fn_dict: dict: A dictionary of functions to use for each operator
+    :param fn_dict: dict: A dictionary of functions to use for each operator,
+        in GPR the operators are normally AND and OR, by default this is
+        {"AND":min, "OR":max}
     :type fn_dict: dict
     :return: The GPR score
     :rtype: float | None
@@ -85,6 +87,14 @@ def eval_gpr(gpr: str, gene_weights: pd.Series, fn_dict: dict = None) -> Any | N
         fn_dict = {"AND": min, "OR": max}
     gpr_expr = _str_to_deque(gpr)
     gpr_expr = _to_postfix(gpr_expr)
+    return _eval_gpr_deque(gpr_expr=gpr_expr,
+                           gene_weights=gene_weights,
+                           fn_dict=fn_dict)
+
+
+def _eval_gpr_deque(gpr_expr: deque,
+                    gene_weights: pd.Series,
+                    fn_dict: dict):
     eval_stack = []
     for token in gpr_expr:
         if token not in fn_dict:
@@ -94,7 +104,7 @@ def eval_gpr(gpr: str, gene_weights: pd.Series, fn_dict: dict = None) -> Any | N
         val2 = eval_stack.pop()
         eval_stack.append(fn_dict[token](val1, val2))
     if len(eval_stack) != 1:
-        raise ValueError(f"Failed to parse GPR: {gpr}")
+        raise ValueError(f"Failed to parse GPR Expression: {gpr_expr}")
     return eval_stack.pop()
 
 
@@ -125,7 +135,7 @@ def _str_to_deque(in_string: str, replacements: dict = None) -> deque[str]:
 
 
 def _process_token(
-    token: str, postfix: deque[str], operator_stack: deque[str], precedence
+        token: str, postfix: deque[str], operator_stack: deque[str], precedence
 ):
     """
     The process_token function takes in a token, the postfix list, the
@@ -151,9 +161,9 @@ def _process_token(
     # output, then add the operator itself to the postfix expression
     if token in precedence:
         while (
-            (len(operator_stack) > 0)
-            and (operator_stack[-1] != "(")
-            and (precedence[operator_stack[-1]] >= precedence[token])
+                (len(operator_stack) > 0)
+                and (operator_stack[-1] != "(")
+                and (precedence[operator_stack[-1]] >= precedence[token])
         ):
             op = operator_stack.pop()
             postfix.append(op)
@@ -172,7 +182,7 @@ def _process_token(
             op = operator_stack.pop()
             postfix.append(op)
         if (
-            len(operator_stack) == 0 or operator_stack[-1] != "("
+                len(operator_stack) == 0 or operator_stack[-1] != "("
         ):  # Check for mismatch in parentheses
             raise ValueError("Mismatched Parenthesis in Expression")
         _ = operator_stack.pop()  # Remove left paren from stack
