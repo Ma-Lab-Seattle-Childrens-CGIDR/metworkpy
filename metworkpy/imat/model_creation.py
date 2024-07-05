@@ -3,6 +3,7 @@ Submodule with functions for creating a context specific model using iMAT
 """
 
 # Standard Library Imports
+from __future__ import annotations
 from typing import Union
 
 # External Imports
@@ -32,6 +33,7 @@ DEFAULTS = {
 def generate_model(
     model: cobra.Model,
     rxn_weights: Union[pd.Series, dict],
+    imat_solution: cobra.Solution,
     method: str = "imat_restrictions",
     epsilon: float = DEFAULTS["epsilon"],
     threshold: float = DEFAULTS["threshold"],
@@ -45,6 +47,10 @@ def generate_model(
     :type model: cobra.Model
     :param rxn_weights: A dictionary or pandas series of reaction weights.
     :type rxn_weights: dict | pandas.Series
+    :param imat_solution: A pre-existing IMAT solution passed to the model creation methods,
+        will only impact simple and subset as FVA and MILP solve altered versions of the
+        IMAT problem.
+    :type imat_solution: cobra.Solution
     :param method: The method to use for generating the context specific
         model. Valid methods are:
         'imat_restrictions', 'simple_bounds', 'subset',
@@ -161,7 +167,13 @@ def imat_constraint_model(model, rxn_weights, epsilon, threshold, objective_tole
     return imat_model
 
 
-def simple_bounds_model(model, rxn_weights, epsilon, threshold):
+def simple_bounds_model(
+    model,
+    rxn_weights: dict | pd.Series,
+    epsilon: float,
+    threshold: float,
+    imat_solution: cobra.Solution = None,
+):
     """
     Generate a context specific model by setting bounds on reactions based on
     iMAT solution.
@@ -176,6 +188,8 @@ def simple_bounds_model(model, rxn_weights, epsilon, threshold):
     :param threshold: The threshold value to use for iMAT (default: 1e-1).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
+    :param imat_solution: A preexisting IMAT solution, if not provided will be computed when function is called
+    :type imat_solution: cobra.Solution
     :return: A context specific cobra.Model.
     :rtype: cobra.Model
 
@@ -193,7 +207,8 @@ def simple_bounds_model(model, rxn_weights, epsilon, threshold):
         include integer constraints, and so can be used for sampling.
     """
     updated_model = model.copy()
-    imat_solution = imat(model, rxn_weights, epsilon, threshold)
+    if not imat_solution:
+        imat_solution = imat(model, rxn_weights, epsilon, threshold)
     if imat_solution.status != "optimal":
         raise ValueError("No optimal solution found for IMAT problem")
     fluxes = imat_solution.fluxes
@@ -220,7 +235,13 @@ def simple_bounds_model(model, rxn_weights, epsilon, threshold):
     return updated_model
 
 
-def subset_model(model, rxn_weights, epsilon, threshold):
+def subset_model(
+    model: cobra.Model,
+    rxn_weights: dict | pd.Series,
+    epsilon: float,
+    threshold: float,
+    imat_solution: cobra.Solution = None,
+):
     """
     Generate a context specific model by knocking out reactions found to
     be inactive by iMAT.
@@ -235,6 +256,8 @@ def subset_model(model, rxn_weights, epsilon, threshold):
     :param threshold: The threshold value to use for iMAT (default: 1e-1).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
+    :param imat_solution: A preexisting IMAT solution, if not provided will be computed when function is called
+    :type imat_solution: cobra.Solution
     :return: A context specific cobra.Model.
     :rtype: cobra.Model
 
@@ -245,7 +268,8 @@ def subset_model(model, rxn_weights, epsilon, threshold):
         not include integer constraints, and so can be used for sampling.
     """
     updated_model = model.copy()
-    imat_solution = imat(model, rxn_weights, epsilon, threshold)
+    if not imat_solution:
+        imat_solution = imat(model, rxn_weights, epsilon, threshold)
     if imat_solution.status != "optimal":
         raise ValueError("No optimal solution found for IMAT problem")
     fluxes = imat_solution.fluxes
