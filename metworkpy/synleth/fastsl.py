@@ -1,5 +1,5 @@
 """
-Module for finding Synthetic Lethality Gene Groups in
+Module for finding Synthetic Lethality Gene Groups in Cobra Models
 """
 
 # Imports
@@ -8,7 +8,7 @@ from __future__ import annotations
 import concurrent.futures
 import multiprocessing
 import multiprocessing.queues
-from multiprocessing.managers import ListProxy
+from multiprocessing.managers import ListProxy, DictProxy
 from typing import Iterable
 
 # External Imports
@@ -84,6 +84,8 @@ def find_synthetic_lethal_genes(
     with multiprocessing.Manager() as manager:
         gene_queue = manager.Queue()
         results_list = manager.list()
+        # Need to create a way to make sure repeats are not processed
+        processed_dict = manager.dict()
         # Add initially active gene set to queue
         for g in _get_potentially_active_genes(
             model=model,
@@ -97,6 +99,7 @@ def find_synthetic_lethal_genes(
                     _process_gene_set_worker,
                     gene_queue=gene_queue,
                     results_list=results_list,
+                    processed_dict=processed_dict,
                     model=model,
                     max_depth=max_depth,
                     pfba_fraction_of_optimum=pfba_fraction_of_optimum,
@@ -122,6 +125,7 @@ def find_synthetic_lethal_genes(
 def _process_gene_set_worker(
     gene_queue: multiprocessing.queues.Queue,
     results_list: ListProxy,
+    processed_dict: DictProxy,
     model: cobra.Model,
     max_depth: int,
     pfba_fraction_of_optimum: float,
@@ -134,29 +138,28 @@ def _process_gene_set_worker(
             gene_set = gene_queue.get_nowait()
         except multiprocessing.queues.Empty:
             break
-        with model as m:
-            if show_queue_size:
-                print(gene_queue.qsize())
-            knock_out_model_genes(m, list(gene_set))
-            # Case where the gene set is currently essential
-            # Should only happen genes, since they are added without being checked
-            objective_value = m.slim_optimize(error_value=np.nan)
-            if np.isnan(objective_value) or (objective_value <= essential_cutoff):
-                results_list.append(gene_set)
-            else:
-                potentially_active_genes = _get_potentially_active_genes(
-                    model=m,
-                    pfba_fraction_of_optimum=pfba_fraction_of_optimum,
-                    active_cutoff=active_cutoff,
-                )
-                for gene in potentially_active_genes:
-                    new_set = gene_set.union({gene})
-                    if (new_set != gene_set) and (len(new_set) <= max_depth):
-                        if _is_essential(
-                            model=m, gene=gene, essential_cutoff=essential_cutoff
-                        ):
-                            results_list.append(new_set)
-                        else:
+        frozen_gene_set = frozenset(gene_set)
+        if frozen_gene_set in processed_dict:
+            pass
+        else:
+            processed_dict[frozen_gene_set] = True
+            with model as m:
+                if show_queue_size:
+                    print(gene_queue.qsize())
+                knock_out_model_genes(m, list(gene_set))
+                # Case where the gene set is currently essential
+                objective_value = m.slim_optimize(error_value=np.nan)
+                if np.isnan(objective_value) or (objective_value <= essential_cutoff):
+                    results_list.append(gene_set)
+                else:
+                    potentially_active_genes = _get_potentially_active_genes(
+                        model=m,
+                        pfba_fraction_of_optimum=pfba_fraction_of_optimum,
+                        active_cutoff=active_cutoff,
+                    )
+                    for gene in potentially_active_genes:
+                        new_set = gene_set.union({gene})
+                        if (new_set != gene_set) and (len(new_set) <= max_depth):
                             gene_queue.put(new_set)
 
 

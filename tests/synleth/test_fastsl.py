@@ -72,6 +72,7 @@ class TestFindSyntheticLethalGenes(unittest.TestCase):
         self.assertCountEqual(double_ko, double_ko_parallel)
         max_objective_value = self.textbook_model.slim_optimize()
         for gene_set in double_ko:
+            print(gene_set)
             with self.textbook_model as m:
                 knock_out_model_genes(model=m, gene_list=list(gene_set))
                 obj_value = m.slim_optimize(error_value=np.nan)
