@@ -181,6 +181,8 @@ def count_to_rpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFram
     # Ensure that the count data frame and feature length series have the same genes
     count_genes = set(count.columns)
     fl_genes = set(feature_length.index)
+    # Get the library size before dropping genes
+    sum_counts = count.sum(axis=1)
     if not (count_genes == fl_genes):
         warn(
             "Different genes in count dataframe and feature length series, dropping any not in common"
@@ -188,7 +190,6 @@ def count_to_rpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFram
         genes = [gene for gene in count.columns if gene in feature_length.index]
         count = count[genes]
         feature_length = feature_length[genes]
-    sum_counts = count.sum(axis=1)
     return count.divide(feature_length, axis=1).divide(sum_counts, axis=0) * 1.0e9
 
 
@@ -219,18 +220,8 @@ def count_to_tpm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFrame
     :return: TPM normalized counts
     :rtype: pd.DataFrame
     """
-    # Ensure that the count data frame and feature length series have the same genes
-    count_genes = set(count.columns)
-    fl_genes = set(feature_length.index)
-    if not (count_genes == fl_genes):
-        warn(
-            "Different genes in count dataframe and feature length series, dropping any not in common"
-        )
-        genes = [gene for gene in count.columns if gene in feature_length.index]
-        count = count[genes]
-        feature_length = feature_length[genes]
-    length_normalized = count.divide(feature_length, axis=1)
-    return length_normalized.divide(length_normalized.sum(axis=1), axis=0) * 1.0e6
+    rpkm = count_to_rpkm(count, feature_length)
+    return rpkm_to_tpm(rpkm)
 
 
 def count_to_cpm(count: pd.DataFrame) -> pd.DataFrame:
