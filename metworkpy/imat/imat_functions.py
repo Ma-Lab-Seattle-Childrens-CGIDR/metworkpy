@@ -92,6 +92,10 @@ def flux_to_binary(
     :type tolerance: float
     :return: A pandas series of binary values.
     :rtype: pandas.Series
+
+    .. note:
+       This doesn't account for gene expression level, to determine highly expressed reactions which are
+       considered on/off, the output of this function will need to be compared with reaction weights.
     """
     which_reactions = _parse_which_reactions(which_reactions)
     if which_reactions == "forward":

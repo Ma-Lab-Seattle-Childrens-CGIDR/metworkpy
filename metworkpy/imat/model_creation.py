@@ -388,8 +388,8 @@ def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
         forward direction, and active in the reverse direction. The
         reaction bounds are then set based on the results of the MILP
         problems. This model is not guaranteed to have fluxes consistent
-        with the optimal iMAT objective. This model will include integer
-        constraints, and so can not be used for sampling.
+        with the optimal iMAT objective. This model will not include integer
+        constraints, and so can be used for sampling.
     """
     updated_model = model.copy()
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
@@ -411,7 +411,7 @@ def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
                 reaction.bounds = _inactive_bounds(
                     reaction.lower_bound, reaction.upper_bound, threshold
                 )
-                ko_solution = ko_model.slim_optimize(error_value=np.nan)
+                ko_solution = ko_model.slim_optimize(error_value=-1.0)
         with imat_model as forward_model:
             reaction = forward_model.reactions.get_by_id(rxn)
             if reaction.upper_bound < epsilon:
@@ -443,11 +443,10 @@ def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
             forward_solution,
             reverse_solution,
         ]
-    final_results = milp_results.apply(_milp_eval, axis=1).dropna()
+    final_results = milp_results.apply(_milp_eval, axis=1)
     # Now 0 is inactive, 1 is forward, -1 is reverse, nan is under determined
     for rxn in reactions:
         if pd.isna(final_results[rxn]):  # skip under-determined reactions
-            # should never actually happen due to drop na, but here for safety
             continue
         reaction = updated_model.reactions.get_by_id(rxn)
         if final_results[rxn] == 0:  # inactive

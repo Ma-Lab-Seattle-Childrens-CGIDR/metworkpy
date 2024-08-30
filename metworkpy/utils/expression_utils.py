@@ -187,10 +187,11 @@ def count_to_rpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFram
         warn(
             "Different genes in count dataframe and feature length series, dropping any not in common"
         )
-        genes = [gene for gene in count.columns if gene in feature_length.index]
+        genes = sorted(list(count_genes.intersection(fl_genes)))
         count = count[genes]
         feature_length = feature_length[genes]
-    return count.divide(feature_length, axis=1).divide(sum_counts, axis=0) * 1.0e9
+    div_factor = (feature_length/1e3)*(sum_counts[feature_length.index]/1e6)
+    return count.divide(feature_length, axis=1).divide(sum_counts[count.index], axis=0) * 1.0e9
 
 
 def count_to_fpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFrame:
