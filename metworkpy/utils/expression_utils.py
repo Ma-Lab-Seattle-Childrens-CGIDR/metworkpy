@@ -190,8 +190,10 @@ def count_to_rpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFram
         genes = sorted(list(count_genes.intersection(fl_genes)))
         count = count[genes]
         feature_length = feature_length[genes]
-    div_factor = (feature_length/1e3)*(sum_counts[feature_length.index]/1e6)
-    return count.divide(feature_length, axis=1).divide(sum_counts[count.index], axis=0) * 1.0e9
+    return (
+        count.divide(feature_length, axis=1).divide(sum_counts[count.index], axis=0)
+        * 1.0e9
+    )
 
 
 def count_to_fpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFrame:
