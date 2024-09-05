@@ -7,13 +7,15 @@ from __future__ import annotations
 
 import functools
 import itertools
-from multiprocessing import shared_memory, Pool
+from multiprocessing import shared_memory, Pool, cpu_count
 from typing import Tuple
 
 # External Imports
 import numpy as np
 import pandas as pd
 import scipy
+
+from metworkpy.utils._parallel import _create_shared_memory_numpy_array
 
 
 # Local Imports
@@ -51,6 +53,7 @@ def mi_network_adjacency_matrix(
             f"samples is of an invalid type, expected numpy ndarray or "
             f"pandas DataFrame but received {type(samples)}"
         )
+    processes = min(processes, cpu_count())
     (
         shared_nrows,
         shared_ncols,
@@ -159,28 +162,3 @@ def _mi_network_worker(
 
 
 # endregion Worker Function
-
-
-# region Helper Functions
-def _create_shared_memory_numpy_array(
-    input_array, name: str | None = None
-) -> Tuple[int, int, np.dtype, str]:
-    """
-    Create a numpy array in shared memory from `input_array`
-    :param input_array: Numpy array to create shared memory array from
-    :type input_array: np.ndarray
-    :param name: Name to give shared memory
-    :type name: str
-    :return: Tuple of (number of rows, number of columns, dtype, name)
-    :rtype: Tuple[int, int, np.dtype, str]
-    """
-    shm = shared_memory.SharedMemory(name=name, create=True, size=input_array.nbytes)
-    shared_array = np.ndarray(
-        input_array.shape, dtype=input_array.dtype, buffer=shm.buf
-    )
-    shared_array[:] = input_array
-    nrow, ncol = input_array.shape
-    return nrow, ncol, input_array.dtype, shm.name
-
-
-# endregion Helper Functions

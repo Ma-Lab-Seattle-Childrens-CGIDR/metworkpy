@@ -5,15 +5,18 @@ those distributions.
 
 # Standard Library Imports
 from __future__ import annotations
+
 from typing import Union
 
 # External Imports
 import numpy as np
+import pandas as pd
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
 
 # Local Imports
 from metworkpy.divergence._main_wrapper import _wrap_divergence_functions
+from metworkpy.divergence._pairwise_divergence import _divergence_array
 
 
 # region Main Function
@@ -117,6 +120,47 @@ def _kl_disc(p: np.ndarray, q: np.ndarray):
 
 
 # endregion Discrete Divergence
+
+
+def kl_divergence_array(
+    p: pd.DataFrame | np.ndarray,
+    q: pd.DataFrame | np.ndarray,
+    n_neighbors: int = 5,
+    metric: float | str = 2.0,
+    processes: int = 1,
+) -> np.ndarray | pd.Series:
+    """
+    Calculate the Jensen-Shannon divergence between the columns in two arrays using the
+    nearest neighbors method.
+
+    :param p: Flux sample array, with columns representing different reactions and rows representing
+        different samples. Should have same number of columns as q.
+    :type p: pd.DataFrame | np.ndarray
+    :param q: Flux sample array, with columns representing different reactions and rows representing
+        different samples. Should have same number of columns as p.
+    :type q: pd.DataFrame | np.ndarray
+    :param n_neighbors: Number of neighbors to use when estimating divergence
+    :type n_neighbors: int
+    :param metric: Metric to use for computing distance between points in p and q, can be \"Euclidean\",
+        \"Manhattan\", or \"Chebyshev\". Can also be a float representing the Minkowski p-norm.
+    :type metric: float | str
+    :param processes: Number of processes to use when calculating the divergence (default 1)
+    :type processes: int
+    :return: Array with length equal to the number of columns in p and q, the ith value representing
+        the divergence between the ith column of p and the ith column of q. If both p and q are
+        numpy ndarrays, this returns a ndarray with shape (ncols,). If either p or q are pandas
+        DataFrames then returns a pandas Series with index the same as the columns in the DataFrame
+        (p takes priority if the column names differ).
+    :rtype: np.ndarray | pd.DataFrame
+    """
+    return _divergence_array(
+        p=p,
+        q=q,
+        divergence_function=_kl_cont,
+        n_neighbors=n_neighbors,
+        metric=metric,
+        processes=processes,
+    )
 
 
 # region Continuous Divergence
