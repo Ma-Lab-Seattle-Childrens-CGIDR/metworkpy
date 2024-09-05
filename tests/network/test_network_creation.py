@@ -1,15 +1,16 @@
 # Imports
 # Standard library imports
+import itertools
 import pathlib
 import unittest
 
-import networkx as nx
-import pandas as pd
-
 # External Imports
+import cobra
 from cobra.core.configuration import Configuration
 from cobra.flux_analysis import flux_variability_analysis
+import networkx as nx
 import numpy as np
+import pandas as pd
 from scipy.sparse import csc_array, csr_array
 
 # Local Imports
@@ -22,10 +23,13 @@ from metworkpy.network.network_construction import (
     _adj_mat_ud_w_flux,
     _adj_mat_ud_w_stoichiometry,
     create_adjacency_matrix,
-    create_network,
+    create_metabolic_network,
+    create_mutual_information_network,
 )
+from metworkpy.information import mi_network_adjacency_matrix
 
 
+# region Metabolic Network
 def setup(cls):
     Configuration().solver = "glpk"
     cls.data_path = pathlib.Path(__file__).parent.parent.absolute() / "data"
@@ -460,13 +464,13 @@ class TestCreateNetwork(unittest.TestCase):
         setup(cls)
 
     def test_directed_unweighted(self):
-        test_network = create_network(
+        test_network = create_metabolic_network(
             model=self.test_model, weighted=False, directed=True
         )
         self.assertIsInstance(test_network, nx.DiGraph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
-        tiny_network = create_network(
+        tiny_network = create_metabolic_network(
             model=self.tiny_model, weighted=False, directed=True
         )
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 1)
@@ -474,20 +478,20 @@ class TestCreateNetwork(unittest.TestCase):
             _ = tiny_network["R_C_ex"]["C"]
 
     def test_undirected_unweighted(self):
-        test_network = create_network(
+        test_network = create_metabolic_network(
             model=self.test_model, weighted=False, directed=False
         )
         self.assertIsInstance(test_network, nx.Graph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
-        tiny_network = create_network(
+        tiny_network = create_metabolic_network(
             model=self.tiny_model, weighted=False, directed=False
         )
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 1)
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 1)
 
     def test_directed_weighted_stoichiometry(self):
-        test_network = create_network(
+        test_network = create_metabolic_network(
             model=self.test_model,
             weighted=True,
             directed=True,
@@ -496,7 +500,7 @@ class TestCreateNetwork(unittest.TestCase):
         self.assertIsInstance(test_network, nx.DiGraph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
-        tiny_network = create_network(
+        tiny_network = create_metabolic_network(
             model=self.tiny_model,
             weighted=True,
             directed=True,
@@ -507,7 +511,7 @@ class TestCreateNetwork(unittest.TestCase):
             _ = tiny_network["R_C_ex"]["C"]
 
     def test_undirected_weighted_stoichiometry(self):
-        test_network = create_network(
+        test_network = create_metabolic_network(
             model=self.test_model,
             weighted=True,
             directed=False,
@@ -516,7 +520,7 @@ class TestCreateNetwork(unittest.TestCase):
         self.assertIsInstance(test_network, nx.Graph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
-        tiny_network = create_network(
+        tiny_network = create_metabolic_network(
             model=self.tiny_model,
             weighted=True,
             directed=False,
@@ -526,13 +530,13 @@ class TestCreateNetwork(unittest.TestCase):
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 1)
 
     def test_directed_weighted_flux(self):
-        test_network = create_network(
+        test_network = create_metabolic_network(
             model=self.test_model, weighted=True, directed=True, weight_by="flux"
         )
         self.assertIsInstance(test_network, nx.DiGraph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 50)
-        tiny_network = create_network(
+        tiny_network = create_metabolic_network(
             model=self.tiny_model, weighted=True, directed=True, weight_by="flux"
         )
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 50)
@@ -540,18 +544,56 @@ class TestCreateNetwork(unittest.TestCase):
             _ = tiny_network["R_C_ex"]["C"]
 
     def test_undirected_weighted_flux(self):
-        test_network = create_network(
+        test_network = create_metabolic_network(
             model=self.test_model, weighted=True, directed=False, weight_by="flux"
         )
         self.assertIsInstance(test_network, nx.Graph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 50)
-        tiny_network = create_network(
+        tiny_network = create_metabolic_network(
             model=self.tiny_model, weighted=True, directed=False, weight_by="flux"
         )
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 50)
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 50)
 
+
+# endregion Metabolic Network
+
+# region Mutual Information Network
+
+
+class TestMutualInformationNetwork(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        Configuration().solver = "glpk"
+        cls.data_path = pathlib.Path(__file__).parent.parent.absolute() / "data"
+        cls.test_model = read_model(cls.data_path / "test_model.xml")
+
+    def test_create_mutual_information_network(self):
+        test_network = create_mutual_information_network(
+            model=self.test_model, n_samples=1000, n_neighbors=3
+        )
+        # More proximate reactions should have greater mutual information
+        self.assertGreater(
+            test_network.get_edge_data("r_A_B_D_E", "r_D_G")["weight"],
+            test_network.get_edge_data("r_A_B_D_E", "R_H_e_ex")["weight"],
+        )
+        for rxn in self.test_model.reactions:
+            test_network.has_node(rxn.id)
+        test_samples = cobra.sampling.sample(self.test_model, n=1000)
+        mi_adj_mat = mi_network_adjacency_matrix(test_samples, n_neighbors=3)
+        test_network = create_mutual_information_network(
+            flux_samples=test_samples, n_neighbors=3
+        )
+        rxn_ids = self.test_model.reactions.list_attr("id")
+        for i, j in itertools.combinations(range(mi_adj_mat.shape[1]), 2):
+            self.assertAlmostEqual(
+                mi_adj_mat[i, j],
+                test_network.get_edge_data(rxn_ids[i], rxn_ids[j])["weight"],
+            )
+
+
+# endregion Mutual Information Network
 
 if __name__ == "__main__":
     unittest.main()

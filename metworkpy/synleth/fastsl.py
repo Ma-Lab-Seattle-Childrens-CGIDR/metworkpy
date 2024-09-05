@@ -107,6 +107,7 @@ def find_synthetic_lethal_genes(
                     essential_cutoff=essential_cutoff,
                     show_queue_size=show_queue_size,
                 )
+                for _ in range(processes)
             ]
             for future in concurrent.futures.as_completed(futures):
                 future.result()

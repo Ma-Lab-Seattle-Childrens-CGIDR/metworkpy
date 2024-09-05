@@ -3,6 +3,7 @@ import functools
 import operator
 import os
 import pathlib
+import time
 import unittest
 from unittest import skipIf
 
@@ -57,22 +58,26 @@ class TestFindSyntheticLethalGenes(unittest.TestCase):
     @skipIf(IN_GITHUB_ACTIONS, "Long Running Tests Skipped")
     def test_double_ko(self):
         ESSENTIAL_PROPORTION = 0.01
+        start_serial = time.time()
         double_ko = find_synthetic_lethal_genes(
             model=self.textbook_model,
             max_depth=2,
             processes=1,
             essential_proportion=ESSENTIAL_PROPORTION,
         )
+        end_serial = time.time()
+        start_parallel = time.time()
         double_ko_parallel = find_synthetic_lethal_genes(
             model=self.textbook_model,
             max_depth=2,
             processes=2,
             essential_proportion=ESSENTIAL_PROPORTION,
         )
+        end_parallel = time.time()
+        self.assertLess(end_parallel - start_parallel, end_serial - start_serial)
         self.assertCountEqual(double_ko, double_ko_parallel)
         max_objective_value = self.textbook_model.slim_optimize()
         for gene_set in double_ko:
-            print(gene_set)
             with self.textbook_model as m:
                 knock_out_model_genes(model=m, gene_list=list(gene_set))
                 obj_value = m.slim_optimize(error_value=np.nan)

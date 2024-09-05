@@ -14,9 +14,11 @@ __all__ = [
     "write_model",
     "model_eq",
     "mutual_information",
+    "mi_network_adjacency_matrix",
     "kl_divergence",
     "js_divergence",
-    "create_network",
+    "create_metabolic_network",
+    "create_mutual_information_network",
     "create_adjacency_matrix",
     "label_density",
     "find_dense_clusters",
@@ -60,12 +62,13 @@ from metworkpy.utils import (
     reaction_to_gene_df,
 )
 
-from metworkpy.information import mutual_information
+from metworkpy.information import mutual_information, mi_network_adjacency_matrix
 
 from metworkpy.divergence import kl_divergence, js_divergence
 
 from metworkpy.network import (
-    create_network,
+    create_metabolic_network,
+    create_mutual_information_network,
     create_adjacency_matrix,
     label_density,
     find_dense_clusters,

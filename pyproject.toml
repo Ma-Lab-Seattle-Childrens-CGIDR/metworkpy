@@ -31,6 +31,7 @@ tqdm = ">=4.66.4"
 fastparquet = { version = ">=2024.5.0", optional = true }
 openpyxl = { version = ">=3.1.4", optional = true }
 pyarrow = ">=16.0.0"
+pytest = "^8.3.2"
 
 [tool.poetry.group.dev]
 optional = true
@@ -68,9 +69,11 @@ build-backend = "poetry.core.masonry.api"
 
 # Stopping Gurobi warning originating from optlang
 # This has been updated in more recent versions, but keeping for 3.9, 3.10 compatability
+# Filtering out the process deprecation warning, because it's caused by underlying libraries
 [tool.pytest.ini_options]
 filterwarnings = [
   'ignore:.+pass a TempConstr or use Model.addLConstr:DeprecationWarning',
+  'ignore:This process \(pid=\d+\) is multi-threaded, use of fork\(\) may lead to deadlocks in the child\.:DeprecationWarning'
 ]
 
 # Setup ruff

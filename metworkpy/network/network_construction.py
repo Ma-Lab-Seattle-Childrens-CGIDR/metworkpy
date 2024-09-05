@@ -1,7 +1,7 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import NamedTuple
+from typing import NamedTuple, Iterable
 
 # External Imports
 import cobra
@@ -22,11 +22,65 @@ from metworkpy.network._array_utils import (
     _broadcast_mult_arr_vec,
 )
 from metworkpy.utils._arguments import _parse_str_args_dict
+from metworkpy.information.mutual_information_network import mi_network_adjacency_matrix
 
 
 # region Main Function
-def create_network(
-    model: cobra,
+def create_mutual_information_network(
+    model: cobra.Model | None = None,
+    flux_samples: pd.DataFrame | np.ndarray | None = None,
+    reaction_names: Iterable[str] | None = None,
+    n_samples: int = 10_000,
+    n_neighbors: int = 5,
+    truncate: bool = True,
+    reciprocal_weights: bool = False,
+    processes: int = 1,
+) -> nx.Graph:
+    if model is None and flux_samples is None:
+        raise ValueError(
+            "Requires either a metabolic model, or flux samples but received neither"
+        )
+    if flux_samples is None:
+        flux_samples = cobra.sampling.sample(
+            model=model, n=n_samples, processes=processes
+        )
+    if isinstance(flux_samples, pd.DataFrame):
+        sample_array = flux_samples.to_numpy()
+        if not reaction_names:
+            reaction_names = flux_samples.columns
+    elif isinstance(flux_samples, np.ndarray):
+        sample_array = flux_samples
+        if not reaction_names:
+            if model:
+                reaction_names = model.reactions.list_attr("id")
+            else:
+                reaction_names = [f"rxn_{i}" for i in range(sample_array.shape[1])]
+    else:
+        raise ValueError(
+            f"Invalid type for flux samples, requires pandas DataFrame or numpy ndarray, but"
+            f"received {type(flux_samples)}"
+        )
+    adj_mat = mi_network_adjacency_matrix(
+        samples=sample_array, n_neighbors=n_neighbors, processes=processes
+    )
+    if truncate:
+        adj_mat[adj_mat < 0] = 0
+    if reciprocal_weights:
+        # Should be all floats, so no issue with integer division
+        adj_mat[adj_mat > 0] = np.reciprocal(adj_mat[adj_mat > 0])
+    mi_network = nx.from_numpy_array(
+        adj_mat, create_using=nx.Graph, parallel_edges=False
+    )
+    _ = nx.relabel_nodes(
+        mi_network,
+        {idx: f"{rxn}" for idx, rxn in enumerate(reaction_names)},
+        copy=False,
+    )
+    return mi_network
+
+
+def create_metabolic_network(
+    model: cobra.Model,
     weighted: bool,
     directed: bool,
     weight_by: str = "stoichiometry",

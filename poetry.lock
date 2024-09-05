@@ -3770,4 +3770,4 @@ gurobipy = ["gurobipy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "<3.13,>=3.9"
-content-hash = "f724370ea0017488ce02a9e83c2b677256825d128b87143bbe57dc01663afb89"
+content-hash = "9658ff1732a463bbaabfbffa6d97ac3fbaa04add37203325334f19325cd99a03"
