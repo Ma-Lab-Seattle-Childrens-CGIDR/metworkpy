@@ -7,6 +7,7 @@ from scipy.stats import multivariate_normal
 
 # Local Imports
 import metworkpy.divergence.kl_divergence_functions
+from metworkpy.divergence.kl_divergence_functions import kl_divergence_array
 
 
 class TestMainKL(unittest.TestCase):
@@ -220,6 +221,52 @@ class TestDiscreteKL(unittest.TestCase):
 
         self.assertTrue(np.isclose(calc_kl_p_q, self.theory_kl_p_q, rtol=1e-1))
         self.assertTrue(np.isclose(calc_kl_q_p, self.theory_kl_q_p, rtol=1e-1))
+
+
+class TestDivergenceArrayKL(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        generator = np.random.default_rng(314)
+        NCOL = 20
+        NROW = 10000
+        cls.NCOL = NCOL
+        cls.NROW = NROW
+        cls.norm_0_3 = generator.normal(loc=0, scale=3, size=NROW * NCOL).reshape(
+            NROW, NCOL
+        )
+        cls.norm_2_10 = generator.normal(loc=2, scale=10, size=NROW * NCOL).reshape(
+            NROW, NCOL
+        )
+        cls.norm_2_10_rep = generator.normal(loc=2, scale=10, size=NROW * NCOL).reshape(
+            NROW, NCOL
+        )
+        cls.theory_kl_div = np.log(10 / 3) + (3**2 + (0 - 2) ** 2) / (2 * 10**2) - 0.5
+
+    def test_serial(self):
+        # Test Known Divergence
+        test_kl_divergence = kl_divergence_array(
+            self.norm_0_3, self.norm_2_10, n_neighbors=5, processes=1
+        )
+        self.assertEqual(len(test_kl_divergence), self.NCOL)
+        self.assertTrue(
+            np.all(np.isclose(test_kl_divergence, self.theory_kl_div, rtol=2e-1))
+        )
+        # Test 0 Divergence
+        test_kl_divergence = kl_divergence_array(
+            self.norm_2_10, self.norm_2_10_rep, n_neighbors=5, processes=1
+        )
+        self.assertTrue(
+            np.all(np.isclose(test_kl_divergence, 0.0, rtol=1e-1, atol=0.05))
+        )
+
+    def test_parallel(self):
+        kl_div_serial = kl_divergence_array(
+            self.norm_0_3, self.norm_2_10, n_neighbors=3, processes=1
+        )
+        kl_div_parallel = kl_divergence_array(
+            self.norm_0_3, self.norm_2_10, n_neighbors=3, processes=2
+        )
+        self.assertTrue(np.all(np.isclose(kl_div_parallel, kl_div_serial)))
 
 
 if __name__ == "__main__":

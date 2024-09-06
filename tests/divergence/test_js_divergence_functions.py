@@ -11,6 +11,7 @@ from metworkpy.divergence.js_divergence_functions import (
     _js_cont,
     _js_disc,
     js_divergence,
+    js_divergence_array,
 )
 
 
@@ -231,6 +232,84 @@ class TestDiscreteJS(unittest.TestCase):
     def test_known_js(self):
         comp_js = _js_disc(self.p_sample, self.q_sample)
         self.assertTrue(np.isclose(comp_js, self.theory_js, atol=5e-3))
+
+
+class TestDivergenceArrayJS(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        generator = np.random.default_rng(314)
+        # Setup for the continuous cases
+        cls.NROW = 500
+        cls.NCOL = 20
+        cls.norm_0_3 = generator.normal(
+            loc=0, scale=3, size=cls.NROW * cls.NCOL
+        ).reshape(cls.NROW, cls.NCOL)
+        cls.norm_2_3 = generator.normal(
+            loc=2, scale=3, size=cls.NROW * cls.NCOL
+        ).reshape(cls.NROW, cls.NCOL)
+        cls.norm_5_3 = generator.normal(
+            loc=5, scale=3, size=cls.NROW * cls.NCOL
+        ).reshape(cls.NROW, cls.NCOL)
+        cls.norm_2_10 = generator.normal(
+            loc=2, scale=10, size=cls.NROW * cls.NCOL
+        ).reshape(cls.NROW, cls.NCOL)
+        cls.norm_2_15 = generator.normal(
+            loc=2, scale=15, size=cls.NROW * cls.NCOL
+        ).reshape(cls.NROW, cls.NCOL)
+        cls.norm_2_10_rep = generator.normal(
+            loc=2, scale=10, size=cls.NROW * cls.NCOL
+        ).reshape(cls.NROW, cls.NCOL)
+
+    def test_symetry(self):
+        self.assertTrue(
+            np.all(
+                np.isclose(
+                    js_divergence_array(
+                        self.norm_0_3, self.norm_2_10, n_neighbors=3, processes=1
+                    ),
+                    js_divergence_array(
+                        self.norm_2_10, self.norm_0_3, n_neighbors=3, processes=1
+                    ),
+                )
+            )
+        )
+
+    def test_identical_dist(self):
+        self.assertTrue(
+            np.all(
+                np.isclose(
+                    js_divergence_array(
+                        self.norm_2_10, self.norm_2_10_rep, n_neighbors=5, processes=1
+                    ),
+                    0.0,
+                    atol=1e-1,
+                )
+            )
+        )
+
+    def test_greater_sd(self):
+        small_sd = js_divergence_array(
+            self.norm_2_3, self.norm_2_10, n_neighbors=3, processes=1
+        )
+        large_sd = js_divergence_array(
+            self.norm_2_3, self.norm_2_15, n_neighbors=3, processes=1
+        )
+        self.assertTrue(np.all(np.less(small_sd, large_sd)))
+
+    def test_greater_mean(self):
+        small_mean = js_divergence_array(
+            self.norm_0_3, self.norm_2_3, n_neighbors=3, processes=1
+        )
+        large_mean = js_divergence_array(
+            self.norm_0_3, self.norm_5_3, n_neighbors=3, processes=1
+        )
+        self.assertTrue(np.all(np.less(small_mean, large_mean)))
+
+    def test_parallel(self):
+        for p, q in zip([self.norm_0_3, self.norm_0_3], [self.norm_2_3, self.norm_5_3]):
+            serial_js_div = js_divergence_array(p, q, n_neighbors=3, processes=1)
+            parallel_js_div = js_divergence_array(p, q, n_neighbors=3, processes=2)
+            self.assertTrue(np.all(np.isclose(parallel_js_div, serial_js_div)))
 
 
 if __name__ == "__main__":
