@@ -6,7 +6,7 @@ those distributions.
 # Standard Library Imports
 from __future__ import annotations
 
-from typing import Union
+from typing import Optional, Union
 
 # External Imports
 import numpy as np
@@ -25,8 +25,8 @@ def kl_divergence(
     q: ArrayLike,
     n_neighbors: int = 5,
     discrete: bool = False,
-    jitter: float = None,
-    jitter_seed: int = None,
+    jitter: Optional[float] = None,
+    jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
 ) -> float:
     """

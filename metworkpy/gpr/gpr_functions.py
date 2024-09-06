@@ -2,7 +2,7 @@
 from __future__ import annotations
 from collections import deque
 import re
-from typing import Any
+from typing import Optional, Any
 import warnings
 
 # External Imports
@@ -17,7 +17,7 @@ IMAT_FUNC_DICT = {"AND": min, "OR": max}
 def gene_to_rxn_weights(
     model: cobra.Model,
     gene_weights: pd.Series,
-    fn_dict: dict = None,
+    fn_dict: Optional[dict] = None,
     fill_val: Any = 0,
 ) -> pd.Series:
     """
@@ -65,7 +65,9 @@ def gene_to_rxn_weights(
     return rxn_weights
 
 
-def eval_gpr(gpr: str, gene_weights: pd.Series, fn_dict: dict = None) -> Any | None:
+def eval_gpr(
+    gpr: str, gene_weights: pd.Series, fn_dict: Optional[dict] = None
+) -> Any | None:
     """
     Evaluate a single GPR string using the provided gene weights and
     function dictionary.
@@ -106,7 +108,7 @@ def _eval_gpr_deque(gpr_expr: deque, gene_weights: pd.Series, fn_dict: dict):
     return eval_stack.pop()
 
 
-def _str_to_deque(in_string: str, replacements: dict = None) -> deque[str]:
+def _str_to_deque(in_string: str, replacements: Optional[dict] = None) -> deque[str]:
     """
     Convert a string to a list of strings, splitting on whitespace and
     parentheses.
@@ -187,7 +189,7 @@ def _process_token(
         return None
 
 
-def _to_postfix(infix: deque[str], precedence: dict = None) -> deque[str]:
+def _to_postfix(infix: deque[str], precedence: Optional[dict] = None) -> deque[str]:
     """
     Convert an infix expression to postfix notation.
     :param infix: deque[str]: A deque of strings representing an infix expression

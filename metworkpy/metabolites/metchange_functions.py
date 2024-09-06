@@ -6,7 +6,7 @@ Module Implementing the Metchange Algorithm
 # Standard Library Imports
 from __future__ import annotations
 from functools import reduce
-from typing import Iterable
+from typing import Optional, Iterable
 
 # External Imports
 import cobra
@@ -24,7 +24,7 @@ from tqdm import tqdm
 def metchange(
     model: cobra.Model,
     reaction_weights: dict[str, float] | pd.Series,
-    metabolites: Iterable[str] = None,
+    metabolites: Optional[Iterable[str]] = None,
     objective_tolerance: float = 0.05,
     progress_bar: bool = False,
 ) -> pd.Series:

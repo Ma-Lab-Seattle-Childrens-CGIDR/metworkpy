@@ -4,7 +4,7 @@ Submodule with functions for creating a context specific model using iMAT
 
 # Standard Library Imports
 from __future__ import annotations
-from typing import Union
+from typing import Optional, Union
 
 # External Imports
 import cobra
@@ -33,7 +33,7 @@ DEFAULTS = {
 def generate_model(
     model: cobra.Model,
     rxn_weights: Union[pd.Series, dict],
-    imat_solution: cobra.Solution = None,
+    imat_solution: Optional[cobra.Solution] = None,
     method: str = "imat_restrictions",
     epsilon: float = DEFAULTS["epsilon"],
     threshold: float = DEFAULTS["threshold"],
@@ -188,7 +188,7 @@ def simple_bounds_model(
     rxn_weights: dict | pd.Series,
     epsilon: float,
     threshold: float,
-    imat_solution: cobra.Solution = None,
+    imat_solution: Optional[cobra.Solution] = None,
     **kwargs,
 ):
     """
@@ -257,7 +257,7 @@ def subset_model(
     rxn_weights: dict | pd.Series,
     epsilon: float,
     threshold: float,
-    imat_solution: cobra.Solution = None,
+    imat_solution: Optional[cobra.Solution] = None,
     **kwargs,
 ):
     """

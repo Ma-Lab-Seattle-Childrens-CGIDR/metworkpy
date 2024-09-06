@@ -6,7 +6,7 @@ data, and converting it into qualitative weights
 from __future__ import annotations
 
 # Standard library imports
-from typing import Callable, Union, Iterable
+from typing import Callable, Union, Iterable, Optional
 from warnings import warn
 
 # External imports
@@ -23,7 +23,7 @@ def expr_to_imat_gene_weights(
     expression: Union[pd.Series, pd.DataFrame],
     quantile: Union[float, tuple[float, float]] = 0.15,
     aggregator: Callable[[ArrayLike], float] = np.median,
-    subset: Iterable | None = None,
+    subset: Optional[Iterable] = None,
     sample_axis: Union[int, str] = 0,
 ) -> pd.Series:
     """
@@ -48,7 +48,7 @@ def expr_to_imat_gene_weights(
         filtered to only include these genes before quantiles are calculated. If
         any genes are present in the subset, but not in expression, they will be
         assigned a value of 0 following the trinarization.
-    :type subset: Iterable | None
+    :type subset: Optional[Iterable]
     :param sample_axis: Which axis represents samples in the expression
         data (only used if expression is DataFrame). "index" or 0 if rows
         represent different samples, "column" or 1 if columns represent

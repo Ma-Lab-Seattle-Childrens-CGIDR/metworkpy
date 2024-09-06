@@ -1,7 +1,7 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import NamedTuple, Iterable
+from typing import NamedTuple, Iterable, Optional
 
 # External Imports
 import cobra
@@ -27,7 +27,7 @@ from metworkpy.information.mutual_information_network import mi_network_adjacenc
 
 # region Main Function
 def create_mutual_information_network(
-    model: cobra.Model | None = None,
+    model: Optional[cobra.Model] = None,
     flux_samples: pd.DataFrame | np.ndarray | None = None,
     reaction_names: Iterable[str] | None = None,
     n_samples: int = 10_000,

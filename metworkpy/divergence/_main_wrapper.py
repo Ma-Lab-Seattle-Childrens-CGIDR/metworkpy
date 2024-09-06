@@ -4,7 +4,7 @@ A wrapper function around methods which can calculate divergences for continuous
 
 # Imports
 # Standard Library Imports
-from typing import Union, Callable
+from typing import Optional, Union, Callable
 
 # External Imports
 import numpy as np
@@ -26,8 +26,8 @@ def _wrap_divergence_functions(
     continuous_method: Callable[[np.ndarray, np.ndarray, int, float], float],
     n_neighbors: int = 5,
     discrete: bool = False,
-    jitter: float = None,
-    jitter_seed: int = None,
+    jitter: Optional[float] = None,
+    jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
 ) -> float:
     """

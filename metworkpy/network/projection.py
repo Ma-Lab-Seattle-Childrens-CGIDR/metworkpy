@@ -5,7 +5,7 @@ Module to project bipartite graphs onto the node sets
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Iterable
+from typing import Iterable, Optional
 from typing import Callable
 
 # External Imports
@@ -20,7 +20,7 @@ from metworkpy.utils._arguments import _parse_str_args_dict
 def bipartite_project(
     network: nx.Graph | nx.DiGraph,
     node_set: Iterable,
-    directed: bool | None = None,
+    directed: Optional[bool] = None,
     weight: str | Callable[[float, float], float] | None = None,
     weight_attribute: str = "weight",
     reciprocal: bool = False,
