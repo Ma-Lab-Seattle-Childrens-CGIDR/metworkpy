@@ -13,12 +13,10 @@ from typing import Tuple
 # External Imports
 import numpy as np
 import pandas as pd
-import scipy
-
-from metworkpy.utils._parallel import _create_shared_memory_numpy_array
-
 
 # Local Imports
+from metworkpy.utils._parallel import _create_shared_memory_numpy_array
+from metworkpy.information.mutual_information_functions import _mi_cont_cont_cheb_only
 
 
 # region Main Function
@@ -124,41 +122,11 @@ def _mi_network_worker(
     shared_array = np.ndarray(
         (shared_nrows, shared_ncols), dtype=shared_dtype, buffer=shm.buf
     )
-
     # Get the x and y columns
     xcol, ycol = index
     x = shared_array[:, (xcol,)]
     y = shared_array[:, (ycol,)]
-
-    # Stack x and y to form the z space
-    z = np.hstack((x, y))
-
-    # Create KDTrees for querying neighbors (this is overkill, but reflects the more generalized mutual information
-    # code)
-    x_tree = scipy.spatial.KDTree(x)
-    y_tree = scipy.spatial.KDTree(y)
-    z_tree = scipy.spatial.KDTree(z)
-
-    # Find the distances from z to n_neighbor point
-    # In the MI calculations, the z distance is always an inf norm
-    r, _ = z_tree.query(z, k=[n_neighbors + 1], p=np.inf)
-    r = r.squeeze()
-
-    # Find the number of neighbors within radius r
-    r = np.nextafter(r, 0)  # Shrink r to exclude kth neighbor
-    x_neighbors = x_tree.query_ball_point(x=x, r=r, p=np.inf, return_length=True) - 1
-    y_neighbors = y_tree.query_ball_point(x=y, r=r, p=np.inf, return_length=True) - 1
-
-    # Calculate the Mutual Information based on equation (8) from Kraskov, Stogbauer, and Grassberger 2004
-    mi = (
-        scipy.special.digamma(n_neighbors)
-        - np.mean(
-            scipy.special.digamma(x_neighbors + 1)
-            + scipy.special.digamma(y_neighbors + 1)
-        )
-        + scipy.special.digamma(z.shape[0])
-    )
-    return xcol, ycol, mi
+    return xcol, ycol, _mi_cont_cont_cheb_only(x=x, y=y, n_neighbors=n_neighbors)
 
 
 # endregion Worker Function
