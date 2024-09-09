@@ -70,7 +70,9 @@ def find_synthetic_lethal_genes(
        this will end up using only 1 core to do most of the calculation, with overhead from parallel processing
        causing this to likely be slower than serial operation. Currently, setting processes=2 will result in
        this function using 2 processes, but in future this might be changed so that it just uses the
-       faster serial implementation in this case.
+       faster serial implementation in this case. Further, due to the relatively high overhead in the parallel
+       implementation, the actual speedup granted by the parallel implementation may be relatively small
+       (especially on smaller models).
 
        For the genes_of_interest argument, this function still needs to check all synthetic lethal groups
        exhaustively, so it will actually take longer than if this is not provided. The reason all groups
@@ -197,14 +199,14 @@ def _process_gene_set_worker(
                 if np.isnan(objective_value) or (objective_value <= essential_cutoff):
                     results_list.append(gene_set)
                 else:
-                    potentially_active_genes = _get_potentially_active_genes(
-                        model=m,
-                        pfba_fraction_of_optimum=pfba_fraction_of_optimum,
-                        active_cutoff=active_cutoff,
-                    )
                     if len(gene_set) >= max_depth:
                         pass
                     else:
+                        potentially_active_genes = _get_potentially_active_genes(
+                            model=m,
+                            pfba_fraction_of_optimum=pfba_fraction_of_optimum,
+                            active_cutoff=active_cutoff,
+                        )
                         for gene in potentially_active_genes:
                             new_set = gene_set.union({gene})
                             if (new_set != gene_set) and (len(new_set) <= max_depth):
@@ -276,13 +278,13 @@ def _process_gene_set_serial(
         if np.isnan(objective_value) or (objective_value <= essential_cutoff):
             results_queue.append(gene_set)
         else:
+            if len(gene_set) >= max_depth:
+                return None
             potentially_active_genes = _get_potentially_active_genes(
                 model=m,
                 pfba_fraction_of_optimum=pfba_fraction_of_optimum,
                 active_cutoff=active_cutoff,
             )
-            if len(gene_set) >= max_depth:
-                return None
             for gene in potentially_active_genes:
                 new_set = gene_set.union({gene})
                 if (new_set != gene_set) and (len(new_set) <= max_depth):

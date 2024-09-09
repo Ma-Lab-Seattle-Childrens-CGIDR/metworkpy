@@ -71,15 +71,18 @@ class TestFindSyntheticLethalGenes(unittest.TestCase):
         double_ko_parallel = find_synthetic_lethal_genes(
             model=self.textbook_model,
             max_depth=2,
-            processes=3,
+            processes=5,
             essential_proportion=ESSENTIAL_PROPORTION,
         )
         end_parallel = time.time()
-        if cpu_count() >= 3:
+        if cpu_count() >= 5:
             # Parallel will only be faster if it has 3 or more processes available, since
             # it requires one for the manager, and then one for each worker. With only two processes,
             # the serial will be faster, since both will actually be using only 1 worker core,
             # and so the parallel overhead leads it to being slower.
+            # Current implementation has a lot of overhead, so actually it is only really faster for
+            # this small of a model with 5 or more processes. With larger models, the number of processes required
+            # for this return is smaller, since the LP solving takes longer.
             self.assertLess(end_parallel - start_parallel, end_serial - start_serial)
         self.assertCountEqual(double_ko, double_ko_parallel)
         max_objective_value = self.textbook_model.slim_optimize()
