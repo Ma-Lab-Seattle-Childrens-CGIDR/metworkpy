@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "metworkpy"
-version = "0.1.15"
+version = "0.1.16"
 description = "Tools for creating and working with network models of metabolism."
 authors = ["Braden Griebel <bgriebel@uw.edu>"]
 license = "MIT"
