@@ -1,5 +1,6 @@
 # Standard Library Imports
 import functools
+from multiprocessing import cpu_count
 import operator
 import os
 import pathlib
@@ -70,11 +71,16 @@ class TestFindSyntheticLethalGenes(unittest.TestCase):
         double_ko_parallel = find_synthetic_lethal_genes(
             model=self.textbook_model,
             max_depth=2,
-            processes=2,
+            processes=3,
             essential_proportion=ESSENTIAL_PROPORTION,
         )
         end_parallel = time.time()
-        self.assertLess(end_parallel - start_parallel, end_serial - start_serial)
+        if cpu_count() >= 3:
+            # Parallel will only be faster if it has 3 or more processes available, since
+            # it requires one for the manager, and then one for each worker. With only two processes,
+            # the serial will be faster, since both will actually be using only 1 worker core,
+            # and so the parallel overhead leads it to being slower.
+            self.assertLess(end_parallel - start_parallel, end_serial - start_serial)
         self.assertCountEqual(double_ko, double_ko_parallel)
         max_objective_value = self.textbook_model.slim_optimize()
         for gene_set in double_ko:

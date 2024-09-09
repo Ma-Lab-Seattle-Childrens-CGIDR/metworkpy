@@ -5,6 +5,7 @@ Module for finding Synthetic Lethality Gene Groups in Cobra Models
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+from collections import deque
 import concurrent.futures
 import multiprocessing
 import multiprocessing.queues
@@ -64,6 +65,13 @@ def find_synthetic_lethal_genes(
     :rtype: list[set[str]]
 
     .. note:
+       For parallel operation, 3 processes is a recommended minimum. Currently, the parallel implementation
+       requires a manager process (which handles the queue of gene sets to be processed), and so if processes=2
+       this will end up using only 1 core to do most of the calculation, with overhead from parallel processing
+       causing this to likely be slower than serial operation. Currently, setting processes=2 will result in
+       this function using 2 processes, but in future this might be changed so that it just uses the
+       faster serial implementation in this case.
+
        For the genes_of_interest argument, this function still needs to check all synthetic lethal groups
        exhaustively, so it will actually take longer than if this is not provided. The reason all groups
        have to be checked exhaustively is to ensure that no subsets of the group are already synthetically
@@ -80,6 +88,45 @@ def find_synthetic_lethal_genes(
     # Get genes of interest, create set
     if genes_of_interest:
         genes_of_interest = {g for g in genes_of_interest}
+    if processes > 1:
+        synleth_list = _fastsl_parallel(
+            model=model,
+            max_depth=max_depth,
+            pfba_fraction_of_optimum=pfba_fraction_of_optimum,
+            active_cutoff=active_cutoff,
+            essential_cutoff=essential_cutoff,
+            processes=processes,
+            show_queue_size=show_queue_size,
+        )
+    elif processes == 1:
+        synleth_list = _fastsl_serial(
+            model=model,
+            max_depth=max_depth,
+            pfba_fraction_of_optimum=pfba_fraction_of_optimum,
+            active_cutoff=active_cutoff,
+            essential_cutoff=essential_cutoff,
+            show_queue_size=show_queue_size,
+        )
+    # Now need to filter sets
+    synleth_list = _filter_supersets(synleth_list)
+    if not genes_of_interest:
+        return synleth_list
+    return [s for s in synleth_list if len(s & genes_of_interest) > 0]
+
+
+# endregion Synthetic Lethal Genes
+
+
+# region Parallel Helper Functions
+def _fastsl_parallel(
+    model: cobra.Model,
+    max_depth: int,
+    pfba_fraction_of_optimum: float,
+    active_cutoff: float,
+    essential_cutoff: float,
+    processes,
+    show_queue_size: bool,
+) -> list[set[str]]:
     # Create manager
     with multiprocessing.Manager() as manager:
         gene_queue = manager.Queue()
@@ -93,7 +140,12 @@ def find_synthetic_lethal_genes(
             active_cutoff=active_cutoff,
         ):
             gene_queue.put({g})
-        with concurrent.futures.ProcessPoolExecutor(max_workers=processes) as executor:
+        # The processes-1 is because the manager process consumes one processes
+        # but needs to have at least 1 process
+        max_workers = max(1, processes - 1)
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=max_workers
+        ) as executor:
             futures = [
                 executor.submit(
                     _process_gene_set_worker,
@@ -112,17 +164,9 @@ def find_synthetic_lethal_genes(
             for future in concurrent.futures.as_completed(futures):
                 future.result()
             synleth_list = list(results_list)
-        # Now need to filter sets
-        synleth_list = _filter_supersets(synleth_list)
-        if not genes_of_interest:
-            return synleth_list
-        return [s for s in synleth_list if len(s & genes_of_interest) > 0]
+    return synleth_list
 
 
-# endregion Synthetic Lethal Genes
-
-
-# region Helper Functions
 def _process_gene_set_worker(
     gene_queue: multiprocessing.queues.Queue,
     results_list: ListProxy,
@@ -158,12 +202,97 @@ def _process_gene_set_worker(
                         pfba_fraction_of_optimum=pfba_fraction_of_optimum,
                         active_cutoff=active_cutoff,
                     )
-                    for gene in potentially_active_genes:
-                        new_set = gene_set.union({gene})
-                        if (new_set != gene_set) and (len(new_set) <= max_depth):
-                            gene_queue.put(new_set)
+                    if len(gene_set) >= max_depth:
+                        pass
+                    else:
+                        for gene in potentially_active_genes:
+                            new_set = gene_set.union({gene})
+                            if (new_set != gene_set) and (len(new_set) <= max_depth):
+                                gene_queue.put(new_set)
 
 
+# endregion Parallel Helper Functions
+
+
+# region Serial Helper Functions
+def _fastsl_serial(
+    model: cobra.Model,
+    max_depth: int,
+    pfba_fraction_of_optimum: float,
+    active_cutoff: float,
+    essential_cutoff: float,
+    show_queue_size: bool,
+) -> list[set[str]]:
+    gene_queue = deque()
+    results_queue = deque()
+    processed_set = set()
+    # Add potentially active genes to the queue
+    for g in _get_potentially_active_genes(
+        model=model,
+        pfba_fraction_of_optimum=pfba_fraction_of_optimum,
+        active_cutoff=active_cutoff,
+    ):
+        gene_queue.append({g})
+    # While the gene queue isn't empty, run the process function
+    while gene_queue:
+        _process_gene_set_serial(
+            model=model,
+            gene_queue=gene_queue,
+            results_queue=results_queue,
+            processed_set=processed_set,
+            max_depth=max_depth,
+            active_cutoff=active_cutoff,
+            essential_cutoff=essential_cutoff,
+            pfba_fraction_of_optimum=pfba_fraction_of_optimum,
+            show_queue_size=show_queue_size,
+        )
+    synleth_list = list(results_queue)
+    return synleth_list
+
+
+def _process_gene_set_serial(
+    model: cobra.Model,
+    gene_queue: deque[set],
+    results_queue: deque[set],
+    processed_set: set,
+    max_depth: int,
+    active_cutoff: float,
+    essential_cutoff: float,
+    pfba_fraction_of_optimum: float,
+    show_queue_size: bool,
+):
+    gene_set = gene_queue.popleft()
+    if show_queue_size:
+        print(len(gene_queue))
+    # This checking for already processed sets is still necessary since alternate orderings
+    # could produce the same gene sets
+    frozen_gene_set = frozenset(gene_set)
+    if frozen_gene_set in processed_set:
+        return None
+    processed_set.add(frozen_gene_set)
+    with model as m:
+        knock_out_model_genes(m, list(gene_set))
+        objective_value = m.slim_optimize(error_value=np.nan)
+        if np.isnan(objective_value) or (objective_value <= essential_cutoff):
+            results_queue.append(gene_set)
+        else:
+            potentially_active_genes = _get_potentially_active_genes(
+                model=m,
+                pfba_fraction_of_optimum=pfba_fraction_of_optimum,
+                active_cutoff=active_cutoff,
+            )
+            if len(gene_set) >= max_depth:
+                return None
+            for gene in potentially_active_genes:
+                new_set = gene_set.union({gene})
+                if (new_set != gene_set) and (len(new_set) <= max_depth):
+                    gene_queue.append(new_set)
+
+
+# endregion Serial Helper Functions
+
+
+# region Helper Functions
 def _is_essential(model: cobra.Model, gene: str, essential_cutoff: float) -> bool:
     with model as m:
         m.genes.get_by_id(gene).knock_out()
