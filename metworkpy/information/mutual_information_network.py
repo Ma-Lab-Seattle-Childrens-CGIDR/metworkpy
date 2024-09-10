@@ -117,7 +117,7 @@ def _mi_network_worker(
     :return: Tuple of (column 1, column 2, mutual information between two columns)
     :rtype: Tuple[int, int, float]
     """
-    # Get access to the shred memory, and create array from it
+    # Get access to the shared memory, and create array from it
     shm = shared_memory.SharedMemory(name=shared_mem_name)
     shared_array = np.ndarray(
         (shared_nrows, shared_ncols), dtype=shared_dtype, buffer=shm.buf

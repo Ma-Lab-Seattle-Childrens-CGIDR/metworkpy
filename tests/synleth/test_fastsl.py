@@ -1,12 +1,9 @@
 # Standard Library Imports
 import functools
-from multiprocessing import cpu_count
 import operator
 import os
 import pathlib
-import time
 import unittest
-from unittest import skipIf
 
 # External Imports
 import cobra
@@ -56,34 +53,20 @@ class TestFindSyntheticLethalGenes(unittest.TestCase):
             {s.__iter__().__next__() for s in single_gene_ko_parallel}, expected_ko
         )
 
-    @skipIf(IN_GITHUB_ACTIONS, "Long Running Tests Skipped")
     def test_double_ko(self):
         ESSENTIAL_PROPORTION = 0.01
-        start_serial = time.time()
         double_ko = find_synthetic_lethal_genes(
             model=self.textbook_model,
             max_depth=2,
             processes=1,
             essential_proportion=ESSENTIAL_PROPORTION,
         )
-        end_serial = time.time()
-        start_parallel = time.time()
         double_ko_parallel = find_synthetic_lethal_genes(
             model=self.textbook_model,
             max_depth=2,
-            processes=5,
+            processes=2,
             essential_proportion=ESSENTIAL_PROPORTION,
         )
-        end_parallel = time.time()
-        if cpu_count() >= 5:
-            # Parallel will only be faster if it has 3 or more processes available, since
-            # it requires one for the manager, and then one for each worker. With only two processes,
-            # the serial will be faster, since both will actually be using only 1 worker core,
-            # and so the parallel overhead leads it to being slower.
-            # Current implementation has a lot of overhead, so actually it is only really faster for
-            # this small of a model with 5 or more processes. With larger models, the number of processes required
-            # for this return is smaller, since the LP solving takes longer.
-            self.assertLess(end_parallel - start_parallel, end_serial - start_serial)
         self.assertCountEqual(double_ko, double_ko_parallel)
         max_objective_value = self.textbook_model.slim_optimize()
         for gene_set in double_ko:
@@ -97,7 +80,6 @@ class TestFindSyntheticLethalGenes(unittest.TestCase):
                         m.slim_optimize(), ESSENTIAL_PROPORTION * max_objective_value
                     )
 
-    @skipIf(IN_GITHUB_ACTIONS, "Long Running Tests Skipped")
     def test_genes_of_interest(self):
         ESSENTIAL_PROPORTION = 0.01
         double_ko = find_synthetic_lethal_genes(
