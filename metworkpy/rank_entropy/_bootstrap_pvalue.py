@@ -108,14 +108,14 @@ def _bootstrap_rank_entropy_p_value(
     ) = _create_shared_memory_numpy_array(samples_array)
     # Calculate the value for the unshuffled array
     rank_entropy = rank_entropy_fun(
-        samples_array[sample_group1, gene_network],
-        samples_array[sample_group2, gene_network],
+        samples_array[sample_group1][:, gene_network],
+        samples_array[sample_group2][:, gene_network],
     )
     # Create a numpy random number generator with provided seed
     rng_gen = np.random.default_rng(seed=seed)
     # Get the sequence of seeds for the subprocesses
     # The high value for this seed array is at most the maximum of the int64 dtype
-    seed_array = rng_gen.integers(2**64 - 1, size=iterations)
+    seed_array = rng_gen.integers(2**63 - 1, size=iterations)
     # Get the combined samples array
     samples = np.array(sample_group1 + sample_group2)
     sample_group1_size = len(sample_group1)
@@ -150,7 +150,7 @@ def _bootstrap_rank_entropy_p_value(
         pvalue = empirical_cdf.sf.evaluate(rank_entropy)
         return rank_entropy, pvalue[()]
     kde = gaussian_kde(rank_entropy_samples, bw_method=bw_method)
-    pvalue = kde.integrate_box_1d(-np.inf, rank_entropy)
+    pvalue = kde.integrate_box_1d(rank_entropy, np.inf)
     return rank_entropy, pvalue
 
 

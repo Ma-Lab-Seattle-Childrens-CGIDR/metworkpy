@@ -92,16 +92,18 @@ def _rank_array(in_array: np.ndarray[int | float]) -> np.ndarray[int]:
     return np.apply_along_axis(_rank_vector, axis=1, arr=in_array)
 
 
-def _rank_matching_score(in_array: np.ndarray[int]) -> np.ndarray[float]:
+def _rank_matching_scores(in_array: np.ndarray[int]) -> np.ndarray[float]:
     rank_array = _rank_array(in_array)
     rank_template_array = np.repeat(
-        (rank_array.mean(axis=0) > 0.5).astype(int).reshape(1, -1), rank_array.shape[0]
+        (rank_array.mean(axis=0) > 0.5).astype(int).reshape(1, -1),
+        rank_array.shape[0],
+        axis=0,
     )
     return (rank_array == rank_template_array).mean(axis=1)
 
 
 def _rank_conservation_index(in_array: np.ndarray[int]) -> float:
-    return _rank_matching_score(in_array).mean()
+    return _rank_matching_scores(in_array).mean()
 
 
 def _dirac_differential_entropy(
