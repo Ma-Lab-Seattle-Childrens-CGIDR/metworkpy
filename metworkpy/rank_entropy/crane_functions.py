@@ -1,25 +1,25 @@
 """
-Functions for computing differential rank conservation (DIRAC)
+Functions for computing Centroid Rank Entropy (CRANE)
 """
 
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Union, Optional, Callable, Tuple
+from typing import Optional, Literal, Callable, Union
 
 # External Imports
 import numpy as np
 import pandas as pd
-from scipy.stats import gaussian_kde
+from scipy.stats import rankdata, gaussian_kde
 
-# Local Imports
+# Local imports
 from metworkpy.rank_entropy._bootstrap_pvalue import _bootstrap_rank_entropy_p_value
 
 
-# region Main Functions
+# region Main Fuctions
 
 
-def dirac_gene_set_entropy(
+def crane_gene_set_entropy(
     expression_data: np.ndarray[float | int] | pd.DataFrame,
     sample_group1,
     sample_group2,
@@ -30,9 +30,9 @@ def dirac_gene_set_entropy(
     replace: bool = True,
     seed: Optional[int] = None,
     processes=1,
-) -> Tuple[float, float]:
+):
     """
-    Calculate the difference in rank conservation indices, and it's significance
+    Calculate the difference in centroid rank entropy, and it's significance
 
     :param expression_data: Gene expression data, either a numpy array or a pandas DataFrame, with rows representing
         different samples, and columns representing different genes
@@ -59,7 +59,7 @@ def dirac_gene_set_entropy(
     :type seed: int
     :param processes: Number of processes to use during the bootstrapping, default 1
     :type processes: int
-    :return: Tuple of the difference in rank conservation index, and the significance level found via bootstrapping
+    :return: Tuple of the difference in centroid rank entropy, and the significance level found via bootstrapping
     :rtype: Tuple[float,float]
     """
     return _bootstrap_rank_entropy_p_value(
@@ -67,7 +67,7 @@ def dirac_gene_set_entropy(
         sample_group1=sample_group1,
         sample_group2=sample_group2,
         gene_network=gene_network,
-        rank_entropy_fun=_dirac_differential_entropy,
+        rank_entropy_fun=_crane_differential_entropy,
         kernel_density_estimate=kernel_density_estimate,
         bw_method=bw_method,
         iterations=iterations,
@@ -79,37 +79,36 @@ def dirac_gene_set_entropy(
 
 # endregion Main Functions
 
-# region Rank Vector
+# region Rank Centroid Functions
 
 
-def _rank_vector(in_vector: np.ndarray[int | float]) -> np.ndarray[int]:
-    rank_array = np.repeat(in_vector.reshape(1, -1), len(in_vector), axis=0)
-    diff_array = rank_array - rank_array.T
-    return (diff_array[np.triu_indices(len(in_vector), k=1)] > 0).astype(int)
+def _rank_array(
+    in_array: np.ndarray[int | float],
+    method: Literal[
+        "average",
+        "min",
+        "max",
+        "dense",
+        "ordinal",
+    ] = "average",
+) -> np.ndarray[float]:
+    return rankdata(in_array, method=method, axis=1, nan_policy="omit")
 
 
-def _rank_array(in_array: np.ndarray[int | float]) -> np.ndarray[int]:
-    return np.apply_along_axis(_rank_vector, axis=1, arr=in_array)
+def _rank_centroid(in_array: [int | float]) -> np.ndarray[int]:
+    return _rank_array(in_array=in_array).mean(axis=0)
 
 
-def _rank_matching_scores(in_array: np.ndarray[int | float]) -> np.ndarray[float]:
-    rank_array = _rank_array(in_array)
-    rank_template_array = np.repeat(
-        (rank_array.mean(axis=0) > 0.5).astype(int).reshape(1, -1),
-        rank_array.shape[0],
-        axis=0,
-    )
-    return (rank_array == rank_template_array).mean(axis=1)
+def _rank_grouping_score(in_array: [int | float]) -> np.ndarray[int]:
+    centroid = rankdata(in_array, method="average", axis=1).mean(axis=0)
+    return np.sqrt(np.square(np.subtract(in_array, centroid)).sum(axis=1)).mean()
 
 
-def _rank_conservation_index(in_array: np.ndarray[int]) -> float:
-    return _rank_matching_scores(in_array).mean()
-
-
-def _dirac_differential_entropy(
-    a: np.ndarray[float | int], b: np.ndarray[float | int]
+def _crane_differential_entropy(
+    a: np.ndarray[int | float],
+    b: np.ndarray[int | float],
 ) -> float:
-    return np.abs(_rank_conservation_index(a) - _rank_conservation_index(b))
+    return np.abs(_rank_grouping_score(a) - _rank_grouping_score(b))
 
 
-# endregion Rank Vector
+# region Rank Centroid Functions
