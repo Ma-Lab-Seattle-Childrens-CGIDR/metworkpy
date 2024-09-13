@@ -19,16 +19,6 @@ from metworkpy.utils._parallel import _create_shared_memory_numpy_array
 
 
 # region Main Function
-
-# Plan: The main function will use a multiprocessing map function for each of the bootstrapped samples
-# The worker function will receive the function for calculation the value, and a name of a shared memory array
-# (Since I want to avoid the pickling problems). It will then sample, and do the calculation. The function
-# will also receive the index values for both phenotypes (call them sample groups). The threads may also need
-# to receive a numpy generator for the random choice...
-# Actually generate a series of random seeds the length of the sequence, and pass one into each worker function
-# this will then lead to repeatable runs
-
-
 def _bootstrap_rank_entropy_p_value(
     samples_array: np.ndarray[float | int] | pd.DataFrame,
     sample_group1,
@@ -106,51 +96,56 @@ def _bootstrap_rank_entropy_p_value(
         shared_dtype,
         shared_mem_name,
     ) = _create_shared_memory_numpy_array(samples_array)
-    # Calculate the value for the unshuffled array
-    rank_entropy = rank_entropy_fun(
-        samples_array[sample_group1][:, gene_network],
-        samples_array[sample_group2][:, gene_network],
-    )
-    # Create a numpy random number generator with provided seed
-    rng_gen = np.random.default_rng(seed=seed)
-    # Get the sequence of seeds for the subprocesses
-    # The high value for this seed array is at most the maximum of the int64 dtype
-    seed_array = rng_gen.integers(2**63 - 1, size=iterations)
-    # Get the combined samples array
-    samples = np.array(sample_group1 + sample_group2)
-    sample_group1_size = len(sample_group1)
-    sample_group2_size = len(sample_group2)
-    # Get the number of processes to use
-    processes = min(processes, cpu_count())
-    # Set up the pool
-    with Pool(processes) as pool:
-        rank_entropy_samples = np.array(
-            [
-                val
-                for val in pool.imap_unordered(
-                    partial(
-                        _bootstrap_rank_entropy_p_values_worker,
-                        rank_entropy_fun=rank_entropy_fun,
-                        samples=samples,
-                        sample_group1_size=sample_group1_size,
-                        sample_group2_size=sample_group2_size,
-                        shared_nrows=shared_nrows,
-                        shared_ncols=shared_ncols,
-                        shared_dtype=shared_dtype,
-                        shared_mem_name=shared_mem_name,
-                        replace=replace,
-                    ),
-                    seed_array,
-                    chunksize=iterations // processes,
-                )
-            ]
+    # Make sure to unlink memory even if something fails
+    try:
+        # Calculate the value for the unshuffled array
+        rank_entropy = rank_entropy_fun(
+            samples_array[sample_group1][:, gene_network],
+            samples_array[sample_group2][:, gene_network],
         )
-    if not kernel_density_estimate:
-        empirical_cdf = ecdf(rank_entropy_samples)
-        pvalue = empirical_cdf.sf.evaluate(rank_entropy)
-        return rank_entropy, pvalue[()]
-    kde = gaussian_kde(rank_entropy_samples, bw_method=bw_method)
-    pvalue = kde.integrate_box_1d(rank_entropy, np.inf)
+        # Create a numpy random number generator with provided seed
+        rng_gen = np.random.default_rng(seed=seed)
+        # Get the sequence of seeds for the subprocesses
+        # The high value for this seed array is at most the maximum of the int64 dtype
+        seed_array = rng_gen.integers(2**63 - 1, size=iterations)
+        # Get the combined samples array
+        samples = np.array(sample_group1 + sample_group2)
+        sample_group1_size = len(sample_group1)
+        sample_group2_size = len(sample_group2)
+        # Get the number of processes to use
+        processes = min(processes, cpu_count())
+        # Set up the pool
+        with Pool(processes) as pool:
+            rank_entropy_samples = np.array(
+                [
+                    val
+                    for val in pool.imap_unordered(
+                        partial(
+                            _bootstrap_rank_entropy_p_values_worker,
+                            rank_entropy_fun=rank_entropy_fun,
+                            samples=samples,
+                            sample_group1_size=sample_group1_size,
+                            sample_group2_size=sample_group2_size,
+                            shared_nrows=shared_nrows,
+                            shared_ncols=shared_ncols,
+                            shared_dtype=shared_dtype,
+                            shared_mem_name=shared_mem_name,
+                            replace=replace,
+                        ),
+                        seed_array,
+                        chunksize=iterations // processes,
+                    )
+                ]
+            )
+        if not kernel_density_estimate:
+            empirical_cdf = ecdf(rank_entropy_samples)
+            pvalue = empirical_cdf.sf.evaluate(rank_entropy)[()]
+        else:
+            kde = gaussian_kde(rank_entropy_samples, bw_method=bw_method)
+            pvalue = kde.integrate_box_1d(rank_entropy, np.inf)
+    finally:
+        shm = shared_memory.SharedMemory(name=shared_mem_name)
+        shm.unlink()
     return rank_entropy, pvalue
 
 

@@ -186,6 +186,7 @@ class TestRankFunctions(unittest.TestCase):
 
 class TestDiracGeneSetEntropy(unittest.TestCase):
     def test_dirac_gene_set_entropy(self):
+        # Test with the ordered genes to check that they are different
         (
             test_expression_data,
             ordered_samples,
@@ -200,7 +201,7 @@ class TestDiracGeneSetEntropy(unittest.TestCase):
             dist=norm(loc=100, scale=25),
             shuffle_genes=True,
             shuffle_samples=True,
-            seed=None,
+            seed=314,
         )
         rank_conservation_diff, pval = dirac_functions.dirac_gene_set_entropy(
             test_expression_data,
@@ -211,6 +212,16 @@ class TestDiracGeneSetEntropy(unittest.TestCase):
         )
         self.assertGreater(rank_conservation_diff, 0.0)
         self.assertLessEqual(pval, 0.05)
+        # Check with the disorded genes to ensure that they are not different
+        rank_conservation_diff, pval = dirac_functions.dirac_gene_set_entropy(
+            test_expression_data,
+            sample_group1=ordered_samples,
+            sample_group2=unordered_samples,
+            gene_network=unordered_genes,
+            kernel_density_estimate=True,
+        )
+        self.assertLess(rank_conservation_diff, 0.1)
+        self.assertGreaterEqual(pval, 0.1)
 
     def test_parallel(self):
         (
@@ -227,7 +238,7 @@ class TestDiracGeneSetEntropy(unittest.TestCase):
             dist=norm(loc=100, scale=25),
             shuffle_genes=True,
             shuffle_samples=True,
-            seed=None,
+            seed=271,
         )
         (
             rank_conservation_diff_serial,
@@ -271,7 +282,7 @@ class TestDiracGeneSetEntropy(unittest.TestCase):
             dist=norm(loc=100, scale=25),
             shuffle_genes=True,
             shuffle_samples=True,
-            seed=None,
+            seed=314,
         )
         rank_conservation_diff, pval = dirac_functions.dirac_gene_set_entropy(
             test_expression_data,

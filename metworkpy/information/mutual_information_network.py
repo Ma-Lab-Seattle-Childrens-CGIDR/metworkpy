@@ -4,8 +4,8 @@ Functions for computing the Mutual Information Network for a Metabolic Model
 
 # Standard Library Imports
 from __future__ import annotations
-
 import functools
+import math
 import itertools
 from multiprocessing import shared_memory, Pool, cpu_count
 from typing import Tuple
@@ -13,6 +13,7 @@ from typing import Tuple
 # External Imports
 import numpy as np
 import pandas as pd
+import tqdm
 
 # Local Imports
 from metworkpy.utils._parallel import _create_shared_memory_numpy_array
@@ -21,7 +22,10 @@ from metworkpy.information.mutual_information_functions import _mi_cont_cont_che
 
 # region Main Function
 def mi_network_adjacency_matrix(
-    samples: pd.DataFrame | np.ndarray, n_neighbors: int = 5, processes: int = 1
+    samples: pd.DataFrame | np.ndarray,
+    n_neighbors: int = 5,
+    processes: int = 1,
+    progress_bar: bool = False,
 ) -> np.ndarray:
     """
     Create a Mutual Information Network Adjacency matrix from flux samples. Uses kth nearest neighbor method
@@ -33,6 +37,8 @@ def mi_network_adjacency_matrix(
     :type n_neighbors: int
     :param processes: Number of processes to use when
     :type processes: int
+    :param progress_bar: Whether a progress bar should be displayed
+    :type progress_bar: bool
     :return: Square numpy array with values at i,j representing the mutual information between the ith and jth columns
         in the original samples array. This array is symmetrical since mutual information is symmetrical.
     :rtype: np.ndarray
@@ -67,7 +73,9 @@ def mi_network_adjacency_matrix(
         # process write its results there without returning, depending on if this means the main
         # process needs to hold on to a list of the returned values, or if it eagerly writes the results...
         mi_array = np.zeros((shared_ncols, shared_ncols), dtype=float)
-        with Pool(processes=processes) as pool:
+        with Pool(processes=processes) as pool, tqdm.tqdm(
+            total=math.comb(shared_ncols, 2), disable=not progress_bar
+        ) as pbar:
             for x, y, mi in pool.imap_unordered(
                 functools.partial(
                     _mi_network_worker,
@@ -80,6 +88,9 @@ def mi_network_adjacency_matrix(
                 itertools.combinations(range(shared_ncols), 2),
                 chunksize=shared_ncols // processes,
             ):
+                if progress_bar:
+                    pbar.update()
+                    pbar.refresh()
                 # Set the value in the results matrix
                 mi_array[x, y] = mi
                 mi_array[y, x] = mi
