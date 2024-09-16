@@ -1,25 +1,25 @@
 """
-Functions for computing Centroid Rank Entropy (CRANE)
+Functions for computing the Rank Correlation Entropy (RACE)
 """
 
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Optional, Literal, Callable, Union
+from itertools import combinations
+from typing import Optional, Union, Callable, Tuple
 
-# External Imports
+# Enternal Imports
 import numpy as np
 import pandas as pd
-from scipy.stats import rankdata, gaussian_kde
+from scipy.stats import gaussian_kde, kendalltau
 
-# Local imports
+# Local Imports
 from metworkpy.rank_entropy._bootstrap_pvalue import _bootstrap_rank_entropy_p_value
 
+# region Main Functions
 
-# region Main Fuctions
 
-
-def crane_gene_set_entropy(
+def race_gene_set_entropy(
     expression_data: np.ndarray[float | int] | pd.DataFrame,
     sample_group1,
     sample_group2,
@@ -30,9 +30,9 @@ def crane_gene_set_entropy(
     replace: bool = True,
     seed: Optional[int] = None,
     processes=1,
-):
+) -> Tuple[float, float]:
     """
-    Calculate the difference in centroid rank entropy, and it's significance
+    Calculate the difference in rank correlation entropy, and it's significance
 
     :param expression_data: Gene expression data, either a numpy array or a pandas DataFrame, with rows representing
         different samples, and columns representing different genes
@@ -59,7 +59,7 @@ def crane_gene_set_entropy(
     :type seed: int
     :param processes: Number of processes to use during the bootstrapping, default 1
     :type processes: int
-    :return: Tuple of the difference in centroid rank entropy, and the significance level found via bootstrapping
+    :return: Tuple of the difference in rank correlation entropy, and the significance level found via bootstrapping
     :rtype: Tuple[float,float]
     """
     return _bootstrap_rank_entropy_p_value(
@@ -67,7 +67,7 @@ def crane_gene_set_entropy(
         sample_group1=sample_group1,
         sample_group2=sample_group2,
         gene_network=gene_network,
-        rank_entropy_fun=_crane_differential_entropy,
+        rank_entropy_fun=_race_differential_entropy,
         kernel_density_estimate=kernel_density_estimate,
         bw_method=bw_method,
         iterations=iterations,
@@ -79,37 +79,21 @@ def crane_gene_set_entropy(
 
 # endregion Main Functions
 
-# region Rank Centroid Functions
+
+# region Rank Correlation Functions
+def _rank_correlation_mean(input_array: np.ndarray[int | float]) -> float:
+    sum = 0.0
+    count = 0
+    for a, b in combinations(range(input_array.shape[0]), 2):
+        sum += ((kendalltau(input_array[a], input_array[b]).statistic * -1) + 1) / 2
+        count += 1
+    return sum / count
 
 
-def _rank_array(
-    in_array: np.ndarray[int | float],
-    method: Literal[
-        "average",
-        "min",
-        "max",
-        "dense",
-        "ordinal",
-    ] = "average",
-) -> np.ndarray[float]:
-    return rankdata(in_array, method=method, axis=1, nan_policy="omit")
-
-
-def _rank_centroid(in_array: [int | float]) -> np.ndarray[int]:
-    return _rank_array(in_array=in_array).mean(axis=0)
-
-
-def _rank_grouping_score(in_array: [int | float]) -> np.ndarray[int]:
-    ranked_array = _rank_array(in_array)
-    centroid = ranked_array.mean(axis=0)
-    return np.sqrt(np.square(np.subtract(ranked_array, centroid)).sum(axis=1)).mean()
-
-
-def _crane_differential_entropy(
-    a: np.ndarray[int | float],
-    b: np.ndarray[int | float],
+def _race_differential_entropy(
+    a: np.ndarray[int | float], b: np.ndarray[int | float]
 ) -> float:
-    return np.abs(_rank_grouping_score(a) - _rank_grouping_score(b))
+    return np.abs(_rank_correlation_mean(a) - _rank_correlation_mean(b))
 
 
-# region Rank Centroid Functions
+# endregion Rank Correlation Functions
