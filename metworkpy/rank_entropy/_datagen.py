@@ -49,7 +49,7 @@ def _generate_rank_entropy_data(
     :param shuffle_samples: Whether the order of the samples should be shuffled
     :type shuffle_samples: bool
     :param seed: Seed to use for the random number generator used whe shuffling (doesn't change the sampling from
-        the provided dist, which should be seeded before passing it in)
+        the provided dist)
     :type seed: Optional[int]
     :return: Tuple of np.ndarrays, representing:
         1. the generated expression data, with rows representing samples, and columns representing genes.

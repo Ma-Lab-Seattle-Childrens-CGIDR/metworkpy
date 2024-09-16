@@ -212,7 +212,7 @@ class TestDiracGeneSetEntropy(unittest.TestCase):
         )
         self.assertGreater(rank_conservation_diff, 0.0)
         self.assertLessEqual(pval, 0.05)
-        # Check with the disorded genes to ensure that they are not different
+        # Check with the disordered genes to ensure that they are not different
         rank_conservation_diff, pval = dirac_functions.dirac_gene_set_entropy(
             test_expression_data,
             sample_group1=ordered_samples,
