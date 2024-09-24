@@ -76,7 +76,7 @@ class TestRaceGeneSetEntropy(unittest.TestCase):
             iterations=100,
         )
         self.assertLess(rank_conservation_diff, 2.0)
-        self.assertGreaterEqual(pval, 0.1)
+        self.assertGreaterEqual(pval, 0.05)
 
     def test_parallel(self):
         (

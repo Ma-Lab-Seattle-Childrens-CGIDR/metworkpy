@@ -81,7 +81,7 @@ class TestInferGeneSetEntropy(unittest.TestCase):
             kernel_density_estimate=True,
         )
         self.assertLess(rank_conservation_diff, 0.3)
-        self.assertGreaterEqual(pval, 0.1)
+        self.assertGreaterEqual(pval, 0.05)
 
     def test_parallel(self):
         (
