@@ -182,7 +182,7 @@ def count_to_rpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFram
     count_genes = set(count.columns)
     fl_genes = set(feature_length.index)
     # Get the library size before dropping genes
-    sum_counts = count.sum(axis=1)
+    sum_counts = count.sum(axis=0)
     if not (count_genes == fl_genes):
         warn(
             "Different genes in count dataframe and feature length series, dropping any not in common"
@@ -191,8 +191,7 @@ def count_to_rpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFram
         count = count[genes]
         feature_length = feature_length[genes]
     return (
-        count.divide(feature_length, axis=1).divide(sum_counts[count.index], axis=0)
-        * 1.0e9
+        count.divide(feature_length * sum_counts[feature_length.index], axis=1) * 1.0e9
     )
 
 

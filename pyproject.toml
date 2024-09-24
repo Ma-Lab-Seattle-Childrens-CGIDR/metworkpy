@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "metworkpy"
-version = "0.1.16"
+version = "0.1.17"
 description = "Tools for creating and working with network models of metabolism."
 authors = ["Braden Griebel <bgriebel@uw.edu>"]
 license = "MIT"
@@ -57,11 +57,11 @@ sphinx-rtd-theme = "^2.0.0"
 jupyter = "^1.0.0"
 
 [tool.poetry.extras]
-gurobipy = ["gurobipy"]
+gurobi = ["gurobipy"]
 cplex = ["cplex"]
 fastparquet = ["fastparquet"]
 excel = ["openpyxl"]
-all = ["gurobipy", "cplex", "fastparquet", "openpyxl"]
+all = ["gurobi", "cplex", "fastparquet", "openpyxl"]
 
 [build-system]
 requires = ["poetry-core"]
