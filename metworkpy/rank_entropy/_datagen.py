@@ -5,7 +5,7 @@ Generate data for testing the rank entropy functions
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import TypeAlias, Union, Optional, Tuple
+from typing import Union, Optional, Tuple
 
 import numpy as np
 
@@ -15,7 +15,7 @@ from scipy.stats import rv_continuous, rv_discrete
 # Local Imports
 
 # Typing information
-Distribution: TypeAlias = Union[rv_continuous, rv_discrete]
+Distribution = Union[rv_continuous, rv_discrete]
 
 
 # region Main Function

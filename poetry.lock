@@ -3734,7 +3734,7 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 type = ["pytest-mypy"]
 
 [extras]
-all = ["cplex", "fastparquet", "openpyxl"]
+all = ["cplex", "fastparquet", "gurobipy", "openpyxl"]
 cplex = ["cplex"]
 excel = ["openpyxl"]
 fastparquet = ["fastparquet"]
@@ -3743,4 +3743,4 @@ gurobi = ["gurobipy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "<3.13,>=3.9"
-content-hash = "3af965182d61fd3d22d99ca8edcdb41cfb8732732c90585b93f0cf460a1acca8"
+content-hash = "595250e6a1c04aea3b672c14734e5a640b05260b8fce5031fbae47b8713cfc1f"

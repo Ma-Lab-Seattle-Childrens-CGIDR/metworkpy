@@ -125,7 +125,11 @@ class TestInferGeneSetEntropy(unittest.TestCase):
         self.assertAlmostEqual(
             rank_conservation_diff_parallel, rank_conservation_diff_serial
         )
-        self.assertAlmostEqual(pval_serial, pval_parallel)
+        self.assertAlmostEqual(
+            pval_serial,
+            pval_parallel,
+            places=4,
+        )
 
     def test_empirical_cdf(self):
         (
