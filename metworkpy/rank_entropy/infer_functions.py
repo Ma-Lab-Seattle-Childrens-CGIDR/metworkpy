@@ -59,6 +59,11 @@ def infer_gene_set_entropy(
     :type processes: int
     :return: Tuple of the difference in information entropy of ranks, and the significance level found via bootstrapping
     :rtype: Tuple[float,float]
+
+    .. note:
+       With INFER, having different sized sample groups will artificially inflate the significance of rank entropy
+       differences between the groups of samples. This method should only be used when comparing identical sample
+       sizes.
     """
     return _bootstrap_rank_entropy_p_value(
         samples_array=expression_data,
