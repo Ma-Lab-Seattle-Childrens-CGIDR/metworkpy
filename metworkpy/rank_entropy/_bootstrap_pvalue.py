@@ -11,6 +11,7 @@ from typing import Callable, Tuple, Optional, Union
 
 # External Imports
 import numpy as np
+from numpy.typing import NDArray
 import pandas as pd
 from scipy.stats import gaussian_kde, ecdf
 
@@ -20,13 +21,11 @@ from metworkpy.utils._parallel import _create_shared_memory_numpy_array
 
 # region Main Function
 def _bootstrap_rank_entropy_p_value(
-    samples_array: np.ndarray[float | int] | pd.DataFrame,
+    samples_array: NDArray[float | int] | pd.DataFrame,
     sample_group1,
     sample_group2,
     gene_network,
-    rank_entropy_fun: Callable[
-        [np.ndarray[float | int], np.ndarray[float | int]], float
-    ],
+    rank_entropy_fun: Callable[[NDArray[float | int], NDArray[float | int]], float],
     kernel_density_estimate: bool = True,
     bw_method: Optional[Union[str | float | Callable[[gaussian_kde], float]]] = None,
     iterations: int = 1_000,
@@ -39,7 +38,7 @@ def _bootstrap_rank_entropy_p_value(
 
     :param samples_array: Gene expression data, either a numpy array or a pandas DataFrame, with rows representing
         different samples, and columns representing different genes
-    :type samples_array: np.ndarray[int|float] | pd.DataFrame
+    :type samples_array: NDArray[int|float] | pd.DataFrame
     :param sample_group1: Which samples belong to group1. If expression_data is a numpy array, this should be
         a list/array/iterable of ints. If expression_data is a pandas dataframe, this can be anything that can index
         a dataframe inside a .loc (see pandas documentation for details)
@@ -47,7 +46,7 @@ def _bootstrap_rank_entropy_p_value(
     :param gene_network: List of indices for genes in the gene network
     :param rank_entropy_fun: Function used to calculate the rank entropy difference between two sample groups,
         should take two np.ndarrays as arguments and return a float
-    :type rank_entropy_fun: Callable[[np.ndarray[float | int], np.ndarray[float | int]], float]
+    :type rank_entropy_fun: Callable[[NDArray[float | int], NDArray[float | int]], float]
     :param kernel_density_estimate: Whether to use a kernel density estimate for calculating the p-value. If True,
         will use a Gaussian Kernel Density Estimate, if False will use an empirical CDF
     :type kernel_density_estimate: bool
@@ -156,10 +155,8 @@ def _bootstrap_rank_entropy_p_value(
 
 def _bootstrap_rank_entropy_p_values_worker(
     seed: int,
-    rank_entropy_fun: Callable[
-        [np.ndarray[float | int], np.ndarray[float | int]], float
-    ],
-    samples: np.ndarray[int],
+    rank_entropy_fun: Callable[[NDArray[float | int], NDArray[float | int]], float],
+    samples: NDArray[int],
     sample_group1_size: int,
     sample_group2_size: int,
     shared_nrows: int,

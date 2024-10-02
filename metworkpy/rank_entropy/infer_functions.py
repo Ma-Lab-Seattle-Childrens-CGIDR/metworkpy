@@ -9,6 +9,7 @@ from typing import Optional, Union, Callable, Tuple
 
 # Enternal Imports
 import numpy as np
+from numpy.typing import NDArray
 import pandas as pd
 from scipy.stats import gaussian_kde, rankdata
 
@@ -18,7 +19,7 @@ from metworkpy.rank_entropy._bootstrap_pvalue import _bootstrap_rank_entropy_p_v
 
 # region Main Functions
 def infer_gene_set_entropy(
-    expression_data: np.ndarray[float | int] | pd.DataFrame,
+    expression_data: NDArray[float | int] | pd.DataFrame,
     sample_group1,
     sample_group2,
     gene_network,
@@ -85,7 +86,7 @@ def infer_gene_set_entropy(
 # region Helper Functions
 
 
-def _vector_entropy(in_vec: np.ndarray[float | int]) -> float:
+def _vector_entropy(in_vec: NDArray[float | int]) -> float:
     _, count = np.unique(in_vec, return_counts=True)
     tot = np.sum(count)
     p_x = count / tot
@@ -93,13 +94,13 @@ def _vector_entropy(in_vec: np.ndarray[float | int]) -> float:
     return -np.sum(np.multiply(p_x, log_p_x))
 
 
-def _rank_array_entropy(in_array: np.ndarray[float | int]) -> float:
+def _rank_array_entropy(in_array: NDArray[float | int]) -> float:
     rank_array = rankdata(in_array, method="average", nan_policy="omit", axis=1)
     return np.apply_along_axis(_vector_entropy, axis=0, arr=rank_array).mean()
 
 
 def _infer_differential_entropy(
-    a: np.ndarray[float | int], b: np.ndarray[float | int]
+    a: NDArray[float | int], b: NDArray[float | int]
 ) -> float:
     return np.abs(_rank_array_entropy(a) - _rank_array_entropy(b))
 

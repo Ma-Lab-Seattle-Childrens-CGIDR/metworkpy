@@ -10,6 +10,7 @@ from typing import Optional, Union, Callable, Tuple
 
 # Enternal Imports
 import numpy as np
+from numpy.typing import NDArray
 import pandas as pd
 from scipy.stats import gaussian_kde, kendalltau
 
@@ -20,7 +21,7 @@ from metworkpy.rank_entropy._bootstrap_pvalue import _bootstrap_rank_entropy_p_v
 
 
 def race_gene_set_entropy(
-    expression_data: np.ndarray[float | int] | pd.DataFrame,
+    expression_data: NDArray[float | int] | pd.DataFrame,
     sample_group1,
     sample_group2,
     gene_network,
@@ -81,7 +82,7 @@ def race_gene_set_entropy(
 
 
 # region Rank Correlation Functions
-def _rank_correlation_mean(input_array: np.ndarray[int | float]) -> float:
+def _rank_correlation_mean(input_array: NDArray[int | float]) -> float:
     sum = 0.0
     count = 0
     for a, b in combinations(range(input_array.shape[0]), 2):
@@ -91,7 +92,7 @@ def _rank_correlation_mean(input_array: np.ndarray[int | float]) -> float:
 
 
 def _race_differential_entropy(
-    a: np.ndarray[int | float], b: np.ndarray[int | float]
+    a: NDArray[int | float], b: NDArray[int | float]
 ) -> float:
     return np.abs(_rank_correlation_mean(a) - _rank_correlation_mean(b))
 

@@ -4,11 +4,11 @@ A wrapper function around methods which can calculate divergences for continuous
 
 # Imports
 # Standard Library Imports
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, Any
 
 # External Imports
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 
 # Local Imports
 from metworkpy.utils._arguments import _parse_metric
@@ -22,8 +22,8 @@ from metworkpy.utils._jitter import _jitter_single
 def _wrap_divergence_functions(
     p: ArrayLike,
     q: ArrayLike,
-    discrete_method: Callable[[np.ndarray, np.ndarray], float],
-    continuous_method: Callable[[np.ndarray, np.ndarray, int, float], float],
+    discrete_method: Callable[[NDArray[Any], NDArray[Any]], float],
+    continuous_method: Callable[[NDArray[float], NDArray[float], int, float], float],
     n_neighbors: int = 5,
     discrete: bool = False,
     jitter: Optional[float] = None,
