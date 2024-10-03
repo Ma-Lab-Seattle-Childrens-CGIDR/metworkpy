@@ -50,7 +50,7 @@ def crane_gene_set_classification(
     :param kernel_density_estimate: Whether to use a kernel density estimate for calculating the p-value. If True,
         will use a Gaussian Kernel Density Estimate, if False will use an empirical CDF
     :type kernel_density_estimate: bool
-    :param bw_method: Bandwidth method, see [scipy.stats.gaussian_kde](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html) for details
+    :param bw_method: Bandwidth method, see `scipy.stats.gaussian_kde <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html>`_ for details
     :type bw_method: Optional[Union[str|float|Callable[[gaussian_kde], float]]]
     :param iterations: Number of iterations to perform during bootstrapping the null distribution
     :type iterations: int
@@ -108,7 +108,7 @@ def crane_gene_set_entropy(
     :param kernel_density_estimate: Whether to use a kernel density estimate for calculating the p-value. If True,
         will use a Gaussian Kernel Density Estimate, if False will use an empirical CDF
     :type kernel_density_estimate: bool
-    :param bw_method: Bandwidth method, see [scipy.stats.gaussian_kde](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html) for details
+    :param bw_method: Bandwidth method, see `scipy.stats.gaussian_kde <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html>`_ for details
     :type bw_method: Optional[Union[str|float|Callable[[gaussian_kde], float]]]
     :param iterations: Number of iterations to perform during bootstrapping the null distribution
     :type iterations: int
@@ -220,7 +220,7 @@ class CraneClassifier:
         :type X: NDArray[float|int]|pd.DataFrame
         :return: Predicted classes for all the samples. If X is a DataFrame, this will be a pandas Series;
             if X is a ndarray, this will be a 1-dimensional numpy array
-        :rtype:
+        :rtype: pd.Series|NDArray
         """
         if self.rank_centroids is None:
             raise NotFitError(
