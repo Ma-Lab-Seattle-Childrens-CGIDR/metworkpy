@@ -59,19 +59,23 @@ def _generate_rank_entropy_data(
         5. the indices of the unordered genes
     :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
     """
+    rng_generator = np.random.default_rng(seed=seed)
     ordered_array = _ordered_array(
         nrow=n_ordered_samples,
         ncol=n_genes_ordered,
         dist=dist,
         col_shuffle=shuffle_genes,
+        rng_generator=rng_generator,
     )
     unordered_array = _unordered_array(
-        nrow=n_unordered_samples, ncol=n_genes_ordered, dist=dist
+        nrow=n_unordered_samples,
+        ncol=n_genes_ordered,
+        dist=dist,
+        rng_generator=rng_generator,
     )
     ordered_genes_array = np.vstack((ordered_array, unordered_array))
-    rng = np.random.default_rng(seed)
     if shuffle_samples:
-        samples_shuffled = rng.permuted(
+        samples_shuffled = rng_generator.permuted(
             list(range(n_ordered_samples + n_unordered_samples))
         )
         ordered_samples = samples_shuffled[:n_ordered_samples]
@@ -84,11 +88,16 @@ def _generate_rank_entropy_data(
             range(n_ordered_samples, n_unordered_samples + n_ordered_samples)
         )
     unordered_genes_array = _unordered_array(
-        nrow=n_ordered_samples + n_unordered_samples, ncol=n_genes_unordered, dist=dist
+        nrow=n_ordered_samples + n_unordered_samples,
+        ncol=n_genes_unordered,
+        dist=dist,
+        rng_generator=rng_generator,
     )
     res_array = np.hstack((ordered_genes_array, unordered_genes_array))
     if shuffle_genes:
-        genes_shuffled = rng.permuted(list(range(n_genes_ordered + n_genes_unordered)))
+        genes_shuffled = rng_generator.permuted(
+            list(range(n_genes_ordered + n_genes_unordered))
+        )
         ordered_genes = genes_shuffled[:n_genes_ordered]
         unordered_genes = genes_shuffled[n_genes_ordered:]
         res_array[:, ordered_genes] = ordered_genes_array
@@ -105,14 +114,25 @@ def _generate_rank_entropy_data(
 
 
 # region Unordered
-def _unordered_vector(size: int, dist: Distribution) -> np.ndarray:
-    return dist.rvs(size)
+def _unordered_vector(
+    size: int,
+    dist: Distribution,
+    rng_generator: np.random.Generator = np.random.default_rng(),
+) -> np.ndarray:
+    return dist.rvs(size, random_state=rng_generator)
 
 
-def _unordered_array(nrow: int, ncol: int, dist: Distribution) -> np.ndarray:
+def _unordered_array(
+    nrow: int,
+    ncol: int,
+    dist: Distribution,
+    rng_generator: np.random.Generator = np.random.default_rng(),
+) -> np.ndarray:
     res_array = np.zeros((nrow, ncol), dtype=dist.rvs(0).dtype)
     for row in range(nrow):
-        res_array[row, :] = _unordered_vector(size=ncol, dist=dist)
+        res_array[row, :] = _unordered_vector(
+            size=ncol, dist=dist, rng_generator=rng_generator
+        )
     return res_array
 
 
@@ -120,19 +140,28 @@ def _unordered_array(nrow: int, ncol: int, dist: Distribution) -> np.ndarray:
 
 
 # region Ordered
-def _ordered_vector(size: int, dist: Distribution) -> np.ndarray:
-    return np.sort(_unordered_vector(size, dist))
+def _ordered_vector(
+    size: int,
+    dist: Distribution,
+    rng_generator: np.random.Generator = np.random.default_rng(),
+) -> np.ndarray:
+    return np.sort(_unordered_vector(size, dist, rng_generator=rng_generator))
 
 
 def _ordered_array(
-    nrow: int, ncol: int, dist: Distribution, col_shuffle: bool = True
+    nrow: int,
+    ncol: int,
+    dist: Distribution,
+    col_shuffle: bool = True,
+    rng_generator: np.random.Generator = np.random.default_rng(),
 ) -> np.ndarray:
     res_array = np.zeros((nrow, ncol), dtype=dist.rvs(0).dtype)
     for row in range(nrow):
-        res_array[row, :] = _ordered_vector(size=ncol, dist=dist)
-    if col_shuffle:
-        rng_gen = np.random.default_rng()
-        new_col_order = rng_gen.permuted(list(range(ncol)))
+        res_array[row, :] = _ordered_vector(
+            size=ncol, dist=dist, rng_generator=rng_generator
+        )
+    if col_shuffle and ncol != 0:
+        new_col_order = rng_generator.permuted(list(range(ncol)))
         res_array = res_array[:, new_col_order]
     return res_array
 

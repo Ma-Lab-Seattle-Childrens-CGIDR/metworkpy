@@ -10,8 +10,9 @@ API Reference for Metworkpy
    divergence
    gpr
    metabolites
+   network
    imat
    information
-   network
+   rank_entropy
    synleth
    utils

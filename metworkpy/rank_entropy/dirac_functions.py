@@ -15,6 +15,7 @@ from scipy.stats import gaussian_kde
 
 # Local Imports
 from metworkpy.rank_entropy._bootstrap_pvalue import _bootstrap_rank_entropy_p_value
+from metworkpy.rank_entropy.rank_entropy_exceptions import NotFitError
 
 
 # region Main Functions
@@ -215,7 +216,7 @@ class DiracClassifier:
         :type X: NDArray[float|int]|pd.DataFrame
         :return: Predicted classes for all the samples. If X is a DataFrame, this will be a pandas Series;
             if X is a ndarray, this will be a 1-dimensional numpy array
-        :rtype:
+        :rtype: pd.Series | NDArray
         """
         if self.rank_templates is None:
             raise NotFitError(
@@ -232,13 +233,10 @@ class DiracClassifier:
 
     def _classify_arr(self, X: NDArray[float | int]) -> NDArray:
         class_array = np.zeros((X.shape[0], self.num_labels), dtype=float)
+        rank_array = _rank_array(X)
         for idx, template in enumerate(self.rank_templates):
-            class_array[:, idx] = np.equal(X, template).mean(axis=1)
+            class_array[:, idx] = np.equal(rank_array, template).mean(axis=1)
         return self.classes[np.argmax(class_array, axis=1)]
-
-
-class NotFitError(Exception):
-    pass
 
 
 # endregion Dirac Classifier
@@ -290,29 +288,22 @@ def _dirac_classification_rate(
     rank_array_a = _rank_array(a)
     rank_array_b = _rank_array(b)
 
-    rank_template_a = (rank_array_a.mean(axis=0) > 0.5).astype(int)
-    rank_template_b = (rank_array_b.mean(axis=0) > 0.5).astype(int)
-
-    # Create rank template arrays of the appropriate sizes for array a and b
-    rank_template_a_array_a = np.repeat(rank_template_a, a.shape[0], axis=0)
-    rank_template_a_array_b = np.repeat(rank_template_a, b.shape[0], axis=0)
-
-    rank_template_b_array_a = np.repeat(rank_template_b, a.shape[0], axis=0)
-    rank_template_b_array_b = np.repeat(rank_template_b, b.shape[0], axis=0)
+    rank_template_a = (rank_array_a.mean(axis=0) > 0.5).astype(int).reshape(1, -1)
+    rank_template_b = (rank_array_b.mean(axis=0) > 0.5).astype(int).reshape(1, -1)
 
     # Compute the Rank matching score for each array, for each phenotype
     rank_matching_score_array_a_phenotype_a = (
-        rank_array_a == rank_template_a_array_a
+        np.equal(rank_array_a, rank_template_a)
     ).mean(axis=1)
     rank_matching_score_array_a_phenotype_b = (
-        rank_array_a == rank_template_b_array_a
+        np.equal(rank_array_a, rank_template_b)
     ).mean(axis=1)
 
     rank_matching_score_array_b_phenotype_a = (
-        rank_array_b == rank_template_a_array_b
+        np.equal(rank_array_b, rank_template_a)
     ).mean(axis=1)
     rank_matching_score_array_b_phenotype_b = (
-        rank_array_b == rank_template_b_array_b
+        np.equal(rank_array_b, rank_template_b)
     ).mean(axis=1)
 
     # Calculate Rank Difference Scores

@@ -1,5 +1,5 @@
 Network Reference
-=====================
+=================
 
 API Documentation for the network submodule
 
