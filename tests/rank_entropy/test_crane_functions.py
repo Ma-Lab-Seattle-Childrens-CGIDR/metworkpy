@@ -59,7 +59,8 @@ class TestCraneHelperFunctions(unittest.TestCase):
         )
 
         # Test random array
-        test_array = np.random.rand(10, 20)
+        rng = np.random.default_rng(51928)
+        test_array = rng.uniform(low=0, high=1, size=10 * 20).reshape(10, 20)
         test_centroid = _rank_centroid(test_array)
         self.assertTupleEqual(test_centroid.shape, (1, 20))
         self.assertAlmostEqual(np.mean(test_centroid), 10.5)
@@ -71,19 +72,22 @@ class TestCraneHelperFunctions(unittest.TestCase):
         test_grouping_score = _rank_grouping_score(test_array)
         self.assertAlmostEqual(test_grouping_score, 0.0)
 
-        test_array = np.random.rand(4, 5)
+        rng = np.random.default_rng(123456)
+
+        test_array = rng.uniform(0, 1, size=4 * 5).reshape(4, 5)
         test_grouping_score = _rank_grouping_score(test_array)
         self.assertGreater(test_grouping_score, 0.2)
 
-        rand_array = np.random.rand(4, 5)
+        rand_array = rng.uniform(0, 1, size=4 * 5).reshape(4, 5)
         ord_array = np.arange(20).reshape(4, 5)
         self.assertGreater(
             _rank_grouping_score(rand_array), _rank_grouping_score(ord_array)
         )
 
     def test_crane_differential_entropy(self):
+        rng = np.random.default_rng(12312941024)
         test_a = np.arange(20).reshape(4, 5)
-        test_b = np.random.rand(4, 5)
+        test_b = rng.uniform(0, 1, size=4 * 5).reshape(4, 5)
         self.assertGreater(_crane_differential_entropy(test_a, test_b), 0.0)
         self.assertAlmostEqual(_crane_differential_entropy(test_a, test_a), 0.0)
         self.assertAlmostEqual(_crane_differential_entropy(test_b, test_b), 0.0)
