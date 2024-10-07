@@ -94,7 +94,7 @@ def ko_divergence(
             f"target_gene_network must be a list or a dict, but received a {type(target_networks)}"
         )
     for key, target_list in target_networks.items():
-        target_networks[key] = _convert_target_networks(model, target_list)
+        target_networks[key] = _convert_target_network(model, target_list)
     for gene_to_ko in tqdm.tqdm(genes_to_ko, disable=not progress_bar):
         with model as ko_model:
             _ = knock_out_model_genes(ko_model, gene_list=[gene_to_ko])
@@ -102,13 +102,13 @@ def ko_divergence(
                 ko_model, sample_count, processes=processes
             )
         res_series = pd.Series(np.nan, index=list(target_networks.keys()))
-        for network, gene_list in tqdm.tqdm(
+        for network, rxn_list in tqdm.tqdm(
             target_networks.items(), disable=not progress_bar, leave=False
         ):
             if divergence_metric == "js":
                 res_series[network] = js_divergence(
-                    p=perturbed_sample[gene_list],
-                    q=unperturbed_sample[gene_list],
+                    p=perturbed_sample[rxn_list],
+                    q=unperturbed_sample[rxn_list],
                     n_neighbors=n_neighbors,
                     discrete=False,
                     jitter=jitter,
@@ -117,8 +117,8 @@ def ko_divergence(
                 )
             elif divergence_metric == "kl":
                 res_series[network] = kl_divergence(
-                    p=perturbed_sample[gene_list],
-                    q=unperturbed_sample[gene_list],
+                    p=perturbed_sample[rxn_list],
+                    q=unperturbed_sample[rxn_list],
                     n_neighbors=n_neighbors,
                     discrete=False,
                     jitter=jitter,
@@ -131,14 +131,14 @@ def ko_divergence(
                 )
         res_series.name = gene_to_ko
         ko_res_list.append(res_series)
-    return pd.concat(ko_res_list, axis=1)
+    return pd.concat(ko_res_list, axis=1).T
 
 
 # endregion Main Function
 
 
 # region helper functions
-def _convert_target_networks(model: cobra.Model, network: list[str]) -> list[str]:
+def _convert_target_network(model: cobra.Model, network: list[str]) -> list[str]:
     """Converts gene/rxn networks into rxn networks only"""
     res_list = []
     reactions = set(model.reactions.list_attr("id"))

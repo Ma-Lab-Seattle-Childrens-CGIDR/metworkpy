@@ -441,9 +441,7 @@ class TestDiscCont(unittest.TestCase):
                     continuous=y.reshape(-1, 1),
                     n_neighbors=n_neighbors,
                 )
-                self.assertTrue(
-                    np.isclose(mi_computed, mi_theory, rtol=1e-1)
-                )  # TODO: Add tests based on the studies from the paper (3 square waves, and 3 Gaussians)
+                self.assertTrue(np.isclose(mi_computed, mi_theory, rtol=1e-1))
 
 
 class TestDiscDisc(unittest.TestCase):
