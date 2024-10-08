@@ -34,8 +34,39 @@ def create_mutual_information_network(
     n_neighbors: int = 5,
     truncate: bool = True,
     reciprocal_weights: bool = False,
-    processes: int = 1,
+    processes: Optional[int] = 1,
+    progress_bar: bool = False,
 ) -> nx.Graph:
+    """
+    Create a mutual information network from the provided metabolic model
+
+    :param model: Metabolic model to construct the mutual information network from. Only required if the flux_samples
+        parameter is None
+    :type model: Optional[cobra.Model]
+    :param flux_samples: Flux samples used to calculate mutual information between reactions. If None,
+        the passed model will be sampled to generate these flux samples.
+    :type flux_samples: Optional[pd.DataFrame|np.ndarray]
+    :param reaction_names: Names for the reactions
+    :type reaction_names: Optional[Iterable[str]]
+    :param n_samples: Number of samples to take if flux_samples is None (ignored if flux_samples is not None)
+    :type n_samples: int
+    :param n_neighbors: Number of neighbors to use during the mutual information estimation
+    :type n_neighbors: int
+    :param truncate: Whether the mutual information values should be truncated at 0. Mutual information should
+        always be greater than or equal to 0, but the estimates can be negative. If true, all the mutual
+        information values which are less than 0 will be set to 0.
+    :type truncate: bool
+    :param reciprocal_weights: Whether the non-zero weights in the network should be the reciprocal of mutual
+        information.
+    :type reciprocal_weights: bool
+    :param processes: Number of processes to use during the mutual information calculation
+    :type processes: Optional[int]
+    :param progress_bar: Whether a progress bar should be shown for the mutual information calculations
+    :type progress_bar: bool
+    :return: A networkx Graph, which nodes representing different reactions and edge weights corresponding to
+        estimated mutual information
+    :rtype: nx.Graph
+    """
     if model is None and flux_samples is None:
         raise ValueError(
             "Requires either a metabolic model, or flux samples but received neither"
@@ -61,7 +92,10 @@ def create_mutual_information_network(
             f"received {type(flux_samples)}"
         )
     adj_mat = mi_network_adjacency_matrix(
-        samples=sample_array, n_neighbors=n_neighbors, processes=processes
+        samples=sample_array,
+        n_neighbors=n_neighbors,
+        processes=processes,
+        progress_bar=progress_bar,
     )
     if truncate:
         adj_mat[adj_mat < 0] = 0
