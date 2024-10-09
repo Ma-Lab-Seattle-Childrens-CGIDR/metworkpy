@@ -5,7 +5,7 @@ name: Tests
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "nobranches" ]
     tags-ignore:
       - '**' # Don't run on tags, since those are tested in the build and publish pipeline
   pull_request:
