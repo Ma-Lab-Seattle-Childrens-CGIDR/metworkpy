@@ -4,48 +4,45 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+env:
+  UV_SYSTEM_PYTHON: 1
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
-
+        python-version:
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
     steps:
       - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: 0.4.20
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: snok/install-poetry@v1
-        with:
-          version: 1.8.3
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-      - name: cache deps
-        id: cache-deps
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: pydeps-${{ hashFiles('**/poetry/lock') }}
-      - name: Install Poetry
-        run: poetry install --no-interaction --no-root
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-      - name: Install Package with Poetry
+      - name: Install Metworkpy
         run: |
           if [[ "${{ matrix.python-version }}" == "3.9" || "${{ matrix.python-version }}" == "3.10" ]]; then
-            poetry install --no-interaction --with test,dev --extras "gurobi cplex excel fastparquet"
+            uv pip install ".[gurobi,excel,fastparquet,cplex]"
           else
-            poetry install --no-interaction --with test,dev --extras "gurobi excel fastparquet"
+            uv pip install ".[gurobi,excel,fastparquet]"
           fi
+      - name: Install Tools
+        run: uv pip install pytest ruff
       - name: Lint with ruff
         run: |
-          poetry run ruff check ./metworkpy
-      - name: Test with pytest
+          ruff check --output-format=github ./metworkpy
+      - name: Test with Pytest
         run: |
-          poetry run pytest
+          pytest .
   build:
     needs:
       - test
@@ -53,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v4
