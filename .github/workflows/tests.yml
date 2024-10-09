@@ -41,8 +41,8 @@ jobs:
       id: cache-deps
       uses: actions/cache@v4
       with:
-        path: .venv
-        key: pydeps-${{ hashFiles('**/poetry/lock') }}
+        path: ./.venv
+        key: pydeps-${{ hashFiles('poetry.lock') }}
     - name: Install Poetry
       run: poetry install --no-interaction --no-root
       if: steps.cache-deps.outputs.cache-hit != 'true'
