@@ -83,7 +83,7 @@ def reaction_to_gene_list(
                 == -1
             ):
                 gene_list.append(gene)
-        return list(set(gene_list))
+    return list(set(gene_list))
 
 
 # endregion Translate List
