@@ -40,7 +40,7 @@ def ko_divergence(
     jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
     progress_bar: bool = False,
-    processes: int = 1,
+    **kwargs,
 ) -> pd.DataFrame:
     """
     Determine the impacts of gene knock-outs on different target reaction or gene networks
@@ -74,8 +74,7 @@ def ko_divergence(
     :type distance_metric: Union[str, float]
     :param progress_bar: Whether a progress bar is desired
     :type progress_bar: bool
-    :param processes: Number of processes to use for flux sampling
-    :type processes: int
+    :param kwargs: Arguments passed to the sample method of COBRApy, see `COBRApy Documentation <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/sampling/index.html#cobra.sampling.sample>`_
     :return: Dataframe with index of genes, and columns representing the different target networks. Values
         represent the divergence of a particular target network between the unperturbed model and the model
         following the gene knock-out.
@@ -83,7 +82,7 @@ def ko_divergence(
     """
     divergence_metric = _parse_divergence_method(divergence_metric)
     ko_res_list = []
-    unperturbed_sample = cobra.sampling.sample(model, sample_count, processes=processes)
+    unperturbed_sample = cobra.sampling.sample(model, sample_count, **kwargs)
     # If needed, convert the gene network into a dict
     if isinstance(target_networks, list):
         target_networks = {"target_network": target_networks}
@@ -96,11 +95,19 @@ def ko_divergence(
     for key, target_list in target_networks.items():
         target_networks[key] = _convert_target_network(model, target_list)
     for gene_to_ko in tqdm.tqdm(genes_to_ko, disable=not progress_bar):
-        with model as ko_model:
-            _ = knock_out_model_genes(ko_model, gene_list=[gene_to_ko])
-            perturbed_sample = cobra.sampling.sample(
-                ko_model, sample_count, processes=processes
-            )
+        try:
+            with model as ko_model:
+                _ = knock_out_model_genes(ko_model, gene_list=[gene_to_ko])
+                perturbed_sample = cobra.sampling.sample(
+                    ko_model, sample_count, **kwargs
+                )
+        except ValueError:
+            # This can happen if the gene knock out causes all reactions to be 0. (or very close)
+            # So continue, leaving that part of the results dataframe as all np.nan
+            res_series = pd.Series(np.nan, index=list(target_networks.keys()))
+            res_series.name = gene_to_ko
+            ko_res_list.append(res_series)
+            continue
         res_series = pd.Series(np.nan, index=list(target_networks.keys()))
         for network, rxn_list in tqdm.tqdm(
             target_networks.items(), disable=not progress_bar, leave=False

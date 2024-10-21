@@ -3,6 +3,7 @@
 import pathlib
 import unittest
 
+import metworkpy.utils.models
 # External Imports
 
 # Local Imports
@@ -131,6 +132,7 @@ class TestKoDivergence(unittest.TestCase):
 
     def test_larger_metabolic_model(self):
         textbook_model = read_model(self.data_path / "textbook_model.json")
+        textbook_model_copy = textbook_model.copy()
         div_ko_res = ko_divergence(
             model=textbook_model,
             genes_to_ko=[
@@ -156,6 +158,11 @@ class TestKoDivergence(unittest.TestCase):
             distance_metric="euclidean",
             progress_bar=False,
             processes=1,
+        )
+        self.assertTrue(
+            metworkpy.utils.models.model_eq(
+                textbook_model, textbook_model_copy, verbose=False
+            )
         )
 
         self.assertEqual(
