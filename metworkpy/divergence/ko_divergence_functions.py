@@ -95,19 +95,19 @@ def ko_divergence(
     for key, target_list in target_networks.items():
         target_networks[key] = _convert_target_network(model, target_list)
     for gene_to_ko in tqdm.tqdm(genes_to_ko, disable=not progress_bar):
-        try:
-            with model as ko_model:
+        with model as ko_model:
+            try:
                 _ = knock_out_model_genes(ko_model, gene_list=[gene_to_ko])
                 perturbed_sample = cobra.sampling.sample(
                     ko_model, sample_count, **kwargs
                 )
-        except ValueError:
-            # This can happen if the gene knock out causes all reactions to be 0. (or very close)
-            # So continue, leaving that part of the results dataframe as all np.nan
-            res_series = pd.Series(np.nan, index=list(target_networks.keys()))
-            res_series.name = gene_to_ko
-            ko_res_list.append(res_series)
-            continue
+            except ValueError:
+                # This can happen if the gene knock out causes all reactions to be 0. (or very close)
+                # So continue, leaving that part of the results dataframe as all np.nan
+                res_series = pd.Series(np.nan, index=list(target_networks.keys()))
+                res_series.name = gene_to_ko
+                ko_res_list.append(res_series)
+                continue
         res_series = pd.Series(np.nan, index=list(target_networks.keys()))
         for network, rxn_list in tqdm.tqdm(
             target_networks.items(), disable=not progress_bar, leave=False
