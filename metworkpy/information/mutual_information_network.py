@@ -73,9 +73,12 @@ def mi_network_adjacency_matrix(
         # process write its results there without returning, depending on if this means the main
         # process needs to hold on to a list of the returned values, or if it eagerly writes the results...
         mi_array = np.zeros((shared_ncols, shared_ncols), dtype=float)
-        with Pool(processes=processes) as pool, tqdm.tqdm(
-            total=math.comb(shared_ncols, 2), disable=not progress_bar
-        ) as pbar:
+        with (
+            Pool(processes=processes) as pool,
+            tqdm.tqdm(
+                total=math.comb(shared_ncols, 2), disable=not progress_bar
+            ) as pbar,
+        ):
             for x, y, mi in pool.imap_unordered(
                 functools.partial(
                     _mi_network_worker,

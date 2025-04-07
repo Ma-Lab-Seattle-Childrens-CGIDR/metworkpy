@@ -41,10 +41,10 @@ def imat(
     :type model: cobra.Model
     :param rxn_weights: A dictionary or pandas series of reaction weights.
     :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1e-3).
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
         Represents the minimum flux for a reaction to be considered on.
     :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-4).
+    :param threshold: The threshold value to use for iMAT (default: 1e-2).
         Represents the maximum flux for a reaction to be considered off.
     :type threshold: float
     :return: A cobra Solution object with the objective value and fluxes.
