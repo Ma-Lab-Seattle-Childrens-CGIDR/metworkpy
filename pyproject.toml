@@ -1,79 +1,60 @@
-[tool.poetry]
+[project]
+authors = [{ name = "Braden Griebel", email = "bgriebel@uw.edu" }]
+license = { text = "MIT" }
+requires-python = "<3.14,>=3.9"
+dependencies = [
+  "cobra>=0.29.0",
+  "scipy>=1.12.0",
+  "networkx>=3.2.1",
+  "pandas>=2.2.0",
+  "numpy>=1.26",
+  "optlang>=1.8.1",
+  "sympy>=1.12",
+  "tqdm>=4.66.4",
+  "pyarrow>=16.0.0",
+]
 name = "metworkpy"
 version = "0.1.26"
 description = "Tools for creating and working with network models of metabolism."
-authors = ["Braden Griebel <bgriebel@uw.edu>"]
-license = "MIT"
 readme = "README.md"
+keywords = ["FBA", "metabolism", "IMAT", "metchange"]
+
+[project.urls]
 homepage = "https://metworkpy.readthedocs.io/en/latest/"
 repository = "https://github.com/Braden-Griebel/metworkpy"
 documentation = "https://metworkpy.readthedocs.io/en/latest/"
-keywords = ["FBA", "metabolism", "IMAT", "metchange"]
 
-[tool.poetry.scripts]
-imatgen = 'metworkpy.scripts.imatgen:main_run'
-metchange = 'metworkpy.scripts.metchange:run'
-metsample = 'metworkpy.scripts.metsample:main_run'
-metdivergence = 'metworkpy.scripts.metdivergence:main_run'
+[project.optional-dependencies]
+cplex = ["cplex>=22.1.1.1"]
+gurobi = ["gurobipy>=11.0.0"]
+fastparquet = ["fastparquet>=2024.5.0"]
+excel = ["openpyxl>=3.1.4"]
 
-[tool.poetry.dependencies]
-python = "<3.13,>=3.9"
-cobra = ">=0.29.0"
-scipy = ">=1.12.0"
-networkx = ">=3.2.1"
-pandas = ">=2.2.0"
-numpy = ">=1.26"
-optlang = ">=1.8.1"
-sympy = ">=1.12"
-cplex = { version = ">=22.1.1.1", optional = true }
-gurobipy = { version = ">=11.0.0", optional = true }
-tqdm = ">=4.66.4"
-fastparquet = { version = ">=2024.5.0", optional = true }
-openpyxl = { version = ">=3.1.4", optional = true }
-pyarrow = ">=16.0.0"
+[project.scripts]
+imatgen = "metworkpy.scripts.imatgen:main_run"
+metchange = "metworkpy.scripts.metchange:run"
+metsample = "metworkpy.scripts.metsample:main_run"
+metdivergence = "metworkpy.scripts.metdivergence:main_run"
 
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.2.2"
-pre-commit = "^3.7.1"
-
-[tool.poetry.group.test]
-optional = true
-
-[tool.poetry.group.test.dependencies]
-pytest = ">=8.0.1"
-
-
-[tool.poetry.group.docs]
-optional = true
-
-[tool.poetry.group.docs.dependencies]
-sphinx = "^7.2.6"
-sphinx-exec-code = "^0.12"
-sphinx-rtd-theme = "^2.0.0"
-jupyter = "^1.0.0"
-
-[tool.poetry.extras]
-gurobi = ["gurobipy"]
-cplex = ["cplex"]
-fastparquet = ["fastparquet"]
-excel = ["openpyxl"]
-all = ["gurobipy", "cplex", "fastparquet", "openpyxl"]
+[dependency-groups]
+dev = ["ruff<1.0.0,>=0.2.2", "pre-commit<4.0.0,>=3.7.1"]
+test = ["pytest>=8.0.1"]
+docs = [
+  "sphinx<8.0.0,>=7.2.6",
+  "sphinx-exec-code<1.0,>=0.12",
+  "sphinx-rtd-theme<3.0.0,>=2.0.0",
+  "jupyter<2.0.0,>=1.0.0",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
-# Stopping Gurobi warning originating from optlang
-# This has been updated in more recent versions, but keeping for 3.9, 3.10 compatability
-# Filtering out the process deprecation warning, because it's caused by underlying libraries
-[tool.pytest.ini_options]
-filterwarnings = [
-  'ignore:.+pass a TempConstr or use Model.addLConstr:DeprecationWarning',
-  'ignore:This process \(pid=\d+\) is multi-threaded, use of fork\(\) may lead to deadlocks in the child\.:DeprecationWarning'
-]
+#[tool.pytest.ini_options]
+#filterwarnings = [
+#  'ignore:.+pass a TempConstr or use Model.addLConstr:DeprecationWarning',
+#  'ignore:This process \(pid=\d+\) is multi-threaded, use of fork\(\) may lead to deadlocks in the child\.:DeprecationWarning',
+#]
 
 # Setup ruff
 [tool.ruff]
