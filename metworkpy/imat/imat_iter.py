@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from enum import Enum
 import re
-from typing import Union, Literal
+from typing import Union, Literal, Optional, Any
 
 # External Imports
 import cobra
@@ -27,6 +27,7 @@ DEFAULTS = {
     "threshold": 1e-2,
     "tolerance": Configuration().tolerance,
     "objective_tolerance": 5e-2,
+    "max_iter": 20,
 }
 
 BINARY_REGEX = re.compile(r"y_(pos|neg)_(.+)")
@@ -41,10 +42,187 @@ class ReactionActivity(Enum):
     Inactive = 0
     ActiveReverse = -1
     ActiveForward = 1
-    Other = 9
+    Other = 404
 
 
 # endregion Reaction Activity Enum
+
+
+# region Main iMAT Iterator
+# This class is for convenient dispatch to the different underlying iterators
+class ImatIter:
+    """
+    Iterator for stepping through different possible iMAT solutions
+
+    :param model: A cobra.Model object to use for iMAT
+    :type model: cobra.Model
+    :param rxn_weights: A dictionary or pandas series of reaction weights.
+    :type rxn_weights: dict | pandas.Series
+    :param output: What type of output is desired from the iterator, can be 'model', 'binary-variables',
+        or 'reaction-state', see notes for details.
+    :type output: Literal["model", "binary-variables", "reaction-activity"]
+    :param max_iter: Maximum number of iMAT iterations to perform
+    :type max_iter: int
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
+        Represents the minimum flux for a reaction to be considered on.
+    :type epsilon: float
+    :param threshold: The threshold value to use for iMAT (default: 1e-2).
+        Represents the maximum flux for a reaction to be considered off.
+    :type threshold: float
+    :param objective_tolerance: The tolerance for a solution to be considered optimal,
+        the iterator will continue until no solution can be found which has a value of
+        the iMAT objective function which is at least (1-`objective_tolerance`)*`optimal_imat_objective`.
+        For example, a value of 0.05 (the default) indicates that the iterator will continue
+        until no solution is found that is within 5% of the optimal objective.
+    :type objective_tolerance: float
+    """
+
+    def __init__(
+        self,
+        model: cobra.Model,
+        rxn_weights: Union[pd.Series, dict],
+        output: Literal["model", "binary-variables", "reaction-activity"] = "model",
+        max_iter: int = DEFAULTS["max_iter"],
+        epsilon: float = DEFAULTS["epsilon"],
+        threshold: float = DEFAULTS["threshold"],
+        objective_tolerance: float = DEFAULTS["objective_tolerance"],
+        **kwargs,
+    ):
+        # Save all provided parameter to pass to specific iterator
+        self.model = model
+        self.rxn_weights = rxn_weights
+        if output not in ["model", "binary-variables", "reaction-activity"]:
+            raise ValueError(
+                f'output parameter must be one of "model", "binary-variables", "reaction-activity", '
+                f"but {output} was received instead"
+            )
+        self.output = output
+        self.max_iter = max_iter
+        self.epsilon = epsilon
+        self.threshold = threshold
+        self.objective_tolerance = objective_tolerance
+        self.kwarg_dict = kwargs
+
+    def __iter__(self):
+        if self.output == "model":
+            iter_class = ImatIterModels
+        elif self.output == "binary-variables":
+            iter_class = ImatIterBinaryVariables
+        elif self.output == "reaction-activity":
+            iter_class = ImatIterReactionActivities
+        else:
+            raise ValueError(
+                f'output parameter must be one of "model", "binary-variables", "reaction-activity", '
+                f"but {self.output} was received instead"
+            )
+        return iter_class(
+            model=self.model,
+            rxn_weights=self.rxn_weights,
+            max_iter=self.max_iter,
+            epsilon=self.epsilon,
+            threshold=self.threshold,
+            objective_tolerance=self.objective_tolerance,
+            **self.kwarg_dict,
+        )
+
+
+# endregion Main iMAT Iterator
+
+
+# region Iterative Sampling
+
+
+def imat_iter_flux_sample(
+    model: cobra.Model,
+    rxn_weights: pd.Series[float],
+    model_generation_method: Literal["simple", "subset"] = "simple",
+    max_iter: int = DEFAULTS["max_iter"],
+    epsilon: float = DEFAULTS["epsilon"],
+    threshold: float = DEFAULTS["threshold"],
+    objective_tolerance: float = DEFAULTS["objective_tolerance"],
+    sampler: Optional[cobra.sampling.HRSampler] = None,
+    thinning: int = 100,
+    num_samples: int = 1_000,
+    sampler_kwargs: Optional[dict[str, Any]] = None,
+    **kwargs,
+) -> pd.DataFrame[float]:
+    """
+    Generate a flux sample from a Model by iterating over multiple optimal (or near-optimal depending on
+    objective tolerance) iMAT solutions, and sampling from each
+
+    :param model: The base cobra Model to use for generating iMAT models which are then sampled from
+    :type model: cobra.Model
+    :param rxn_weights: The qualitative weights indicating which reactions are high expression, or low
+        expression, with values of 1 indicating high expression reactions, -1 indicating
+        low expression reactions, and 0 indicating in between or unknown (see
+        :func:`metworkpy.gpr.gpr_functions.gene_to_rxn_weights` for help generating this from
+        qualitative gene weights).
+    :type rxn_weights: pd.Series[float]
+    :param model_generation_method: Method to use when creating an updated model based on the
+        results of the iMAT, can be either 'simple', or 'subset', see note for details.
+    :type model_generation_method: Literal["simple", "subset"]
+    :param max_iter: Maximum number of iMAT updated models to iterate through
+    :type max_iter: int
+    :param epsilon: The epsilon value to use for iMAT (default: 1).
+        Represents the minimum flux for a reaction to be considered on.
+    :type epsilon: float
+    :param threshold: The threshold value to use for iMAT (default: 1e-2).
+        Represents the maximum flux for a reaction to be considered off.
+    :type threshold: float
+    :param objective_tolerance: The tolerance for a solution to be considered optimal,
+        the iterator will continue until no solution can be found which has a value of
+        the iMAT objective function which is at least (1-`objective_tolerance`)*`optimal_imat_objective`.
+        For example, a value of 0.05 (the default) indicates that the iterator will continue
+        until no solution is found that is within 5% of the optimal objective.
+    :type objective_tolerance: float
+    :param sampler: Sampler class from cobra to use for sampling (defaults to OptGPSampler),
+        should be the class, not an instance of the class, so pass `OptGPSampler`, not `OptGPSampler()`.
+        Keywords to the __init__function can be passed as a dict to `sampler_kwargs`.
+    :type sampler: cobra.sampling.HRSampler
+    :param thinning: Thinning factor representing how often the sampler returns a sample, for example a value of 100 (the default)
+        indicates that the sampler will return a sample every 100 steps. See `Cobrapy documentation <https://cobrapy.readthedocs.io/en/latest/sampling.html>`_
+    :type thinning: int
+    :param num_samples: Number of samples to take per iMAT updated model so the total number
+        of samples will be (number of iMAT updated models generated)*num_samples
+    :type num_samples: int
+    :param sampler_kwargs: Keyword arguments passed to the __init__ function of the sampler class
+    :type sampler_kwargs: dict[str, Any]
+    :param kwargs: Additional keyword arguments passed to the sampler's sample function
+    :type kwargs: dict[str, Any]
+    :return: Flux samples from several iMAT updated models
+    :rtype: pd.DataFrame[float]
+    """
+    # Create a list to hold the results
+    flux_sample_df_list = []
+    # Set up the sampler if needed
+    if sampler is None:
+        sampler = cobra.sampling.OptGPSampler
+    if thinning not in sampler_kwargs:
+        sampler_kwargs["thinning"] = 100
+    # Iterate through the iMAT updated models
+    for updated_model in ImatIterModels(
+        model=model,
+        rxn_weights=rxn_weights,
+        method=model_generation_method,
+        max_iter=max_iter,
+        epsilon=epsilon,
+        threshold=threshold,
+        objective_tolerance=objective_tolerance,
+    ):
+        # Create the sampler
+        imat_sampler = sampler(model=updated_model, **sampler_kwargs)
+        # Sample from the updated model
+        flux_samples = imat_sampler.sample(n=num_samples, **kwargs)
+        # Validate the flux samples
+        # noinspection PyTypeChecker
+        valid_flux_samples = flux_samples[imat_sampler.validate(flux_samples) == "v"]
+        # Add the valid samples to the results list
+        flux_sample_df_list.append(valid_flux_samples)
+    # Return the combined flux samples
+    return pd.concat(flux_sample_df_list, axis=0)
+
+
+# endregion Iterative Sampling
 
 
 # region Imat Iterator Base Class
@@ -76,7 +254,7 @@ class ImatIterBase(ABC):
         self,
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
-        max_iter: int = 20,
+        max_iter: int = DEFAULTS["max_iter"],
         epsilon: float = DEFAULTS["epsilon"],
         threshold: float = DEFAULTS["threshold"],
         objective_tolerance: float = DEFAULTS["objective_tolerance"],
@@ -346,7 +524,7 @@ class ImatIterBinaryVariables(ImatIterBase):
         self,
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
-        max_iter: int = 20,
+        max_iter: int = DEFAULTS["max_iter"],
         epsilon: float = DEFAULTS["epsilon"],
         threshold: float = DEFAULTS["threshold"],
         objective_tolerance: float = DEFAULTS["objective_tolerance"],
@@ -419,7 +597,7 @@ class ImatIterReactionActivities(ImatIterBase):
         self,
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
-        max_iter: int = 20,
+        max_iter: int = DEFAULTS["max_iter"],
         epsilon: float = DEFAULTS["epsilon"],
         threshold: float = DEFAULTS["threshold"],
         objective_tolerance: float = DEFAULTS["objective_tolerance"],
@@ -501,7 +679,7 @@ class ImatIterModels(ImatIterBase):
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
         method: Literal["simple", "subset"] = "simple",
-        max_iter: int = 20,
+        max_iter: int = DEFAULTS["max_iter"],
         epsilon: float = DEFAULTS["epsilon"],
         threshold: float = DEFAULTS["threshold"],
         objective_tolerance: float = DEFAULTS["objective_tolerance"],
@@ -516,6 +694,7 @@ class ImatIterModels(ImatIterBase):
         )
         self._method = method
 
+    # noinspection PyProtectedMember
     def __next__(self) -> cobra.Model:
         # Call the base classes iter_update method to update the iter state
         self._iter_update_start()
@@ -534,12 +713,14 @@ class ImatIterModels(ImatIterBase):
         ].index
         for rxn in inactive_reactions.index:
             reaction = updated_model.reactions.get_by_id(rxn)
+            # noinspection PyProtectedMember
             reaction.bounds = model_creation._inactive_bounds(
                 reaction.lower_bound, reaction.upper_bound, self._threshold
             )
         if self._method == "simple":
             for rxn in active_forward_reactions:
                 reaction = updated_model.reactions.get_by_id(rxn)
+                # noinspection PyProtectedMember
                 reaction.bounds = model_creation._active_bounds(
                     reaction.lower_bound,
                     reaction.upper_bound,
