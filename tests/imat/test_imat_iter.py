@@ -3,6 +3,7 @@ import pathlib
 import unittest
 
 # External Imports
+import cobra
 from cobra.core.configuration import Configuration
 import numpy as np
 import pandas as pd
@@ -71,6 +72,21 @@ class TestImatIterBinaryVariables(unittest.TestCase):
         for _, _, _ in test_iter:
             counter += 1
         self.assertGreater(counter, 5)
+
+    def test_max_iter(self):
+        counter = 0
+        test_iter = imat_iter.ImatIterBinaryVariables(
+            model=self.model.copy(),
+            rxn_weights=self.rxn_weights,
+            max_iter=3,
+            epsilon=self.epsilon,
+            threshold=self.threshold,
+            objective_tolerance=self.objective_tolerance,
+        )
+        # Iterate through, should at least iterate once
+        for _, _, _ in test_iter:
+            counter += 1
+        self.assertEqual(counter, 3)
 
     def test_different_solutions(self):
         # Test that the solutions returned are different
@@ -255,6 +271,108 @@ class TestImatIterModels(unittest.TestCase):
             counter += 1  # This could be replaced with enumerated, but I don't like how state is leaked from for loops
         # Ensure that iterations have actually occurred
         self.assertGreater(counter, 5)
+
+
+class TestImatIterMain(unittest.TestCase):
+    model = None
+    data_path = None
+    rxn_weights = None
+    epsilon = None
+    threshold = None
+    max_iter = None
+    objective_tolerance = None
+
+    @classmethod
+    def setUpClass(cls):
+        setup(cls)
+
+    def test_model_dispatch(self):
+        counter = 0
+        test_iter = imat_iter.ImatIterModels(
+            model=self.model.copy(),
+            rxn_weights=self.rxn_weights,
+            method="simple",
+            max_iter=self.max_iter,
+            epsilon=self.epsilon,
+            threshold=self.threshold,
+            objective_tolerance=self.objective_tolerance,
+        )
+        # Iterate through, should at least iterate once
+        for model in test_iter:
+            self.assertIsInstance(model, cobra.Model)
+            counter += 1
+        self.assertGreater(counter, 5)
+
+    def test_binary_variable_dispatch(self):
+        counter = 0
+        test_iter = imat_iter.ImatIterBinaryVariables(
+            model=self.model.copy(),
+            rxn_weights=self.rxn_weights,
+            max_iter=self.max_iter,
+            epsilon=self.epsilon,
+            threshold=self.threshold,
+            objective_tolerance=self.objective_tolerance,
+        )
+        # Iterate through, should be returning named tuple of pandas series
+        for ntuple in test_iter:
+            self.assertIsInstance(ntuple, imat_iter.ImatBinaryVariables)
+            self.assertIsInstance(ntuple.rh_y_pos, pd.Series)
+            self.assertIsInstance(ntuple.rh_y_neg, pd.Series)
+            self.assertIsInstance(ntuple.rl_y_pos, pd.Series)
+            self.assertEqual(ntuple.rh_y_pos.dtypes, "float")
+            self.assertEqual(ntuple.rh_y_neg.dtypes, "float")
+            self.assertEqual(ntuple.rl_y_pos.dtypes, "float")
+            counter += 1
+        self.assertGreater(counter, 5)
+
+    def test_reaction_activity_dispatch(self):
+        counter = 0
+        test_iter = imat_iter.ImatIterReactionActivities(
+            model=self.model.copy(),
+            rxn_weights=self.rxn_weights,
+            max_iter=self.max_iter,
+            epsilon=self.epsilon,
+            threshold=self.threshold,
+            objective_tolerance=self.objective_tolerance,
+        )
+        # Iterate through, should be returning named tuple of pandas series
+        for act_series in test_iter:
+            self.assertIsInstance(act_series, pd.Series)
+            self.assertEqual(act_series.dtype, "object")
+            self.assertIsInstance(act_series.iloc[0], imat_iter.ReactionActivity)
+            counter += 1
+        self.assertGreater(counter, 5)
+
+
+class TestImatIterSampling(unittest.TestCase):
+    model = None
+    data_path = None
+    rxn_weights = None
+    epsilon = None
+    threshold = None
+    max_iter = None
+    objective_tolerance = None
+
+    @classmethod
+    def setUpClass(cls):
+        setup(cls)
+
+    def test_imat_sampling(self):
+        sample_res = imat_iter.imat_iter_flux_sample(
+            model=self.model,
+            rxn_weights=self.rxn_weights,
+            model_generation_method="simple",
+            max_iter=3,  # Reduced to save comp time
+            epsilon=self.epsilon,
+            threshold=self.threshold,
+            objective_tolerance=self.objective_tolerance,
+            sampler=None,
+            thinning=20,  # Again reducing to save time
+            num_samples=100,
+            sampler_kwargs={"processes": 1},
+        )
+        self.assertIsInstance(sample_res, pd.DataFrame)
+        self.assertEqual(sample_res.shape[0], 3 * 100)
 
 
 if __name__ == "__main__":

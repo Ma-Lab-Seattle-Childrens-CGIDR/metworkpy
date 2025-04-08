@@ -181,6 +181,7 @@ def imat_iter_flux_sample(
     :type sampler: cobra.sampling.HRSampler
     :param thinning: Thinning factor representing how often the sampler returns a sample, for example a value of 100 (the default)
         indicates that the sampler will return a sample every 100 steps. See `Cobrapy documentation <https://cobrapy.readthedocs.io/en/latest/sampling.html>`_
+        Will be overwritten by value in sampler_kwargs if thinning is provided there.
     :type thinning: int
     :param num_samples: Number of samples to take per iMAT updated model so the total number
         of samples will be (number of iMAT updated models generated)*num_samples
@@ -197,8 +198,10 @@ def imat_iter_flux_sample(
     # Set up the sampler if needed
     if sampler is None:
         sampler = cobra.sampling.OptGPSampler
+    if sampler_kwargs is None:
+        sampler_kwargs = {}
     if thinning not in sampler_kwargs:
-        sampler_kwargs["thinning"] = 100
+        sampler_kwargs["thinning"] = thinning
     # Iterate through the iMAT updated models
     for updated_model in ImatIterModels(
         model=model,
