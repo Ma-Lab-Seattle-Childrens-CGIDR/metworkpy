@@ -8,7 +8,9 @@ import pathlib
 
 # External Imports
 import cobra
+import numpy as np
 import optlang.container
+import pandas as pd
 from sympy import parse_expr
 
 
@@ -193,6 +195,50 @@ def model_eq(model1: cobra.Model, model2: cobra.Model, verbose: bool = False) ->
         if not _check_constraint_eq(const1, const2, verbose=verbose):
             return False
     return True
+
+
+def model_bounds_eq(model1: cobra.Model, model2: cobra.Model, **kwargs) -> bool:
+    """
+    Check if the bounds of two models are equal
+
+    :param model1: First model to compare
+    :type model1: cobra.Model
+    :param model2: Second model to compare
+    :type model2: cobra.Model
+    :param kwargs: Additional keyword arguments passed to numpy isclose function to check equality
+    :type kwargs: dict[str, Any]
+    :return: True if the model bounds are equal, false otherwise
+    :rtype: bool
+    """
+    # First check that the models have the same reactions
+    model1_rxns = set(model1.reactions.list_attr("id"))
+    model2_rxns = set(model2.reactions.list_attr("id"))
+    if model1_rxns != model2_rxns:
+        raise ValueError(
+            "To compare reaction bounds, models must have the same reactions, but model1 and model2 have different reactions"
+        )
+    # Get the upper and lower bounds from the models
+    model1_lb = pd.Series(
+        model1.reactions.list_attr("lower_bound"),
+        index=model1.reactions.list_attr("id"),
+    )
+    model1_ub = pd.Series(
+        model1.reactions.list_attr("upper_bound"),
+        index=model1.reactions.list_attr("id"),
+    )
+    model2_lb = pd.Series(
+        model2.reactions.list_attr("lower_bound"),
+        index=model2.reactions.list_attr("id"),
+    )
+    model2_ub = pd.Series(
+        model2.reactions.list_attr("upper_bound"),
+        index=model2.reactions.list_attr("id"),
+    )
+    # Check if the bounds are the same
+    return (
+        np.isclose(model1_lb, model2_lb, **kwargs).all()
+        and np.isclose(model1_ub, model2_ub, **kwargs).all()
+    )
 
 
 def _check_dictlist_subset(

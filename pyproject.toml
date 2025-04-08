@@ -30,6 +30,11 @@ cplex = ["cplex>=22.1.1.1"]
 gurobi = ["gurobipy>=11.0.0"]
 fastparquet = ["fastparquet>=2024.5.0"]
 excel = ["openpyxl>=3.1.4"]
+hybrid = [
+    "highspy>=1.10.0",
+    "osqp>=1.0.3",
+]
+
 
 [project.scripts]
 imatgen = "metworkpy.scripts.imatgen:main_run"
@@ -39,7 +44,11 @@ metdivergence = "metworkpy.scripts.metdivergence:main_run"
 
 [dependency-groups]
 dev = ["ruff<1.0.0,>=0.2.2", "pre-commit<4.0.0,>=3.7.1"]
-test = ["pytest>=8.0.1"]
+test = [
+    "highspy>=1.10.0",
+    "osqp>=1.0.3",
+    "pytest>=8.0.1",
+]
 docs = [
   "sphinx<8.0.0,>=7.2.6",
   "sphinx-exec-code<1.0,>=0.12",
@@ -53,7 +62,7 @@ build-backend = "pdm.backend"
 
 [tool.pytest.ini_options]
 filterwarnings = [
-#  'ignore:.+pass a TempConstr or use Model.addLConstr:DeprecationWarning',
+  # This warning just occurs with essentially all multi-processing calls
   'ignore:This process \(pid=\d+\) is multi-threaded, use of fork\(\) may lead to deadlocks in the child\.:DeprecationWarning',
 ]
 

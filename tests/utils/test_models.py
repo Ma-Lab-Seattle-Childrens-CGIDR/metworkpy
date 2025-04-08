@@ -250,5 +250,33 @@ class TestModelEquality(unittest.TestCase):
         self.assertFalse(metworkpy.utils.models.model_eq(model2, model1))
 
 
+class TestModelBoundsEquality(unittest.TestCase):
+    data_path = None
+    model_path = None
+
+    @classmethod
+    def setUpClass(cls):
+        Configuration().solver = "glpk"
+        cls.data_path = str(pathlib.Path(__file__).parent.parent / "data")
+        cls.model_path = os.path.join(cls.data_path, "test_model.json")
+        cls.model = metworkpy.utils.models.read_model(cls.model_path)
+
+    def test_bounds_equal(self):
+        # Copy the model to get two identical models
+        model1 = self.model.copy()
+        model2 = self.model.copy()
+        # Check that the bounds are all equal
+        self.assertTrue(metworkpy.utils.models.model_bounds_eq(model1, model2))
+
+    def test_bound_unequal(self):
+        # Copy the model to get two identical models
+        model1 = self.model.copy()
+        model2 = self.model.copy()
+        # Change one of the bounds of model1
+        model1.reactions.get_by_id("r_A_B_D_E").bounds = (-10, 10)
+        # Ensure that the bounds are now different
+        self.assertFalse(metworkpy.utils.models.model_bounds_eq(model1, model2))
+
+
 if __name__ == "__main__":
     unittest.main()

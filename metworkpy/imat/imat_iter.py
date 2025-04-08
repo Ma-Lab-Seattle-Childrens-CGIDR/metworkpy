@@ -357,9 +357,9 @@ class ImatIterBase(ABC):
         :rtype: dict[str,dict[str,optlang.Variable]]
         """
         high_expr_variables = {}
-        for rxn, y_pos in self._get_high_expr_pos_variables():
+        for rxn, y_pos in self._get_high_expr_pos_variables().items():
             high_expr_variables[rxn] = {"pos": y_pos}
-        for rxn, y_neg in self._get_high_expr_neg_variables():
+        for rxn, y_neg in self._get_high_expr_neg_variables().items():
             high_expr_variables[rxn]["neg"] = y_neg
         return high_expr_variables
 
@@ -386,14 +386,14 @@ class ImatIterBase(ABC):
             ReactionActivity.Other, index=self._rxn_weights.index
         )
         # Go through all high expression reactions
-        for rxn, variables in self._get_high_expr_variables():
+        for rxn, variables in self._get_high_expr_variables().items():
             if np.isclose(variables["pos"].primal, 1.0):
                 reaction_activities[rxn] = ReactionActivity.ActiveForward
             elif np.isclose(variables["neg"].primal, 1.0):
                 reaction_activities[rxn] = ReactionActivity.ActiveReverse
         # Next through all the low expression reactions
-        for rxn, y_neg in self._get_low_expr_variables():
-            if np.isclose(y_neg, 1.0):
+        for rxn, y_neg in self._get_low_expr_variables().items():
+            if np.isclose(y_neg.primal, 1.0):
                 reaction_activities[rxn] = ReactionActivity.Inactive
         return reaction_activities
 
@@ -416,7 +416,7 @@ class ImatIterBase(ABC):
             all_binary_variables.append(self._imat_model.variables.get(f"y_pos_{rxn}"))
         return all_binary_variables
 
-    def _iter_update_start(self):
+    def _iter_update(self):
         """
         Function called during  __next__ method of subclasses, used to update counters, evaluate current
         iMAT solution, and raise the StopIteration if needed
@@ -454,7 +454,7 @@ class ImatIterBase(ABC):
             # Check if the variable is on or off
             if np.isclose(var.primal, 1.0):
                 on_variables.append(1 - var)
-            elif np.isclose(var.primal, 1.0):
+            elif np.isclose(var.primal, 0.0):
                 off_variables.append(var)
             else:
                 raise RuntimeError(
@@ -471,9 +471,10 @@ class ImatIterBase(ABC):
             )
         else:
             icut_expr = sum(on_variables) + sum(off_variables)
-        self._imat_model.solver.interface.Constraint(
-            icut_expr, lb=1.0, name=f"integer cut {self._counter}"
+        icut_constraint = self._imat_model.solver.interface.Constraint(
+            icut_expr, lb=1.0, name=f"integer_cut_{self._counter}"
         )
+        self._imat_model.solver.add(icut_constraint)
 
 
 # endregion Imat Iterator Base Class
@@ -540,7 +541,7 @@ class ImatIterBinaryVariables(ImatIterBase):
 
     def __next__(self):
         # Call the base classes iter_update method to update the iter state
-        self._iter_update_start()
+        self._iter_update()
         # Create the needed pandas series
         rh_y_pos = pd.Series(0.0, index=pd.Index(self._get_high_expr_rxns()))
         rh_y_neg = pd.Series(0.0, index=rh_y_pos.index)
@@ -613,7 +614,7 @@ class ImatIterReactionActivities(ImatIterBase):
 
     def __next__(self) -> pd.Series[ReactionActivity]:
         # Call the base classes iter_update method to update the iter state
-        self._iter_update_start()
+        self._iter_update()
         # Get the binary series of reaction activities to return
         rxn_activities = self._get_binary_variables_state()
         # Add the integer cut constraint
@@ -697,7 +698,7 @@ class ImatIterModels(ImatIterBase):
     # noinspection PyProtectedMember
     def __next__(self) -> cobra.Model:
         # Call the base classes iter_update method to update the iter state
-        self._iter_update_start()
+        self._iter_update()
         # Create the model to be returned
         updated_model = self.in_model.copy()
         # Get the reaction activities of the underlying problem
@@ -711,7 +712,7 @@ class ImatIterModels(ImatIterBase):
         inactive_reactions = reaction_activities[
             reaction_activities == ReactionActivity.Inactive
         ].index
-        for rxn in inactive_reactions.index:
+        for rxn in inactive_reactions:
             reaction = updated_model.reactions.get_by_id(rxn)
             # noinspection PyProtectedMember
             reaction.bounds = model_creation._inactive_bounds(
@@ -727,7 +728,7 @@ class ImatIterModels(ImatIterBase):
                     self._epsilon,
                     forward=True,
                 )
-            for rxn in active_reverse_reactions.index:
+            for rxn in active_reverse_reactions:
                 reaction = updated_model.reactions.get_by_id(rxn)
                 reaction.bounds = model_creation._active_bounds(
                     reaction.lower_bound,

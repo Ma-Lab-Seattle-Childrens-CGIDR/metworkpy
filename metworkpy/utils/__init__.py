@@ -1,4 +1,4 @@
-from .models import read_model, write_model, model_eq
+from .models import read_model, write_model, model_eq, model_bounds_eq
 from .expression_utils import (
     expr_to_imat_gene_weights,
     count_to_rpkm,
@@ -22,6 +22,7 @@ __all__ = [
     "read_model",
     "write_model",
     "model_eq",
+    "model_bounds_eq",
     "expr_to_imat_gene_weights",
     "count_to_rpkm",
     "count_to_fpkm",

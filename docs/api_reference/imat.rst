@@ -11,6 +11,13 @@ imat\_functions
    :undoc-members:
    :show-inheritance:
 
+imat\_iter
+----------
+.. automodule:: metworkpy.imat.imat_iter
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 model\_creation
 ---------------
 

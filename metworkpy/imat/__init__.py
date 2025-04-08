@@ -17,6 +17,14 @@ from .model_creation import (
     milp_model,
 )
 
+from .imat_iter import (
+    ImatIter,
+    ImatIterReactionActivities,
+    ImatIterBinaryVariables,
+    ImatIterModels,
+    imat_iter_flux_sample,
+)
+
 __all__ = [
     "imat",
     "flux_to_binary",
@@ -31,4 +39,9 @@ __all__ = [
     "subset_model",
     "fva_model",
     "milp_model",
+    "ImatIter",
+    "ImatIterReactionActivities",
+    "ImatIterBinaryVariables",
+    "ImatIterModels",
+    "imat_iter_flux_sample",
 ]
