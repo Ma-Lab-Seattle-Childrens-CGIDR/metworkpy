@@ -93,7 +93,7 @@ def flux_to_binary(
     :return: A pandas series of binary values.
     :rtype: pandas.Series
 
-    .. note:
+    .. note::
        This doesn't account for gene expression level, to determine highly expressed reactions which are
        considered on/off, the output of this function will need to be compared with reaction weights.
     """

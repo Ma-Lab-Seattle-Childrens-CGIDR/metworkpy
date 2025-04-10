@@ -173,7 +173,7 @@ def find_metabolite_network_genes(
            metabolite.
     :rtype: pd.DataFrame[bool|float]
 
-    .. note:
+    .. note::
        For converting from the reaction fluxes to gene fluxes, the gene is assigned
        a value corresponding to the maximum magnitude flux the gene is associated
        with (but the value assigned keeps the sign). For example, if a gene was

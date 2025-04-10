@@ -131,7 +131,7 @@ def expr_to_metchange_gene_weights(
         probability that a gene product is absent), indexed by gene ids.
     :rtype: pd.Series
 
-    .. note:
+    .. note::
        This does not convert the expression values into reaction weights, to do so
        `metworkpy.parse.gpr.gene_to_rxn_weights` can be used. The function dict will need to
        be altered from the default, with `{'AND':max, 'OR':min}` due to the metchange

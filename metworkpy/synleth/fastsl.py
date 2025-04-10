@@ -64,7 +64,7 @@ def find_synthetic_lethal_genes(
     :return: List of synthetically lethal groups of genes, recorded as sets of gene ids
     :rtype: list[set[str]]
 
-    .. note:
+    .. note::
        For parallel operation, 3 processes is a recommended minimum. Currently, the parallel implementation
        requires a manager process (which handles the queue of gene sets to be processed), and so if processes=2
        this will end up using only 1 core to do most of the calculation, with overhead from parallel processing

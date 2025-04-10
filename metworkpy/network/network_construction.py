@@ -171,7 +171,7 @@ def create_metabolic_network(
         cobrapy model
     :rtype: nx.Graph | nx.DiGraph
 
-    .. note:
+    .. note::
        When creating a weighted network, the options are to weight the edges based on
        flux, or stoichiometry. If stoichiometry is chosen the edge weight will
        correspond to the stoichiometric coefficient of the metabolite, in a given
@@ -283,7 +283,7 @@ def create_adjacency_matrix(
            reaction, and metabolite node respectively
     :rtype: tuple[pd.DataFrame | sparray, list[str], dict[str,str]]
 
-    .. note:
+    .. note::
        When creating a weighted network, the options are to weight the edges based on
        flux, or stoichiometry. If stoichiometry is chosen the edge weight will
        correspond to the stoichiometric coefficient of the metabolite, in a given
@@ -402,7 +402,7 @@ def _adj_mat_ud_uw(model: cobra.Model, threshold: float = 1e-4) -> csr_array:
     :return: Adjacency Matrix
     :rtype: csr_array
 
-    .. note:
+    .. note::
        The index of the adjacency matrix is the metabolites followed by the reactions
        for both the rows and columns.
     """
@@ -457,7 +457,7 @@ def _adj_mat_d_uw(model: cobra.Model, threshold: float = 1e-4) -> csr_array:
     :return: Adjacency Matrix
     :rtype: csr_array
 
-    .. note:
+    .. note::
        The index of the adjacency matrix is the metabolites followed by the reactions
        for both the rows and columns.
     """
@@ -522,7 +522,7 @@ def _adj_mat_ud_w_flux(
         to higher weight)
     :rtype: csr_array
 
-    .. note:
+    .. note::
        The index of the adjacency matrix is the metabolites followed by the reactions
        for both the rows and columns.
 
@@ -588,7 +588,7 @@ def _adj_mat_ud_w_stoichiometry(
     :return: Adjacency Matrix
     :rtype: csr_array
 
-    .. note:
+    .. note::
        The index of the adjacency matrix is the metabolites followed by the reactions
        for both the rows and columns.
     """
@@ -651,7 +651,7 @@ def _adj_mat_d_w_flux(
         to higher weight)
     :rtype: csr_array
 
-    .. note:
+    .. note::
        The index of the adjacency matrix is the metabolites followed by the reactions
        for both the rows and columns.
 
@@ -720,7 +720,7 @@ def _adj_mat_d_w_stoichiometry(
     :return: Adjacency Matrix
     :rtype: csr_array
 
-    .. note:
+    .. note::
        The index of the adjacency matrix is the metabolites followed by the reactions
        for both the rows and columns.
     """

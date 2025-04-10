@@ -46,7 +46,7 @@ def label_density(
     :return: The label density for the nodes in the network
     :rtype: pd.Series
 
-    .. note:
+    .. note::
        For each node in a network, neighboring nodes up to a distance of `radius`
        away are checked for labels. The total number of labels, or the sum of the labels
        found (in the case of dict or Series input) divided by the number of nodes
@@ -102,7 +102,7 @@ def find_dense_clusters(
         clusters are not ordered.
     :rtype: pd.DataFrame
 
-    .. note:
+    .. note::
        This method finds the label density of the graph, then defines high density
        nodes as those in the top `quantile` (so if quantile = 0.15, the top 15%
        of nodes in terms of density will be defined as high density). Following this,

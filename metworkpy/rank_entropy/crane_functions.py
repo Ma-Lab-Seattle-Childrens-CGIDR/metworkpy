@@ -172,7 +172,7 @@ class CraneClassifier:
         :return: Fitted DIRAC classifier object
         :rtype: DiracClassifier
 
-        .. note:
+        .. note::
            This updates the classifier in place, and also returns itself.
         """
         rank_centroids = []

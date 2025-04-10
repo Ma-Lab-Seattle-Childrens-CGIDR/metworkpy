@@ -156,7 +156,8 @@ def imat_iter_flux_sample(
         expression, with values of 1 indicating high expression reactions, -1 indicating
         low expression reactions, and 0 indicating in between or unknown (see
         :func:`metworkpy.gpr.gpr_functions.gene_to_rxn_weights` for help generating this from
-        qualitative gene weights).
+        qualitative gene weights, and :func:`metworkpy.utils.expression_utils.expr_to_imat_gene_weights`
+        for converting expression data into gene weights).
     :type rxn_weights: pd.Series[float]
     :param model_generation_method: Method to use when creating an updated model based on the
         results of the iMAT, can be either 'simple', or 'subset', see note for details.
@@ -661,7 +662,7 @@ class ImatIterModels(ImatIterBase):
         reactions in the iMAT Model.
     :rtype: Iterable[pd.Series[ReactionActivity]]
 
-    .. note:
+    .. note::
        When creating an updated model based on the solution to the iMAT problem, two different methods can
        be selected, either
 

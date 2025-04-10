@@ -52,12 +52,12 @@ def metchange(
     :return: Series of inconsistency scores for all the `metabolites`
     :rtype: pd.Series
 
-    .. note:
+    .. note::
        This algorithm seeks to find an inconsistency score for metabolites based
        on gene expression. The gene expression is represented by reaction weights,
        which can be calculated by combining
-       `metworkpy.metabolites.metchange_functions.expr_to_metchange_gene_weights`_ and
-       `metworkpy.parse.gpr.gene_to_rxn_weights`_ . The algorithm calculates the
+       :func:`metworkpy.utils.expression_utils.expr_to_metchange_gene_weights` and
+       :func:`metworkpy.gpr.gpr_functions.gene_to_rxn_weights`. The algorithm calculates the
        inconsistency score through a two part optimization. First, for a given
        metabolite, the maximum metabolite production is found. Then the metabolite
        production is constrained to stay within objective_tolerance*maximum-production of

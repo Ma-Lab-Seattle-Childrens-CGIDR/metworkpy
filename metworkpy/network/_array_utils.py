@@ -32,7 +32,7 @@ def _split_arr_col(
     :return: Tuple of split arrays
     :rtype: tuple[ArrayLike | csc_array | csr_array, ...]
 
-    .. note:
+    .. note::
        This method treats the original array as though the columns were interleaved.
        So, if into is 2, it will return a tuple with each even column in the first
        subarray, and each odd column in the second subarray.
@@ -53,7 +53,7 @@ def _split_arr_row(
     :return:
     :rtype: ArrayLike | csc_array | csr_array
 
-    .. note:
+    .. note::
        This method treats the original array as though the rows were interleaved.
        So, if into is 2, it will return a tuple with each even row in the first
        subarray, and each odd row in the second subarray.

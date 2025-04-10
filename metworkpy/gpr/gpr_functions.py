@@ -35,7 +35,7 @@ def gene_to_rxn_weights(
     :return: A series of reaction weights
     :rtype: pd.Series
 
-    .. note:
+    .. note::
        The fill value is applied to fill NaN values after the GPR rules have been
        applied.
        If there are genes missing from the expression data, they will silently be
