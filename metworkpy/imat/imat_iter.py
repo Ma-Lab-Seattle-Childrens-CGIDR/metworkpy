@@ -356,7 +356,7 @@ class ImatIterBase(ABC):
         Get a nested dict of all the variables associated with high expression reactions, keyed by reaction id,
         and then by 'pos'/'neg' for positive and negative variables respectively
 
-        :returns: The dict of all the variables associated with high expression reactions
+        :return: The dict of all the variables associated with high expression reactions
         :rtype: dict[str,dict[str,optlang.Variable]]
         """
         high_expr_variables = {}
@@ -370,7 +370,7 @@ class ImatIterBase(ABC):
         """
         Get a pandas Series describing the state of the weighted reactions in the iMAT solution
 
-        :returns: Series with reaction ids as the index, and :class:`ReactionActivity`
+        :return: Series with reaction ids as the index, and :class:`ReactionActivity`
         :rtype: pd.Series[ReactionActivity]
 
         .. note::
@@ -404,7 +404,7 @@ class ImatIterBase(ABC):
         """
         Get all the binary variables associated with the underlying iMAT model
 
-        :returns: List of all the binary variables in the iMAT model
+        :return: List of all the binary variables in the iMAT model
         :rtype: list[optlang.Variable]
         """
         all_binary_variables = []
@@ -512,8 +512,8 @@ class ImatIterBinaryVariables(ImatIterBase):
         For example, a value of 0.05 (the default) indicates that the iterator will continue
         until no solution is found that is within 5% of the optimal objective.
     :type objective_tolerance: float
+    :return: A named tuple with 3 fields
 
-    :returns: A named tuple with 3 fields
         * rh_y_pos: A pandas Series indexed by reaction id with the values indicating the state of the y+ variables
           associated with the high expression reactions. A value of 1 indicates that the reaction is **active** in the
           forward direction.
@@ -522,6 +522,7 @@ class ImatIterBinaryVariables(ImatIterBase):
           reverse direction.
         * rl_y_pos: A pandas Series indexed by reaction id with the values indicating the state of the y+ variables
           associated with the low expression reactions. A value of 1 indicates that the reaction is **inactive**.
+
     """
 
     def __init__(
@@ -592,7 +593,7 @@ class ImatIterReactionActivities(ImatIterBase):
         until no solution is found that is within 5% of the optimal objective.
     :type objective_tolerance: float
 
-    :returns: Every iteration returns a pandas Series of :class:`ReactionActivity` describing the activity of
+    :return: Every iteration returns a pandas Series of :class:`ReactionActivity` describing the activity of
         reactions in the iMAT Model.
     :rtype: Iterable[pd.Series[ReactionActivity]]
     """
@@ -656,20 +657,21 @@ class ImatIterModels(ImatIterBase):
         For example, a value of 0.05 (the default) indicates that the iterator will continue
         until no solution is found that is within 5% of the optimal objective.
     :type objective_tolerance: float
-
-    :returns: Every iteration returns a pandas Series of :class:`ReactionActivity` describing the activity of
+    :return: Every iteration returns a pandas Series of :class:`ReactionActivity` describing the activity of
         reactions in the iMAT Model.
     :rtype: Iterable[pd.Series[ReactionActivity]]
 
-    .. note::
+    .. note:
        When creating an updated model based on the solution to the iMAT problem, two different methods can
        be selected, either
+
        * simple: This method enforces the activity constraints found during the iMAT solution, so
          reactions found to be active in the forward direction are forced to be active in the forward
          direction, and reactions found active in the reverse direction are forced to be active in the
          reverse direction, and reactions found to be inactive are forced to be inactive.
        * subset: This method instead finds which subset of reactions the iMAT problem indicates are not inactive,
          and allows only those reactions to carry flux (essentially inactive reactions are forced off).
+
        The simple method can lead to the model being infeasible, and can also lead to reactions being considered
        essential because their knockout leads to forced active reactions no longer being able to carry flux. The
        subset method shouldn't lead to as much infeasibility when performing essentiality analysis, but is a
