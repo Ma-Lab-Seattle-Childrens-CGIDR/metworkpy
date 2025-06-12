@@ -357,8 +357,8 @@ def fva_model(
     for rxn in reactions:
         reaction = updated_model.reactions.get_by_id(rxn)
         reaction.bounds = (
-            fva_res.loc[rxn, "minimum"],
-            fva_res.loc[rxn, "maximum"],
+            max(fva_res.loc[rxn, "minimum"], reaction.lower_bound),
+            min(fva_res.loc[rxn, "maximum"], reaction.upper_bound),
         )
     return updated_model
 
@@ -526,7 +526,7 @@ def _parse_method(method: str) -> str:
                     "milp",
                     "milp-model",
                     "milp_model",
-                    "milp model" "mixed_integer_linear_programming",
+                    "milp modelmixed_integer_linear_programming",
                     "mixed integer linear programming",
                     "mixed-integer-linear-programming",
                 ],
