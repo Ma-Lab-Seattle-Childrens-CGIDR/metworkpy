@@ -7,6 +7,7 @@ from __future__ import annotations
 
 # External Imports
 import cobra
+import numpy as np
 
 # Local Imports
 from metworkpy.utils.translate import reaction_to_gene_list
@@ -42,11 +43,11 @@ def fast_ess_rxn(
     """
     # First use pFBA to identify candidate reactions
     pfba_res = cobra.flux_analysis.parsimonious.pfba(
-        model=model, fraction_of_optimum=1.0 - essentiality_threshold
+        model=model, fraction_of_optimum=essentiality_threshold
     )
     pfba_fluxes = pfba_res.fluxes
     potentially_essential_reactions = list(
-        pfba_fluxes[pfba_fluxes >= pfba_tolerance].index
+        pfba_fluxes[pfba_fluxes.abs() >= pfba_tolerance].index
     )
     # NOTE: Format of the deletion results is a dataframe,
     # with the index being a frozenset of str, a column for 'growth',
@@ -56,12 +57,13 @@ def fast_ess_rxn(
         reaction_list=potentially_essential_reactions,
         method="fba",
         **kwargs,
-    )
+    ).replace(np.nan, 0.0)
     essential_reactions = [
         rxn.__iter__().__next__()
         for rxn in deletion_results[
-            deletion_results["growth"] <= (model.slim_optimize * essentiality_threshold)
-        ].index
+            deletion_results["growth"]
+            <= (model.slim_optimize() * essentiality_threshold)
+        ]["ids"]
     ]
     return essential_reactions
 
@@ -96,11 +98,11 @@ def fast_ess_genes(
     """
     # First use pFBA to identify candidate reactions
     pfba_res = cobra.flux_analysis.parsimonious.pfba(
-        model=model, fraction_of_optimum=1.0 - essentiality_threshold
+        model=model, fraction_of_optimum=essentiality_threshold
     )
     pfba_fluxes = pfba_res.fluxes
     potentially_essential_reactions = list(
-        pfba_fluxes[pfba_fluxes >= pfba_tolerance].index
+        pfba_fluxes[pfba_fluxes.abs() >= pfba_tolerance].index
     )
     potentially_essential_genes = reaction_to_gene_list(
         model=model, reaction_list=potentially_essential_reactions, essential=True
@@ -113,11 +115,12 @@ def fast_ess_genes(
         gene_list=potentially_essential_genes,
         method="fba",
         **kwargs,
-    )
+    ).replace(np.nan, 0.0)
     essential_genes = [
         gene.__iter__().__next__()
         for gene in deletion_results[
-            deletion_results["growth"] <= (model.slim_optimize * essentiality_threshold)
-        ].index
+            deletion_results["growth"]
+            <= (model.slim_optimize() * essentiality_threshold)
+        ]["ids"]
     ]
     return essential_genes
