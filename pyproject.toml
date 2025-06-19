@@ -15,7 +15,7 @@ dependencies = [
   "pyarrow>=16.0.0",
 ]
 name = "metworkpy"
-version = "0.1.28"
+version = "0.1.29"
 description = "Tools for creating and working with network models of metabolism."
 readme = "README.md"
 keywords = ["FBA", "metabolism", "IMAT", "metchange"]

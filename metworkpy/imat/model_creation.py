@@ -5,6 +5,7 @@ Submodule with functions for creating a context specific model using iMAT
 # Standard Library Imports
 from __future__ import annotations
 from typing import Optional, Union
+import warnings
 
 # External Imports
 import cobra
@@ -307,6 +308,7 @@ def fva_model(
     threshold,
     objective_tolerance,
     loopless: bool = True,
+    warn_tolerance: bool = True,
     **kwargs,
 ):
     """
@@ -331,6 +333,10 @@ def fva_model(
     :param loopless: Whether to use the loopless FVA method (default: True).
         If False, the standard FVA method will be used.
     :type loopless: bool
+    :param warn_tolerance: Issue a warning if there is a problem with finding
+        the bounds of a particular reaction due to the lower bound being greater
+        than the upper bound. This is normally caused by the solver tolerance,
+        and the values will be swapped to get valid bounds for the reaction.
     :return: A context specific cobra.Model.
     :rtype: cobra.Model
 
@@ -356,9 +362,26 @@ def fva_model(
     ).dropna()
     for rxn in reactions:
         reaction = updated_model.reactions.get_by_id(rxn)
+        new_lb = fva_res.loc[rxn, "minimum"]
+        new_ub = fva_res.loc[rxn, "maximum"]
+        if new_lb > new_ub:
+            if warn_tolerance:
+                warnings.warn(
+                    f"Problem with bounds computed for {rxn}, calculated "
+                    f"lowerbound as {new_lb} and upperbound as {new_ub}."
+                    f"This should only occur due to the the tolerance of "
+                    f"the solver, and so the bounds should differ by at most "
+                    f"that tolerance. Swapping the computed bounds to "
+                    f"correct the issue."
+                )
+            # This should force valid bounds
+            # And should only happen due to solver tolerance
+            # So the new_lb should be at most solver tolerance
+            # less than the previous, (simmilarly with the upperbound)
+            new_lb, new_ub = new_ub, new_lb
         reaction.bounds = (
-            max(fva_res.loc[rxn, "minimum"], reaction.lower_bound),
-            min(fva_res.loc[rxn, "maximum"], reaction.upper_bound),
+            new_lb,
+            new_ub,
         )
     return updated_model
 
