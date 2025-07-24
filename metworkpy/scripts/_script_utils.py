@@ -1,6 +1,4 @@
-"""
-Utility functions for command line scripts
-"""
+"""Utility functions for command line scripts"""
 
 from __future__ import annotations
 import re
@@ -13,12 +11,17 @@ from metworkpy.utils._arguments import _parse_str_args_dict
 
 
 def _parse_samples(samples_str: str) -> list[int]:
-    """
-    Parse a samples specification string to a list of sample rows
-    :param samples_str: Samples specification string
-    :type samples_str: str
-    :return: List of sample rows
-    :rtype: list[int]
+    """Parse a samples specification string to a list of sample rows
+
+    Parameters
+    ----------
+    samples_str : str
+        Samples specification string
+
+    Returns
+    -------
+    list[int]
+        List of sample rows
     """
     if not samples_str:
         return []
@@ -35,17 +38,22 @@ def _parse_samples(samples_str: str) -> list[int]:
 def _parse_sample_groups_and_names(
     groups_str: str, names_str: Optional[str] = None
 ) -> tuple[list[list[int]], list[str]]:
-    """
-    Parse a sample groups specification string to a list of sample groups, and parse a group names specification
+    """Parse a sample groups specification string to a list of sample groups, and parse a group names specification
         string to
 
-    :param groups_str: Sample group specification string
-    :type groups_str: str
-    :param names_str: Sample group names specification string
-    :type names_str: str
-    :return: A tuple, where the first value is the sample groups (list of lists of sample rows),
-        and the second value is the sample group names (list of strings)
-    :rtype: tuple[list[list[int]],list[str]]
+    Parameters
+    ----------
+    groups_str : str
+        Sample group specification string
+    names_str : str
+        Sample group names specification string
+
+    Returns
+    -------
+    tuple[list[list[int]],list[str]]
+        A tuple, where the first value is the sample groups (list of
+        lists of sample rows), and the second value is the sample group
+        names (list of strings)
     """
     if not groups_str:
         return []
@@ -65,12 +73,17 @@ def _parse_sample_groups_and_names(
 
 
 def _parse_quantile(quantile_str: str) -> tuple[float, float]:
-    """
-    Parse a quantile specification string to a tuple of floats
-    :param quantile_str: The string specifying desired quantiles
-    :type quantile_str: str
-    :return: The parsed quantiles
-    :rtype: tuple[float,float]
+    """Parse a quantile specification string to a tuple of floats
+
+    Parameters
+    ----------
+    quantile_str : str
+        The string specifying desired quantiles
+
+    Returns
+    -------
+    tuple[float,float]
+        The parsed quantiles
     """
     if "," not in quantile_str:
         q = float(quantile_str)

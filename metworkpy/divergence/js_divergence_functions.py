@@ -1,6 +1,4 @@
-"""
-Functions for calculating the Jenson-Shannon divergence between two sampled distributions
-"""
+"""Functions for calculating the Jenson-Shannon divergence between two sampled distributions"""
 
 # Imports
 # Standard Library Imports
@@ -30,37 +28,48 @@ def js_divergence(
     jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
 ) -> float:
-    """
-    Calculate the Jensen-Shannon divergence between two distributions represented by samples p and q
+    """Calculate the Jensen-Shannon divergence between two distributions represented by samples p and q
 
-    :param p: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If `p` is
-        one dimensional, it will be reshaped to (n_samples,1). If it is not a np.ndarray, this function will attempt to
-        coerce it into one.
-    :type p: ArrayLike
-    :param q: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If `q` is
-        one dimensional, it will be reshaped to (n_samples,1). If it is not a np.ndarray, this function will attempt to
-        coerce it into one.
-    :type q: ArrayLike
-    :param n_neighbors: Number of neighbors to use for computing divergence. Will attempt to coerce into an
-        integer. Must be at least 1. Default 5.
-    :type n_neighbors: int
-    :param discrete: Whether the samples are from discrete distributions
-    :type discrete: bool
-    :param jitter: Amount of noise to add to avoid ties. If None no noise is added. If a float, that is the standard
-        deviation of the random noise added to the continuous samples. If a tuple, the first element is the standard
-        deviation of the noise added to the x array, the second element is the standard deviation added to the y array.
-    :type jitter: Union[None, float, tuple[float,float]]
-    :param jitter_seed: Seed for the random number generator used for adding noise
-    :type jitter_seed: Union[None, int]
-    :param distance_metric: Metric to use for computing distance between points in p and q, can be \"Euclidean\",
-        \"Manhattan\", or \"Chebyshev\". Can also be a float representing the Minkowski p-norm.
-    :type distance_metric: Union[str, float]
-    :return: The Jensen-Shannon divergence between p and q
-    :rtype: float
+    Parameters
+    ----------
+    p : ArrayLike
+        Array representing sample from a distribution, should have shape
+        (n_samples, n_dimensions). If `p` is one dimensional, it will be
+        reshaped to (n_samples,1). If it is not a np.ndarray, this
+        function will attempt to coerce it into one.
+    q : ArrayLike
+        Array representing sample from a distribution, should have shape
+        (n_samples, n_dimensions). If `q` is one dimensional, it will be
+        reshaped to (n_samples,1). If it is not a np.ndarray, this
+        function will attempt to coerce it into one.
+    n_neighbors : int
+        Number of neighbors to use for computing divergence. Will
+        attempt to coerce into an integer. Must be at least 1. Default
+        5.
+    discrete : bool
+        Whether the samples are from discrete distributions
+    jitter : Union[None, float, tuple[float,float]]
+        Amount of noise to add to avoid ties. If None no noise is added.
+        If a float, that is the standard deviation of the random noise
+        added to the continuous samples. If a tuple, the first element
+        is the standard deviation of the noise added to the x array, the
+        second element is the standard deviation added to the y array.
+    jitter_seed : Union[None, int]
+        Seed for the random number generator used for adding noise
+    distance_metric : Union[str, float]
+        Metric to use for computing distance between points in p and q,
+        can be \"Euclidean\", \"Manhattan\", or \"Chebyshev\". Can also
+        be a float representing the Minkowski p-norm.
 
-    .. seealso::
+    Returns
+    -------
+    float
+        The Jensen-Shannon divergence between p and q
 
-       Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
+    See Also
+    --------
+
+    Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
     """
     return _wrap_divergence_functions(
         p=p,
@@ -88,29 +97,39 @@ def js_divergence_array(
     metric: float | str = 2.0,
     processes: int = 1,
 ) -> np.ndarray | pd.Series:
-    """
-    Calculate the Jensen-Shannon divergence between the columns in two arrays using the
+    """Calculate the Jensen-Shannon divergence between the columns in two arrays using the
     nearest neighbors method.
 
-    :param p: Flux sample array, with columns representing different reactions and rows representing
-        different samples. Should have same number of columns as q.
-    :type p: pd.DataFrame | np.ndarray
-    :param q: Flux sample array, with columns representing different reactions and rows representing
-        different samples. Should have same number of columns as p.
-    :type q: pd.DataFrame | np.ndarray
-    :param n_neighbors: Number of neighbors to use when estimating divergence
-    :type n_neighbors: int
-    :param metric: Metric to use for computing distance between points in p and q, can be \"Euclidean\",
-        \"Manhattan\", or \"Chebyshev\". Can also be a float representing the Minkowski p-norm.
-    :type metric: float | str
-    :param processes: Number of processes to use when calculating the divergence (default 1)
-    :type processes: int
-    :return: Array with length equal to the number of columns in p and q, the ith value representing
-        the divergence between the ith column of p and the ith column of q. If both p and q are
-        numpy ndarrays, this returns a ndarray with shape (ncols,). If either p or q are pandas
-        DataFrames then returns a pandas Series with index the same as the columns in the DataFrame
-        (p takes priority if the column names differ).
-    :rtype: np.ndarray | pd.DataFrame
+    Parameters
+    ----------
+    p : pd.DataFrame | np.ndarray
+        Flux sample array, with columns representing different reactions
+        and rows representing different samples. Should have same number
+        of columns as q.
+    q : pd.DataFrame | np.ndarray
+        Flux sample array, with columns representing different reactions
+        and rows representing different samples. Should have same number
+        of columns as p.
+    n_neighbors : int
+        Number of neighbors to use when estimating divergence
+    metric : float | str
+        Metric to use for computing distance between points in p and q,
+        can be \"Euclidean\", \"Manhattan\", or \"Chebyshev\". Can also
+        be a float representing the Minkowski p-norm.
+    processes : int
+        Number of processes to use when calculating the divergence
+        (default 1)
+
+    Returns
+    -------
+    np.ndarray | pd.DataFrame
+        Array with length equal to the number of columns in p and q, the
+        ith value representing the divergence between the ith column of
+        p and the ith column of q. If both p and q are numpy ndarrays,
+        this returns a ndarray with shape (ncols,). If either p or q are
+        pandas DataFrames then returns a pandas Series with index the
+        same as the columns in the DataFrame (p takes priority if the
+        column names differ).
     """
     return _divergence_array(
         p=p,
@@ -135,33 +154,39 @@ def _js_cont(
     metric: float = 2.0,
     **kwargs,
 ) -> float:
-    """
-    Calculate the Jensen-Shannon divergence between samples from two continuous distributions using the
+    """Calculate the Jensen-Shannon divergence between samples from two continuous distributions using the
     nearest neighbor method.
 
-    :param p: Array representing samples from the first continuous distribution, should have shape
-        (n_samples, n_dimensions), where n_dimensions>=1
-    :type p: np.ndarray
-    :param q: Array representing samples from the second continuous distribution, should have shape
-        (n_samples, n_dimensions), where n_dimensions>=1
-    :type q: np.ndarray
-    :param n_neighbors:The number of neighbors to use for computing mutual information
-    :type n_neighbors: int
-    :param metric: Metric to use for computing distance between points in y (must be `float>=1` representing
-        Minkowski p-norm)
-    :type metric: float
-    :param kwargs: Arguments passed to KDTree constructor
-    :return: Jensen-Shannon divergence between p and q
-    :rtype: float
+    Parameters
+    ----------
+    p : np.ndarray
+        Array representing samples from the first continuous
+        distribution, should have shape (n_samples, n_dimensions), where
+        n_dimensions>=1
+    q : np.ndarray
+        Array representing samples from the second continuous
+        distribution, should have shape (n_samples, n_dimensions), where
+        n_dimensions>=1
+    n_neighbors : int
+        The number of neighbors to use for computing mutual information
+    metric : float
+        Metric to use for computing distance between points in y (must
+        be `float>=1` representing Minkowski p-norm)
+    **kwargs
+        Arguments passed to KDTree constructor
 
+    Returns
+    -------
+    float
+        Jensen-Shannon divergence between p and q
 
-    .. seealso::
+    See Also
+    --------
 
-       Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
-            Paper from which this method was obtained
-       :func: `_js_disc`
-            Function for calculating Jensen-Shannon divergence when the distributions are discrete
-
+    Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
+         Paper from which this method was obtained
+    :func: `_js_disc`
+         Function for calculating Jensen-Shannon divergence when the distributions are discrete
     """
     combined = np.vstack([p, q])
     n_data_points = combined.shape[0]
@@ -210,18 +235,21 @@ def _js_cont(
 
 # region Discrete Case
 def _js_disc(p: np.ndarray, q: np.ndarray):
-    """
-    Calculate the Jensen-Shannon divergence between samples from two discrete distributions
+    """Calculate the Jensen-Shannon divergence between samples from two discrete distributions
 
-    :param p: Array representing samples from the first discrete distribution, should have shape
-        (n_samples, 1)
-    :type p: np.ndarray
-    :param q: Array representing samples from the second discrete distribution, should have shape
-        (n_samples, 1)
-    :type q: np.ndarray
-    :return: Jensen-Shannon divergence between p and q
-    :rtype: float
+    Parameters
+    ----------
+    p : np.ndarray
+        Array representing samples from the first discrete distribution,
+        should have shape (n_samples, 1)
+    q : np.ndarray
+        Array representing samples from the second discrete
+        distribution, should have shape (n_samples, 1)
 
+    Returns
+    -------
+    float
+        Jensen-Shannon divergence between p and q
     """
     p_elements, p_counts = np.unique(p, return_counts=True)
     q_elements, q_counts = np.unique(q, return_counts=True)

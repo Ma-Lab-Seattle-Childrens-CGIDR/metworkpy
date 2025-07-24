@@ -1,6 +1,4 @@
-"""
-Submodule provided an iterator over IMAT solutions by employing integer cut constraints
-"""
+"""Submodule provided an iterator over IMAT solutions by employing integer cut constraints"""
 
 # Standard Library Imports
 from __future__ import annotations
@@ -35,9 +33,7 @@ BINARY_REGEX = re.compile(r"y_(pos|neg)_(.+)")
 
 # region Reaction Activity Enum
 class ReactionActivity(Enum):
-    """
-    An enum for representing reaction activity, with values of Inactive, ActiveReverse, ActiveForward, and Other
-    """
+    """An enum for representing reaction activity, with values of Inactive, ActiveReverse, ActiveForward, and Other"""
 
     Inactive = 0
     ActiveReverse = -1
@@ -51,30 +47,34 @@ class ReactionActivity(Enum):
 # region Main iMAT Iterator
 # This class is for convenient dispatch to the different underlying iterators
 class ImatIter:
-    """
-    Iterator for stepping through different possible iMAT solutions
+    """Iterator for stepping through different possible iMAT solutions
 
-    :param model: A cobra.Model object to use for iMAT
-    :type model: cobra.Model
-    :param rxn_weights: A dictionary or pandas series of reaction weights.
-    :type rxn_weights: dict | pandas.Series
-    :param output: What type of output is desired from the iterator, can be 'model', 'binary-variables',
-        or 'reaction-state', see notes for details.
-    :type output: Literal["model", "binary-variables", "reaction-activity"]
-    :param max_iter: Maximum number of iMAT iterations to perform
-    :type max_iter: int
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-2).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :param objective_tolerance: The tolerance for a solution to be considered optimal,
-        the iterator will continue until no solution can be found which has a value of
-        the iMAT objective function which is at least (1-`objective_tolerance`)*`optimal_imat_objective`.
-        For example, a value of 0.05 (the default) indicates that the iterator will continue
-        until no solution is found that is within 5% of the optimal objective.
-    :type objective_tolerance: float
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    output : Literal["model", "binary-variables", "reaction-activity"]
+        What type of output is desired from the iterator, can be
+        'model', 'binary-variables', or 'reaction-state', see notes for
+        details.
+    max_iter : int
+        Maximum number of iMAT iterations to perform
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-2). Represents
+        the maximum flux for a reaction to be considered off.
+    objective_tolerance : float
+        The tolerance for a solution to be considered optimal, the
+        iterator will continue until no solution can be found which has
+        a value of the iMAT objective function which is at least
+        (1-`objective_tolerance`)*`optimal_imat_objective`. For example,
+        a value of 0.05 (the default) indicates that the iterator will
+        continue until no solution is found that is within 5% of the
+        optimal objective.
     """
 
     def __init__(
@@ -146,53 +146,72 @@ def imat_iter_flux_sample(
     sampler_kwargs: Optional[dict[str, Any]] = None,
     **kwargs,
 ) -> pd.DataFrame[float]:
-    """
-    Generate a flux sample from a Model by iterating over multiple optimal (or near-optimal depending on
+    """Generate a flux sample from a Model by iterating over multiple optimal (or near-optimal depending on
     objective tolerance) iMAT solutions, and sampling from each
 
-    :param model: The base cobra Model to use for generating iMAT models which are then sampled from
-    :type model: cobra.Model
-    :param rxn_weights: The qualitative weights indicating which reactions are high expression, or low
-        expression, with values of 1 indicating high expression reactions, -1 indicating
-        low expression reactions, and 0 indicating in between or unknown (see
-        :func:`metworkpy.gpr.gpr_functions.gene_to_rxn_weights` for help generating this from
-        qualitative gene weights, and :func:`metworkpy.utils.expression_utils.expr_to_imat_gene_weights`
-        for converting expression data into gene weights).
-    :type rxn_weights: pd.Series[float]
-    :param model_generation_method: Method to use when creating an updated model based on the
-        results of the iMAT, can be either 'simple', or 'subset', see note for details.
-    :type model_generation_method: Literal["simple", "subset"]
-    :param max_iter: Maximum number of iMAT updated models to iterate through
-    :type max_iter: int
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-2).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :param objective_tolerance: The tolerance for a solution to be considered optimal,
-        the iterator will continue until no solution can be found which has a value of
-        the iMAT objective function which is at least (1-`objective_tolerance`)*`optimal_imat_objective`.
-        For example, a value of 0.05 (the default) indicates that the iterator will continue
-        until no solution is found that is within 5% of the optimal objective.
-    :type objective_tolerance: float
-    :param sampler: Sampler class from cobra to use for sampling (defaults to OptGPSampler),
-        should be the class, not an instance of the class, so pass `OptGPSampler`, not `OptGPSampler()`.
-        Keywords to the __init__function can be passed as a dict to `sampler_kwargs`.
-    :type sampler: cobra.sampling.HRSampler
-    :param thinning: Thinning factor representing how often the sampler returns a sample, for example a value of 100 (the default)
-        indicates that the sampler will return a sample every 100 steps. See `Cobrapy documentation <https://cobrapy.readthedocs.io/en/latest/sampling.html>`_
-        Will be overwritten by value in sampler_kwargs if thinning is provided there.
-    :type thinning: int
-    :param num_samples: Number of samples to take per iMAT updated model so the total number
-        of samples will be (number of iMAT updated models generated)*num_samples
-    :type num_samples: int
-    :param sampler_kwargs: Keyword arguments passed to the __init__ function of the sampler class
-    :type sampler_kwargs: dict[str, Any]
-    :param kwargs: Additional keyword arguments passed to the sampler's sample function
-    :type kwargs: dict[str, Any]
-    :return: Flux samples from several iMAT updated models
-    :rtype: pd.DataFrame[float]
+    Parameters
+    ----------
+    model : cobra.Model
+        The base cobra Model to use for generating iMAT models which are
+        then sampled from
+    rxn_weights : pd.Series[float]
+        The qualitative weights indicating which reactions are high
+        expression, or low expression, with values of 1 indicating high
+        expression reactions, -1 indicating low expression reactions,
+        and 0 indicating in between or unknown (see
+        :func:`metworkpy.gpr.gpr_functions.gene_to_rxn_weights` for help
+        generating this from qualitative gene weights, and :func:`metwor
+        kpy.utils.expression_utils.expr_to_imat_gene_weights` for
+        converting expression data into gene weights).
+    model_generation_method : Literal["simple", "subset"]
+        Method to use when creating an updated model based on the
+        results of the iMAT, can be either 'simple', or 'subset', see
+        note for details.
+    max_iter : int
+        Maximum number of iMAT updated models to iterate through
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-2). Represents
+        the maximum flux for a reaction to be considered off.
+    objective_tolerance : float
+        The tolerance for a solution to be considered optimal, the
+        iterator will continue until no solution can be found which has
+        a value of the iMAT objective function which is at least
+        (1-`objective_tolerance`)*`optimal_imat_objective`. For example,
+        a value of 0.05 (the default) indicates that the iterator will
+        continue until no solution is found that is within 5% of the
+        optimal objective.
+    sampler : cobra.sampling.HRSampler
+        Sampler class from cobra to use for sampling (defaults to
+        OptGPSampler), should be the class, not an instance of the
+        class, so pass `OptGPSampler`, not `OptGPSampler()`. Keywords to
+        the __init__function can be passed as a dict to
+        `sampler_kwargs`.
+    thinning : int
+        Thinning factor representing how often the sampler returns a
+        sample, for example a value of 100 (the default) indicates that
+        the sampler will return a sample every 100 steps. See `Cobrapy
+        documentation
+        <https://cobrapy.readthedocs.io/en/latest/sampling.html>`_ Will
+        be overwritten by value in sampler_kwargs if thinning is
+        provided there.
+    num_samples : int
+        Number of samples to take per iMAT updated model so the total
+        number of samples will be (number of iMAT updated models
+        generated)*num_samples
+    sampler_kwargs : dict[str, Any]
+        Keyword arguments passed to the __init__ function of the sampler
+        class
+    **kwargs : dict[str, Any]
+        Additional keyword arguments passed to the sampler's sample
+        function
+
+    Returns
+    -------
+    pd.DataFrame[float]
+        Flux samples from several iMAT updated models
     """
     # Create a list to hold the results
     flux_sample_df_list = []
@@ -231,27 +250,30 @@ def imat_iter_flux_sample(
 
 # region Imat Iterator Base Class
 class ImatIterBase(ABC):
-    """
-    Iterator for stepping through different possible iMAT solutions
+    """Iterator for stepping through different possible iMAT solutions
 
-    :param model: A cobra.Model object to use for iMAT
-    :type model: cobra.Model
-    :param rxn_weights: A dictionary or pandas series of reaction weights.
-    :type rxn_weights: dict | pandas.Series
-    :param max_iter: Maximum number of iMAT iterations to perform
-    :type max_iter: int
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-2).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :param objective_tolerance: The tolerance for a solution to be considered optimal,
-        the iterator will continue until no solution can be found which has a value of
-        the iMAT objective function which is at least (1-`objective_tolerance`)*`optimal_imat_objective`.
-        For example, a value of 0.05 (the default) indicates that the iterator will continue
-        until no solution is found that is within 5% of the optimal objective.
-    :type objective_tolerance: float
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    max_iter : int
+        Maximum number of iMAT iterations to perform
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-2). Represents
+        the maximum flux for a reaction to be considered off.
+    objective_tolerance : float
+        The tolerance for a solution to be considered optimal, the
+        iterator will continue until no solution can be found which has
+        a value of the iMAT objective function which is at least
+        (1-`objective_tolerance`)*`optimal_imat_objective`. For example,
+        a value of 0.05 (the default) indicates that the iterator will
+        continue until no solution is found that is within 5% of the
+        optimal objective.
     """
 
     def __init__(
@@ -295,29 +317,33 @@ class ImatIterBase(ABC):
 
     # Some Helper methods available for all subclasses
     def _get_high_expr_rxns(self) -> list[str]:
-        """
-        Get a list of reaction ids of all the high expression reactions
+        """Get a list of reaction ids of all the high expression reactions
 
-        :return: The list of high expression reaction ids.
-        :rtype: list[str]
+        Returns
+        -------
+        list[str]
+            The list of high expression reaction ids.
         """
         return list(self._rxn_weights[self._rxn_weights > 0.5].index)
 
     def _get_low_expr_rxns(self) -> list[str]:
-        """
-        Get a list of reaction ids of all the low expression reactions
+        """Get a list of reaction ids of all the low expression reactions
 
-        :return: The list of low expression reaction ids
-        :rtype: list[str]
+        Returns
+        -------
+        list[str]
+            The list of low expression reaction ids
         """
         return list(self._rxn_weights[self._rxn_weights < -0.5].index)
 
     def _get_high_expr_pos_variables(self) -> dict[str, optlang.Variable]:
-        """
-        Get a dict of all the y_pos variables for high expression reactions, keyed by reaction id
+        """Get a dict of all the y_pos variables for high expression reactions, keyed by reaction id
 
-        :return: The list of all the y_pos variables for high expression reactions
-        :rtype: list[optlang.Variable]
+        Returns
+        -------
+        list[optlang.Variable]
+            The list of all the y_pos variables for high expression
+            reactions
         """
         high_expr_pos_variables = {}
         for rxn in self._get_high_expr_rxns():
@@ -327,11 +353,13 @@ class ImatIterBase(ABC):
         return high_expr_pos_variables
 
     def _get_high_expr_neg_variables(self) -> dict[str, optlang.Variable]:
-        """
-        Get a dict of all the y_neg variables for high expression reactions, keyed by reaction id
+        """Get a dict of all the y_neg variables for high expression reactions, keyed by reaction id
 
-        :return: The dict of all the y_pos variables for high expression reactions
-        :rtype: dict[str,optlang.Variable]
+        Returns
+        -------
+        dict[str,optlang.Variable]
+            The dict of all the y_pos variables for high expression
+            reactions
         """
         high_expr_neg_variables = {}
         for rxn in self._get_high_expr_rxns():
@@ -341,11 +369,13 @@ class ImatIterBase(ABC):
         return high_expr_neg_variables
 
     def _get_low_expr_variables(self) -> dict[str, optlang.Variable]:
-        """
-        Get a dict of all the y_pos variables for low expression reactions, keyed by reaction id
+        """Get a dict of all the y_pos variables for low expression reactions, keyed by reaction id
 
-        :return: The dict of all the y_pos variables for low expression reactions
-        :rtype: dict[str, optlang.Variable]
+        Returns
+        -------
+        dict[str, optlang.Variable]
+            The dict of all the y_pos variables for low expression
+            reactions
         """
         low_expr_pos_variables = {}
         for rxn in self._get_low_expr_rxns():
@@ -353,12 +383,14 @@ class ImatIterBase(ABC):
         return low_expr_pos_variables
 
     def _get_high_expr_variables(self) -> dict[str, dict[str, optlang.Variable]]:
-        """
-        Get a nested dict of all the variables associated with high expression reactions, keyed by reaction id,
+        """Get a nested dict of all the variables associated with high expression reactions, keyed by reaction id,
         and then by 'pos'/'neg' for positive and negative variables respectively
 
-        :return: The dict of all the variables associated with high expression reactions
-        :rtype: dict[str,dict[str,optlang.Variable]]
+        Returns
+        -------
+        dict[str,dict[str,optlang.Variable]]
+            The dict of all the variables associated with high
+            expression reactions
         """
         high_expr_variables = {}
         for rxn, y_pos in self._get_high_expr_pos_variables().items():
@@ -368,22 +400,26 @@ class ImatIterBase(ABC):
         return high_expr_variables
 
     def _get_binary_variables_state(self) -> pd.Series[ReactionActivity]:
-        """
-        Get a pandas Series describing the state of the weighted reactions in the iMAT solution
+        """Get a pandas Series describing the state of the weighted reactions in the iMAT solution
 
-        :return: Series with reaction ids as the index, and :class:`ReactionActivity`
-        :rtype: pd.Series[ReactionActivity]
+        Returns
+        -------
+        pd.Series[ReactionActivity]
+            Series with reaction ids as the index, and
+            :class:`ReactionActivity`
 
-        .. note::
-           The activity of all unweighted reactions is Other, as is the activity of all reactions
-           which have weights but don't have their binary variables 'on', i.e. high expression reactions
-           which are not active (in either the forward, or reverse direction) and
-           low expression reactions which are not inactive (so have activity above the threshold) will have
-           a reaction activity of Other.
+        Notes
+        -----
+        The activity of all unweighted reactions is Other, as is the activity of all reactions
+        which have weights but don't have their binary variables 'on', i.e. high expression reactions
+        which are not active (in either the forward, or reverse direction) and
+        low expression reactions which are not inactive (so have activity above the threshold) will have
+        a reaction activity of Other.
 
-        .. warning::
-           This function requires that the model has been optimized, so that all the variables actually
-           have primal values.
+        Warnings
+        --------
+        This function requires that the model has been optimized, so that all the variables actually
+        have primal values.
         """
         # Create a pandas series to hold the state
         reaction_activities = pd.Series(
@@ -402,11 +438,12 @@ class ImatIterBase(ABC):
         return reaction_activities
 
     def _get_all_binary_variables(self) -> list[optlang.Variable]:
-        """
-        Get all the binary variables associated with the underlying iMAT model
+        """Get all the binary variables associated with the underlying iMAT model
 
-        :return: List of all the binary variables in the iMAT model
-        :rtype: list[optlang.Variable]
+        Returns
+        -------
+        list[optlang.Variable]
+            List of all the binary variables in the iMAT model
         """
         all_binary_variables = []
         # Start with the high expr reactions
@@ -421,8 +458,7 @@ class ImatIterBase(ABC):
         return all_binary_variables
 
     def _iter_update(self):
-        """
-        Function called during  __next__ method of subclasses, used to update counters, evaluate current
+        """Function called during  __next__ method of subclasses, used to update counters, evaluate current
         iMAT solution, and raise the StopIteration if needed
         """
         # Start by calculating a solution
@@ -446,9 +482,7 @@ class ImatIterBase(ABC):
         self._counter += 1
 
     def _add_integer_cut(self) -> None:
-        """
-        Add an integer cut to the _imat_model which restricts a repeat of the current solution
-        """
+        """Add an integer cut to the _imat_model which restricts a repeat of the current solution"""
         # Create a list to hold the expressions for variables which are "on", i.e. equal to 1
         on_variables = []
         # Create a list to hold the expressions for variables which are "off", i.e. equal to 0
@@ -491,29 +525,36 @@ ImatBinaryVariables = namedtuple(
 
 
 class ImatIterBinaryVariables(ImatIterBase):
-    """
-    Iterator for stepping through different possible iMAT solutions, returning a named tuple of pandas Series describing
+    """Iterator for stepping through different possible iMAT solutions, returning a named tuple of pandas Series describing
     the state of all binary variables in the iMAT problem
 
-    :param model: A cobra.Model object to use for iMAT
-    :type model: cobra.Model
-    :param rxn_weights: A dictionary or pandas series of reaction weights.
-    :type rxn_weights: dict | pandas.Series
-    :param max_iter: Maximum number of iMAT iterations to perform
-    :type max_iter: int
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-2).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :param objective_tolerance: The tolerance for a solution to be considered optimal,
-        the iterator will continue until no solution can be found which has a value of
-        the iMAT objective function which is at least (1-`objective_tolerance`)*`optimal_imat_objective`.
-        For example, a value of 0.05 (the default) indicates that the iterator will continue
-        until no solution is found that is within 5% of the optimal objective.
-    :type objective_tolerance: float
-    :return: A named tuple with 3 fields
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    max_iter : int
+        Maximum number of iMAT iterations to perform
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-2). Represents
+        the maximum flux for a reaction to be considered off.
+    objective_tolerance : float
+        The tolerance for a solution to be considered optimal, the
+        iterator will continue until no solution can be found which has
+        a value of the iMAT objective function which is at least
+        (1-`objective_tolerance`)*`optimal_imat_objective`. For example,
+        a value of 0.05 (the default) indicates that the iterator will
+        continue until no solution is found that is within 5% of the
+        optimal objective.
+
+    Returns
+    -------
+    unknown
+        A named tuple with 3 fields
 
         * rh_y_pos: A pandas Series indexed by reaction id with the values indicating the state of the y+ variables
           associated with the high expression reactions. A value of 1 indicates that the reaction is **active** in the
@@ -523,7 +564,6 @@ class ImatIterBinaryVariables(ImatIterBase):
           reverse direction.
         * rl_y_pos: A pandas Series indexed by reaction id with the values indicating the state of the y+ variables
           associated with the low expression reactions. A value of 1 indicates that the reaction is **inactive**.
-
     """
 
     def __init__(
@@ -571,32 +611,38 @@ class ImatIterBinaryVariables(ImatIterBase):
 
 
 class ImatIterReactionActivities(ImatIterBase):
-    """
-    Iterator for stepping through different possible iMAT solutions, returning the reaction state of
+    """Iterator for stepping through different possible iMAT solutions, returning the reaction state of
     reactions with non-zero iMAT weights
 
-    :param model: A cobra.Model object to use for iMAT
-    :type model: cobra.Model
-    :param rxn_weights: A dictionary or pandas series of reaction weights.
-    :type rxn_weights: dict | pandas.Series
-    :param max_iter: Maximum number of iMAT iterations to perform
-    :type max_iter: int
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-2).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :param objective_tolerance: The tolerance for a solution to be considered optimal,
-        the iterator will continue until no solution can be found which has a value of
-        the iMAT objective function which is at least (1-`objective_tolerance`)*`optimal_imat_objective`.
-        For example, a value of 0.05 (the default) indicates that the iterator will continue
-        until no solution is found that is within 5% of the optimal objective.
-    :type objective_tolerance: float
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    max_iter : int
+        Maximum number of iMAT iterations to perform
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-2). Represents
+        the maximum flux for a reaction to be considered off.
+    objective_tolerance : float
+        The tolerance for a solution to be considered optimal, the
+        iterator will continue until no solution can be found which has
+        a value of the iMAT objective function which is at least
+        (1-`objective_tolerance`)*`optimal_imat_objective`. For example,
+        a value of 0.05 (the default) indicates that the iterator will
+        continue until no solution is found that is within 5% of the
+        optimal objective.
 
-    :return: Every iteration returns a pandas Series of :class:`ReactionActivity` describing the activity of
-        reactions in the iMAT Model.
-    :rtype: Iterable[pd.Series[ReactionActivity]]
+    Returns
+    -------
+    Iterable[pd.Series[ReactionActivity]]
+        Every iteration returns a pandas Series of
+        :class:`ReactionActivity` describing the activity of reactions
+        in the iMAT Model.
     """
 
     def __init__(
@@ -633,52 +679,59 @@ class ImatIterReactionActivities(ImatIterBase):
 
 # region iMAT Model Iterator
 class ImatIterModels(ImatIterBase):
-    """
-    Iterator for stepping through different possible iMAT solutions, returning an updated model for each
+    """Iterator for stepping through different possible iMAT solutions, returning an updated model for each
     iMAT solution, with modified reaction bounds to make it conform to the iMAT solution.
 
-    :param model: A cobra.Model object to use for iMAT
-    :type model: cobra.Model
-    :param rxn_weights: A dictionary or pandas series of reaction weights.
-    :type rxn_weights: dict | pandas.Series
-    :param method: Which method to use to create the returned iMAT model, can be either 'simple', or 'subset',
-        see notes for details.
-    :type method: Literal["simple", "subset]
-    :param max_iter: Maximum number of iMAT iterations to perform
-    :type max_iter: int
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-2).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :param objective_tolerance: The tolerance for a solution to be considered optimal,
-        the iterator will continue until no solution can be found which has a value of
-        the iMAT objective function which is at least (1-`objective_tolerance`)*`optimal_imat_objective`.
-        For example, a value of 0.05 (the default) indicates that the iterator will continue
-        until no solution is found that is within 5% of the optimal objective.
-    :type objective_tolerance: float
-    :return: Every iteration returns a pandas Series of :class:`ReactionActivity` describing the activity of
-        reactions in the iMAT Model.
-    :rtype: Iterable[pd.Series[ReactionActivity]]
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    method : Literal["simple", "subset]
+        Which method to use to create the returned iMAT model, can be
+        either 'simple', or 'subset', see notes for details.
+    max_iter : int
+        Maximum number of iMAT iterations to perform
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-2). Represents
+        the maximum flux for a reaction to be considered off.
+    objective_tolerance : float
+        The tolerance for a solution to be considered optimal, the
+        iterator will continue until no solution can be found which has
+        a value of the iMAT objective function which is at least
+        (1-`objective_tolerance`)*`optimal_imat_objective`. For example,
+        a value of 0.05 (the default) indicates that the iterator will
+        continue until no solution is found that is within 5% of the
+        optimal objective.
 
-    .. note::
-       When creating an updated model based on the solution to the iMAT problem, two different methods can
-       be selected, either
+    Returns
+    -------
+    Iterable[pd.Series[ReactionActivity]]
+        Every iteration returns a pandas Series of
+        :class:`ReactionActivity` describing the activity of reactions
+        in the iMAT Model.
 
-       * simple: This method enforces the activity constraints found during the iMAT solution, so
-         reactions found to be active in the forward direction are forced to be active in the forward
-         direction, and reactions found active in the reverse direction are forced to be active in the
-         reverse direction, and reactions found to be inactive are forced to be inactive.
-       * subset: This method instead finds which subset of reactions the iMAT problem indicates are not inactive,
-         and allows only those reactions to carry flux (essentially inactive reactions are forced off).
+    Notes
+    -----
+    When creating an updated model based on the solution to the iMAT problem, two different methods can
+    be selected, either
 
-       The simple method can lead to the model being infeasible, and can also lead to reactions being considered
-       essential because their knockout leads to forced active reactions no longer being able to carry flux. The
-       subset method shouldn't lead to as much infeasibility when performing essentiality analysis, but is a
-       much lighter restriction on the model so may not fully incorporate the information provided by the
-       gene expression weights.
+    * simple: This method enforces the activity constraints found during the iMAT solution, so
+      reactions found to be active in the forward direction are forced to be active in the forward
+      direction, and reactions found active in the reverse direction are forced to be active in the
+      reverse direction, and reactions found to be inactive are forced to be inactive.
+    * subset: This method instead finds which subset of reactions the iMAT problem indicates are not inactive,
+      and allows only those reactions to carry flux (essentially inactive reactions are forced off).
 
+    The simple method can lead to the model being infeasible, and can also lead to reactions being considered
+    essential because their knockout leads to forced active reactions no longer being able to carry flux. The
+    subset method shouldn't lead to as much infeasibility when performing essentiality analysis, but is a
+    much lighter restriction on the model so may not fully incorporate the information provided by the
+    gene expression weights.
     """
 
     def __init__(

@@ -1,6 +1,4 @@
-"""
-Functions for computing the Mutual Information Network for a Metabolic Model
-"""
+"""Functions for computing the Mutual Information Network for a Metabolic Model"""
 
 # Standard Library Imports
 from __future__ import annotations
@@ -27,26 +25,35 @@ def mi_network_adjacency_matrix(
     processes: int = 1,
     progress_bar: bool = False,
 ) -> np.ndarray:
-    """
-    Create a Mutual Information Network Adjacency matrix from flux samples. Uses kth nearest neighbor method
+    """Create a Mutual Information Network Adjacency matrix from flux samples. Uses kth nearest neighbor method
     for estimating mutual information.
-    :param samples: Numpy array or Pandas DataFrame containing the samples, columns should represent different reactions
-        while rows should represent different samples
-    :type samples: np.ndarray|pd.DataFrame
-    :param n_neighbors: Number of neighbors to use for the Mutual Information estimation
-    :type n_neighbors: int
-    :param processes: Number of processes to use when
-    :type processes: int
-    :param progress_bar: Whether a progress bar should be displayed
-    :type progress_bar: bool
-    :return: Square numpy array with values at i,j representing the mutual information between the ith and jth columns
-        in the original samples array. This array is symmetrical since mutual information is symmetrical.
-    :rtype: np.ndarray
 
-    .. seealso::
+    Parameters
+    ----------
+    samples : np.ndarray|pd.DataFrame
+        Numpy array or Pandas DataFrame containing the samples, columns
+        should represent different reactions while rows should represent
+        different samples
+    n_neighbors : int
+        Number of neighbors to use for the Mutual Information estimation
+    processes : int
+        Number of processes to use when
+    progress_bar : bool
+        Whether a progress bar should be displayed
 
-       1. Kraskov, A., Stögbauer, H., & Grassberger, P. (2004). Estimating mutual information. Physical Review E, 69(6), 066138.
-            Method for estimating mutual information between samples from two continuous distributions.
+    Returns
+    -------
+    np.ndarray
+        Square numpy array with values at i,j representing the mutual
+        information between the ith and jth columns in the original
+        samples array. This array is symmetrical since mutual
+        information is symmetrical.
+
+    See Also
+    --------
+
+    1. Kraskov, A., Stögbauer, H., & Grassberger, P. (2004). Estimating mutual information. Physical Review E, 69(6), 066138.
+         Method for estimating mutual information between samples from two continuous distributions.
     """
     if isinstance(samples, pd.DataFrame):
         samples_array = samples.to_numpy()
@@ -114,22 +121,28 @@ def _mi_network_worker(
     shared_mem_name: str,
     n_neighbors: int,
 ) -> Tuple[int, int, float]:
-    """
-    Calculate the mutual information between two columns in the shared numpy array
-    :param index: Tuple representing the index of the two columns
-    :type index: Tuple[int, int]
-    :param shared_nrows: Number of rows in the shared numpy array
-    :type shared_nrows: int
-    :param shared_ncols: Number of columns in the shared numpy array
-    :type shared_ncols: int
-    :param shared_dtype: Data type of the shared numpy array
-    :type shared_dtype: np.dtype
-    :param shared_mem_name: Name of the shared memory
-    :type shared_mem_name: str
-    :param n_neighbors: Number of neighbors to use for estimating the mutual information
-    :type n_neighbors: int
-    :return: Tuple of (column 1, column 2, mutual information between two columns)
-    :rtype: Tuple[int, int, float]
+    """Calculate the mutual information between two columns in the shared numpy array
+
+    Parameters
+    ----------
+    index : Tuple[int, int]
+        Tuple representing the index of the two columns
+    shared_nrows : int
+        Number of rows in the shared numpy array
+    shared_ncols : int
+        Number of columns in the shared numpy array
+    shared_dtype : np.dtype
+        Data type of the shared numpy array
+    shared_mem_name : str
+        Name of the shared memory
+    n_neighbors : int
+        Number of neighbors to use for estimating the mutual information
+
+    Returns
+    -------
+    Tuple[int, int, float]
+        Tuple of (column 1, column 2, mutual information between two
+        columns)
     """
     # Get access to the shared memory, and create array from it
     shm = shared_memory.SharedMemory(name=shared_mem_name)

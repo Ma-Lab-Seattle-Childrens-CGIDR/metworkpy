@@ -1,5 +1,4 @@
-"""
-Function for calculating the Kullback-Leibler divergence between two probability distributions based on samples from
+"""Function for calculating the Kullback-Leibler divergence between two probability distributions based on samples from
 those distributions.
 """
 
@@ -29,47 +28,59 @@ def kl_divergence(
     jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
 ) -> float:
-    """
-    Calculate the Kulback-Leibler divergence between two distributions represented by samples p and q
+    """Calculate the Kulback-Leibler divergence between two distributions represented by samples p and q
 
-    :param p: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If `p` is
-        one dimensional, it will be reshaped to (n_samples,1). If it is not a np.ndarray, this function will attempt to
-        coerce it into one.
-    :type p: ArrayLike
-    :param q: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If `q` is
-        one dimensional, it will be reshaped to (n_samples,1). If it is not a np.ndarray, this function will attempt to
-        coerce it into one.
-    :type q: ArrayLike
-    :param n_neighbors: Number of neighbors to use for computing mutual information. Will attempt to coerce into an
-        integer. Must be at least 1. Default 5.
-    :type n_neighbors: int
-    :param discrete: Whether the samples are from discrete distributions
-    :type discrete: bool
-    :param jitter: Amount of noise to add to avoid ties. If None no noise is added. If a float, that is the standard
-        deviation of the random noise added to the continuous samples. If a tuple, the first element is the standard
-        deviation of the noise added to the x array, the second element is the standard deviation added to the y array.
-    :type jitter: Union[None, float, tuple[float,float]]
-    :param jitter_seed: Seed for the random number generator used for adding noise
-    :type jitter_seed: Union[None, int]
-    :param distance_metric: Metric to use for computing distance between points in p and q, can be \"Euclidean\",
-        \"Manhattan\", or \"Chebyshev\". Can also be a float representing the Minkowski p-norm.
-    :type distance_metric: Union[str, float]
-    :return: The Kulback-Leibler divergence between p and q
-    :rtype: float
+    Parameters
+    ----------
+    p : ArrayLike
+        Array representing sample from a distribution, should have shape
+        (n_samples, n_dimensions). If `p` is one dimensional, it will be
+        reshaped to (n_samples,1). If it is not a np.ndarray, this
+        function will attempt to coerce it into one.
+    q : ArrayLike
+        Array representing sample from a distribution, should have shape
+        (n_samples, n_dimensions). If `q` is one dimensional, it will be
+        reshaped to (n_samples,1). If it is not a np.ndarray, this
+        function will attempt to coerce it into one.
+    n_neighbors : int
+        Number of neighbors to use for computing mutual information.
+        Will attempt to coerce into an integer. Must be at least 1.
+        Default 5.
+    discrete : bool
+        Whether the samples are from discrete distributions
+    jitter : Union[None, float, tuple[float,float]]
+        Amount of noise to add to avoid ties. If None no noise is added.
+        If a float, that is the standard deviation of the random noise
+        added to the continuous samples. If a tuple, the first element
+        is the standard deviation of the noise added to the x array, the
+        second element is the standard deviation added to the y array.
+    jitter_seed : Union[None, int]
+        Seed for the random number generator used for adding noise
+    distance_metric : Union[str, float]
+        Metric to use for computing distance between points in p and q,
+        can be \"Euclidean\", \"Manhattan\", or \"Chebyshev\". Can also
+        be a float representing the Minkowski p-norm.
 
-    .. note::
+    Returns
+    -------
+    float
+        The Kulback-Leibler divergence between p and q
 
-       - This function is not symetrical, and q is treated as representing the reference condition. If you want a
-         symetric metric try the Jenson-Shannon divergence.
+    Notes
+    -----
 
-    .. seealso::
+    - This function is not symetrical, and q is treated as representing the reference condition. If you want a
+      symetric metric try the Jenson-Shannon divergence.
 
-       1. Q. Wang, S. R. Kulkarni and S. Verdu, \"Divergence Estimation for Multidimensional Densities Via
-       k-Nearest-Neighbor Distances\" in IEEE Transactions on Information Theory, vol. 55, no. 5, pp. 2392-2405,
-       May 2009, doi: 10.1109/TIT.2009.2016060.
+    See Also
+    --------
 
-            Method for estimating the mutual information between samples from two continuous distributions based
-            on nearest-neighbor distances.
+    1. Q. Wang, S. R. Kulkarni and S. Verdu, \"Divergence Estimation for Multidimensional Densities Via
+    k-Nearest-Neighbor Distances\" in IEEE Transactions on Information Theory, vol. 55, no. 5, pp. 2392-2405,
+    May 2009, doi: 10.1109/TIT.2009.2016060.
+
+         Method for estimating the mutual information between samples from two continuous distributions based
+         on nearest-neighbor distances.
     """
     return _wrap_divergence_functions(
         p=p,
@@ -89,16 +100,20 @@ def kl_divergence(
 
 # region Discrete Divergence
 def _kl_disc(p: np.ndarray, q: np.ndarray):
-    """
-    Compute the Kullback-Leibler divergence for two samples from two finite discrete distributions
+    """Compute the Kullback-Leibler divergence for two samples from two finite discrete distributions
 
-    :param p: Sample from the p distribution, with shape (n_samples, 1)
-    :type p: np.ndarray
-    :param q: Sample from the q distribution, with shape (n_samples, 1)
-    :type q: np.ndarray
-    :return: The Kullback-Leibler divergence between the two distributions represented by the p and q samples
-    :rtype: float
+    Parameters
+    ----------
+    p : np.ndarray
+        Sample from the p distribution, with shape (n_samples, 1)
+    q : np.ndarray
+        Sample from the q distribution, with shape (n_samples, 1)
 
+    Returns
+    -------
+    float
+        The Kullback-Leibler divergence between the two distributions
+        represented by the p and q samples
     """
     p_elements, p_counts = np.unique(p, return_counts=True)
     q_elements, q_counts = np.unique(q, return_counts=True)
@@ -129,29 +144,39 @@ def kl_divergence_array(
     metric: float | str = 2.0,
     processes: int = 1,
 ) -> np.ndarray | pd.Series:
-    """
-    Calculate the Jensen-Shannon divergence between the columns in two arrays using the
+    """Calculate the Jensen-Shannon divergence between the columns in two arrays using the
     nearest neighbors method.
 
-    :param p: Flux sample array, with columns representing different reactions and rows representing
-        different samples. Should have same number of columns as q.
-    :type p: pd.DataFrame | np.ndarray
-    :param q: Flux sample array, with columns representing different reactions and rows representing
-        different samples. Should have same number of columns as p.
-    :type q: pd.DataFrame | np.ndarray
-    :param n_neighbors: Number of neighbors to use when estimating divergence
-    :type n_neighbors: int
-    :param metric: Metric to use for computing distance between points in p and q, can be \"Euclidean\",
-        \"Manhattan\", or \"Chebyshev\". Can also be a float representing the Minkowski p-norm.
-    :type metric: float | str
-    :param processes: Number of processes to use when calculating the divergence (default 1)
-    :type processes: int
-    :return: Array with length equal to the number of columns in p and q, the ith value representing
-        the divergence between the ith column of p and the ith column of q. If both p and q are
-        numpy ndarrays, this returns a ndarray with shape (ncols,). If either p or q are pandas
-        DataFrames then returns a pandas Series with index the same as the columns in the DataFrame
-        (p takes priority if the column names differ).
-    :rtype: np.ndarray | pd.DataFrame
+    Parameters
+    ----------
+    p : pd.DataFrame | np.ndarray
+        Flux sample array, with columns representing different reactions
+        and rows representing different samples. Should have same number
+        of columns as q.
+    q : pd.DataFrame | np.ndarray
+        Flux sample array, with columns representing different reactions
+        and rows representing different samples. Should have same number
+        of columns as p.
+    n_neighbors : int
+        Number of neighbors to use when estimating divergence
+    metric : float | str
+        Metric to use for computing distance between points in p and q,
+        can be \"Euclidean\", \"Manhattan\", or \"Chebyshev\". Can also
+        be a float representing the Minkowski p-norm.
+    processes : int
+        Number of processes to use when calculating the divergence
+        (default 1)
+
+    Returns
+    -------
+    np.ndarray | pd.DataFrame
+        Array with length equal to the number of columns in p and q, the
+        ith value representing the divergence between the ith column of
+        p and the ith column of q. If both p and q are numpy ndarrays,
+        this returns a ndarray with shape (ncols,). If either p or q are
+        pandas DataFrames then returns a pandas Series with index the
+        same as the columns in the DataFrame (p takes priority if the
+        column names differ).
     """
     return _divergence_array(
         p=p,
@@ -165,20 +190,27 @@ def kl_divergence_array(
 
 # region Continuous Divergence
 def _kl_cont(p: np.ndarray, q: np.ndarray, n_neighbors: int = 5, metric: float = 2.0):
-    """
-    Calculate the Kullback-Leibler divergence for two samples from two continuous distributions
+    """Calculate the Kullback-Leibler divergence for two samples from two continuous distributions
 
-    :param p: Sample from the p distribution, with shape (n_samples, n_dimensions)
-    :type p: np.ndarray
-    :param q: Sample from the q distribution, with shape (n_samples, n_dimensions
-    :type q: np.ndarray
-    :param n_neighbors: Number of neighbors to use for the estimator
-    :type n_neighbors: int
-    :param metric: Minkowski p-norm to use for calculating distances, must be at least 1
-    :type metric: float
-    :return: The Kullback-Leibler divergence between the distributions represented by the p and q samples
-    :rtype: float
+    Parameters
+    ----------
+    p : np.ndarray
+        Sample from the p distribution, with shape (n_samples,
+        n_dimensions)
+    q : np.ndarray
+        Sample from the q distribution, with shape (n_samples,
+        n_dimensions
+    n_neighbors : int
+        Number of neighbors to use for the estimator
+    metric : float
+        Minkowski p-norm to use for calculating distances, must be at
+        least 1
 
+    Returns
+    -------
+    float
+        The Kullback-Leibler divergence between the distributions
+        represented by the p and q samples
     """
     # Construct the KDTrees for finding neighbors, and neighbor distances
     p_tree = KDTree(p)

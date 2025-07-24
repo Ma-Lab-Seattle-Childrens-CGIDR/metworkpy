@@ -1,6 +1,4 @@
-"""
-Script for calculating divergence between flux distributions
-"""
+"""Script for calculating divergence between flux distributions"""
 
 # Imports
 # Standard Library Imports
@@ -21,13 +19,17 @@ from metworkpy.utils._arguments import _parse_metric, _parse_str_args_dict
 
 # region Parse Arguments
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
-    """
-    Parse command line arguments
+    """Parse command line arguments
 
-    :param arg_list: List of command line strings (defaults to reading from stdin)
-    :type arg_list: list[str] | None
-    :return: Parsed Arguments
-    :rtype: argparse.Namespace
+    Parameters
+    ----------
+    arg_list : list[str] | None
+        List of command line strings (defaults to reading from stdin)
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed Arguments
     """
     parser = argparse.ArgumentParser(
         prog="metdivergence", description="Calculate divergence between flux samples"

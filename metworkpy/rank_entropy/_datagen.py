@@ -1,6 +1,4 @@
-"""
-Generate data for testing the rank entropy functions
-"""
+"""Generate data for testing the rank entropy functions"""
 
 # Imports
 # Standard Library Imports
@@ -31,33 +29,39 @@ def _generate_rank_entropy_data(
     shuffle_samples: bool = True,
     seed: Optional[int] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Generate data with ordered and disordered genes/samples
-    :param n_ordered_samples: Number of ordered samples
-    :type n_ordered_samples: int
-    :param n_unordered_samples: Number of unordered samples
-    :type n_unordered_samples: int
-    :param n_genes_ordered: Number of ordered genes
-    :type n_genes_ordered: int
-    :param n_genes_unordered: Number of unordered genes
-    :type n_genes_unordered: int
-    :param dist: Distribution to use for sampling, should be a scipy rv_continuous, or rv_discrete (or at least
-        have a rvs method which takes a single argument size and returns a random sample as a np array of length size)
-    :type dist: Distribution
-    :param shuffle_genes: Whether the order of the genes should be shuffled
-    :type shuffle_genes: bool
-    :param shuffle_samples: Whether the order of the samples should be shuffled
-    :type shuffle_samples: bool
-    :param seed: Seed to use for the random number generator used whe shuffling (doesn't change the sampling from
-        the provided dist)
-    :type seed: Optional[int]
-    :return: Tuple of np.ndarrays, representing:
-        1. the generated expression data, with rows representing samples, and columns representing genes.
-        2. the indices of the ordered samples
-        3. the indices of the unordered samples
-        4. the indices of the ordered genes
-        5. the indices of the unordered genes
-    :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+    """Generate data with ordered and disordered genes/samples
+
+    Parameters
+    ----------
+    n_ordered_samples : int
+        Number of ordered samples
+    n_unordered_samples : int
+        Number of unordered samples
+    n_genes_ordered : int
+        Number of ordered genes
+    n_genes_unordered : int
+        Number of unordered genes
+    dist : Distribution
+        Distribution to use for sampling, should be a scipy
+        rv_continuous, or rv_discrete (or at least have a rvs method
+        which takes a single argument size and returns a random sample
+        as a np array of length size)
+    shuffle_genes : bool
+        Whether the order of the genes should be shuffled
+    shuffle_samples : bool
+        Whether the order of the samples should be shuffled
+    seed : Optional[int]
+        Seed to use for the random number generator used whe shuffling
+        (doesn't change the sampling from the provided dist)
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+        Tuple of np.ndarrays, representing: 1. the generated expression
+        data, with rows representing samples, and columns representing
+        genes. 2. the indices of the ordered samples 3. the indices of
+        the unordered samples 4. the indices of the ordered genes 5. the
+        indices of the unordered genes
     """
     rng_generator = np.random.default_rng(seed=seed)
     ordered_array = _ordered_array(

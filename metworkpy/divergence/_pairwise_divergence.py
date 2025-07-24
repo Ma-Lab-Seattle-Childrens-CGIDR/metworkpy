@@ -1,6 +1,4 @@
-"""
-Calculate the divergence between paired columns in two arrays
-"""
+"""Calculate the divergence between paired columns in two arrays"""
 
 # Imports
 # Standard Library Imports

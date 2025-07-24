@@ -1,6 +1,4 @@
-"""
-Script for running Metchange from the command line
-"""
+"""Script for running Metchange from the command line"""
 
 # Imports
 # Standard Library Imports
@@ -25,13 +23,17 @@ from ._script_utils import (
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
-    """
-    Parse Command line arguments
+    """Parse Command line arguments
 
-    :param arg_list: List of command line strings (defaults to reading from stdin)
-    :type arg_list: list[str]|None
-    :return: Parsed arguments
-    :rtype: argparse.Namespace
+    Parameters
+    ----------
+    arg_list : list[str]|None
+        List of command line strings (defaults to reading from stdin)
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments
     """
     parser = argparse.ArgumentParser(
         prog="metchange",
@@ -236,12 +238,18 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 
 def run(arg_list: list[str] | None = None) -> None:
-    """
-    Function to run the command line interface
-    :param arg_list: List of command line arguments, defaults to those passed to stdin
-    :type arg_list: list[str]|None
-    :return: No return
-    :rtype: None
+    """Function to run the command line interface
+
+    Parameters
+    ----------
+    arg_list : list[str]|None
+        List of command line arguments, defaults to those passed to
+        stdin
+
+    Returns
+    -------
+    None
+        No return
     """
     # Parse args
     args = parse_args(arg_list)

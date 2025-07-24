@@ -1,6 +1,4 @@
-"""
-Submodule with functions for creating a context specific model using iMAT
-"""
+"""Submodule with functions for creating a context specific model using iMAT"""
 
 # Standard Library Imports
 from __future__ import annotations
@@ -41,45 +39,49 @@ def generate_model(
     objective_tolerance: float = DEFAULTS["objective_tolerance"],
     **kwargs,
 ):
-    """
-    Generate a context specific model using iMAT.
+    """Generate a context specific model using iMAT.
 
-    :param model: A cobra.Model object to use for iMAT
-    :type model: cobra.Model
-    :param rxn_weights: A dictionary or pandas series of reaction weights.
-    :type rxn_weights: dict | pandas.Series
-    :param imat_solution: A pre-existing IMAT solution passed to the model creation methods,
-        will only impact simple and subset as FVA and MILP solve altered versions of the
-        IMAT problem.
-    :type imat_solution: cobra.Solution
-    :param method: The method to use for generating the context specific
-        model. Valid methods are:
-        'imat_restrictions', 'simple_bounds', 'subset',
-        'fva', 'milp'.
-    :type method: str
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to  be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-1).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :param objective_tolerance: The tolerance for the objective value
-        (used for imat_restrictions and fva methods). The objective will
-        be restricted to be within objective_tolerance*objective_value of the
-        optimal objective value. (default: 5e-2)
-    :type objective_tolerance: float
-    :return: A context specific cobra.Model.
-    :rtype: cobra.Model
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    imat_solution : cobra.Solution
+        A pre-existing IMAT solution passed to the model creation
+        methods, will only impact simple and subset as FVA and MILP
+        solve altered versions of the IMAT problem.
+    method : str
+        The method to use for generating the context specific model.
+        Valid methods are: 'imat_restrictions', 'simple_bounds',
+        'subset', 'fva', 'milp'.
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to  be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-1). Represents
+        the maximum flux for a reaction to be considered off.
+    objective_tolerance : float
+        The tolerance for the objective value (used for
+        imat_restrictions and fva methods). The objective will be
+        restricted to be within objective_tolerance*objective_value of
+        the optimal objective value. (default: 5e-2)
 
-    .. seealso::
-        | :func:`imat_constraint_model` for more information on the
-            imat_restrictions method.
-        | :func:`simple_bounds_model` for more information on the
-            simple_bounds method.
-        | :func:`subset_model` for more information on the
-            subset method.
-        | :func:`fva_model` for more information on the fva method.
-        | :func:`milp_model` for more information on the milp method.
+    Returns
+    -------
+    cobra.Model
+        A context specific cobra.Model.
+
+    See Also
+    --------
+    | :func:`imat_constraint_model` for more information on the
+        imat_restrictions method.
+    | :func:`simple_bounds_model` for more information on the
+        simple_bounds method.
+    | :func:`subset_model` for more information on the
+        subset method.
+    | :func:`fva_model` for more information on the fva method.
+    | :func:`milp_model` for more information on the milp method.
     """
     method = _parse_method(method)
     if method == "imat_constraint":
@@ -125,36 +127,39 @@ def generate_model(
 def imat_constraint_model(
     model, rxn_weights, epsilon, threshold, objective_tolerance, **kwargs
 ):
-    """
-    Generate a context specific model by adding iMAT constraints, and
+    """Generate a context specific model by adding iMAT constraints, and
     ensuring iMAT objective value is near optimal.
 
-    :param model: A cobra.Model object to use for iMAT
-    :type model: cobra.Model
-    :param rxn_weights: A dictionary or pandas series of reaction weights.
-    :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-1).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :param objective_tolerance: The tolerance for the objective value.
-        The objective will be restricted to be within
-        objective_tolerance*objective_value of the optimal objective value.
-        (default: 5e-2)
-    :type objective_tolerance: float
-    :return: A context specific cobra.Model.
-    :rtype: cobra.Model
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-1). Represents
+        the maximum flux for a reaction to be considered off.
+    objective_tolerance : float
+        The tolerance for the objective value. The objective will be
+        restricted to be within objective_tolerance*objective_value of
+        the optimal objective value. (default: 5e-2)
 
-    .. note::
-        This function first solves the iMAT problem, then adds a constraint
-        to ensure that the iMAT objective value is within
-        objective_tolerance*objective_value of the optimal objective value.
-        This model will include integer constraints, and so can not be used
-        for sampling. If you want to use the model for sampling,
-        use any of the other methods.
+    Returns
+    -------
+    cobra.Model
+        A context specific cobra.Model.
 
+    Notes
+    -----
+    This function first solves the iMAT problem, then adds a constraint
+    to ensure that the iMAT objective value is within
+    objective_tolerance*objective_value of the optimal objective value.
+    This model will include integer constraints, and so can not be used
+    for sampling. If you want to use the model for sampling,
+    use any of the other methods.
     """
     original_objective = model.objective
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
@@ -192,37 +197,43 @@ def simple_bounds_model(
     imat_solution: Optional[cobra.Solution] = None,
     **kwargs,
 ):
-    """
-    Generate a context specific model by setting bounds on reactions based on
+    """Generate a context specific model by setting bounds on reactions based on
     iMAT solution.
 
-    :param model: A cobra.Model object to use for iMAT
-    :type model: cobra.Model
-    :param rxn_weights: A dictionary or pandas series of reaction weights.
-    :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-1).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :param imat_solution: A preexisting IMAT solution, if not provided will be computed when function is called
-    :type imat_solution: cobra.Solution
-    :return: A context specific cobra.Model.
-    :rtype: cobra.Model
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-1). Represents
+        the maximum flux for a reaction to be considered off.
+    imat_solution : cobra.Solution
+        A preexisting IMAT solution, if not provided will be computed
+        when function is called
 
-    .. note::
-        This method first solves the iMAT solution, then for reactions found
-        to be lowly expressed (weight<0), and inactive (flux<threshold),
-        the reaction bounds are set to (-threshold, threshold),
-        (0, threshold), or (-threshold, 0) depending on reversibility.
-        For reactions found to be highly expressed and active in the
-        forward direction (weight>0, flux>epsilon), the reaction bounds are
-        set to (epsilon, ub), or (lb, ub) if lb>epsilon. For reactions found
-        to be highly expressed and active in the reverse direction
-        (weight>0, flux<-epsilon), the reaction bounds are set to
-        (lb, -epsilon), or (lb, ub) if ub<-epsilon.  This model will not
-        include integer constraints, and so can be used for sampling.
+    Returns
+    -------
+    cobra.Model
+        A context specific cobra.Model.
+
+    Notes
+    -----
+    This method first solves the iMAT solution, then for reactions found
+    to be lowly expressed (weight<0), and inactive (flux<threshold),
+    the reaction bounds are set to (-threshold, threshold),
+    (0, threshold), or (-threshold, 0) depending on reversibility.
+    For reactions found to be highly expressed and active in the
+    forward direction (weight>0, flux>epsilon), the reaction bounds are
+    set to (epsilon, ub), or (lb, ub) if lb>epsilon. For reactions found
+    to be highly expressed and active in the reverse direction
+    (weight>0, flux<-epsilon), the reaction bounds are set to
+    (lb, -epsilon), or (lb, ub) if ub<-epsilon.  This model will not
+    include integer constraints, and so can be used for sampling.
     """
     updated_model = model.copy()
     if not imat_solution:
@@ -261,30 +272,36 @@ def subset_model(
     imat_solution: Optional[cobra.Solution] = None,
     **kwargs,
 ):
-    """
-    Generate a context specific model by knocking out reactions found to
+    """Generate a context specific model by knocking out reactions found to
     be inactive by iMAT.
 
-    :param model: A cobra.Model object to use for iMAT
-    :type model: cobra.Model
-    :param rxn_weights: A dictionary or pandas series of reaction weights.
-    :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-1).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :param imat_solution: A preexisting IMAT solution, if not provided will be computed when function is called
-    :type imat_solution: cobra.Solution
-    :return: A context specific cobra.Model.
-    :rtype: cobra.Model
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-1). Represents
+        the maximum flux for a reaction to be considered off.
+    imat_solution : cobra.Solution
+        A preexisting IMAT solution, if not provided will be computed
+        when function is called
 
-    .. note::
-        This method first solves the iMAT solution, then for reactions found
-        to be lowly expressed (weight<0), and  inactive (flux<threshold), the
-        reaction bounds are set to (-threshold, threshold). This model will
-        not include integer constraints, and so can be used for sampling.
+    Returns
+    -------
+    cobra.Model
+        A context specific cobra.Model.
+
+    Notes
+    -----
+    This method first solves the iMAT solution, then for reactions found
+    to be lowly expressed (weight<0), and  inactive (flux<threshold), the
+    reaction bounds are set to (-threshold, threshold). This model will
+    not include integer constraints, and so can be used for sampling.
     """
     updated_model = model.copy()
     if not imat_solution:
@@ -311,43 +328,49 @@ def fva_model(
     warn_tolerance: bool = True,
     **kwargs,
 ):
-    """
-    Generate a context specific model by setting bounds on reactions based on
+    """Generate a context specific model by setting bounds on reactions based on
     FVA for an iMAT model.
 
-    :param model: A cobra.Model object to use for iMAT
-    :type model: cobra.Model
-    :param rxn_weights: A dictionary or pandas series of reaction weights.
-    :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-1).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :param objective_tolerance: The tolerance for the objective value.
-        The objective will be restricted to be within
-        objective_tolerance*objective_value of the optimal objective value.
-        (default: 5e-2)
-    :type objective_tolerance: float
-    :param loopless: Whether to use the loopless FVA method (default: True).
-        If False, the standard FVA method will be used.
-    :type loopless: bool
-    :param warn_tolerance: Issue a warning if there is a problem with finding
-        the bounds of a particular reaction due to the lower bound being greater
-        than the upper bound. This is normally caused by the solver tolerance,
-        and the values will be swapped to get valid bounds for the reaction.
-    :return: A context specific cobra.Model.
-    :rtype: cobra.Model
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-1). Represents
+        the maximum flux for a reaction to be considered off.
+    objective_tolerance : float
+        The tolerance for the objective value. The objective will be
+        restricted to be within objective_tolerance*objective_value of
+        the optimal objective value. (default: 5e-2)
+    loopless : bool
+        Whether to use the loopless FVA method (default: True). If
+        False, the standard FVA method will be used.
+    warn_tolerance
+        Issue a warning if there is a problem with finding the bounds of
+        a particular reaction due to the lower bound being greater than
+        the upper bound. This is normally caused by the solver
+        tolerance, and the values will be swapped to get valid bounds
+        for the reaction.
 
-    .. note::
-        This method first creates a model with the iMAT constraints, and
-        objective and then performs FVA to find the minimum and maximum
-        flux for each reaction which allow for the objective to be within
-        tolerance of optimal. These values are then set as the reaction
-        bounds. This model is not guaranteed to have fluxes consistent
-        with the optimal iMAT objective. This model will not include integer
-        constraints, and so can be used for sampling.
+    Returns
+    -------
+    cobra.Model
+        A context specific cobra.Model.
+
+    Notes
+    -----
+    This method first creates a model with the iMAT constraints, and
+    objective and then performs FVA to find the minimum and maximum
+    flux for each reaction which allow for the objective to be within
+    tolerance of optimal. These values are then set as the reaction
+    bounds. This model is not guaranteed to have fluxes consistent
+    with the optimal iMAT objective. This model will not include integer
+    constraints, and so can be used for sampling.
     """
     updated_model = model.copy()
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
@@ -387,32 +410,37 @@ def fva_model(
 
 
 def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
-    """
-    Generate a context specific model by setting bounds on reactions based on
+    """Generate a context specific model by setting bounds on reactions based on
     a set of mixed integer linear programming problems.
 
-    :param model: A cobra.Model object to use for iMAT
-    :type model: cobra.Model
-    :param rxn_weights: A dictionary or pandas series of reaction weights.
-    :type rxn_weights: dict | pandas.Series
-    :param epsilon: The epsilon value to use for iMAT (default: 1).
-        Represents the minimum flux for a reaction to be considered on.
-    :type epsilon: float
-    :param threshold: The threshold value to use for iMAT (default: 1e-1).
-        Represents the maximum flux for a reaction to be considered off.
-    :type threshold: float
-    :return: A context specific cobra.Model.
-    :rtype: cobra.Model
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-1). Represents
+        the maximum flux for a reaction to be considered off.
 
-    .. note::
-        This method first creates a model with the iMAT constraints, and
-        objective and then solves a set of mixed integer linear programming
-        problems, where each reaction is set to be inactive, active in the
-        forward direction, and active in the reverse direction. The
-        reaction bounds are then set based on the results of the MILP
-        problems. This model is not guaranteed to have fluxes consistent
-        with the optimal iMAT objective. This model will not include integer
-        constraints, and so can be used for sampling.
+    Returns
+    -------
+    cobra.Model
+        A context specific cobra.Model.
+
+    Notes
+    -----
+    This method first creates a model with the iMAT constraints, and
+    objective and then solves a set of mixed integer linear programming
+    problems, where each reaction is set to be inactive, active in the
+    forward direction, and active in the reverse direction. The
+    reaction bounds are then set based on the results of the MILP
+    problems. This model is not guaranteed to have fluxes consistent
+    with the optimal iMAT objective. This model will not include integer
+    constraints, and so can be used for sampling.
     """
     updated_model = model.copy()
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
@@ -499,13 +527,17 @@ def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
 # region Helper Functions
 # noinspection PyProtectedMember
 def _parse_method(method: str) -> str:
-    """
-    Parse the method string to a valid method name.
+    """Parse the method string to a valid method name.
 
-    :param method: The method to parse.
-    :type method: str
-    :return: The parsed method name.
-    :rtype: str
+    Parameters
+    ----------
+    method : str
+        The method to parse.
+
+    Returns
+    -------
+    str
+        The parsed method name.
     """
     try:
         return _arguments._parse_str_args_dict(
@@ -564,9 +596,7 @@ def _parse_method(method: str) -> str:
 
 
 def _inactive_bounds(lb: float, ub: float, threshold: float) -> tuple[float, float]:
-    """
-    Find the new bounds for the reaction if it is inactive.
-    """
+    """Find the new bounds for the reaction if it is inactive."""
     if lb > threshold:
         raise ValueError(
             "Lower bound is greater than threshold, reaction can not be \
@@ -587,9 +617,7 @@ def _inactive_bounds(lb: float, ub: float, threshold: float) -> tuple[float, flo
 def _active_bounds(
     lb: float, ub: float, epsilon: float, forward: bool
 ) -> tuple[float, float]:
-    """
-    Find the new bounds for the reaction if it is active.
-    """
+    """Find the new bounds for the reaction if it is active."""
     if lb > ub:
         raise ValueError("Lower bound is greater than upperbound")
     if forward:
@@ -613,8 +641,7 @@ def _active_bounds(
 
 
 def _milp_eval(milp_res: pd.Series) -> float:
-    """
-    Function for evaluating the results of the MILP method, to determine if a \
+    """Function for evaluating the results of the MILP method, to determine if a \
         reaction should be considered active or inactive. Returns 1 if
         forced forward, -1 if forced reverse, 0 if inactive, and NaN if
         under determined.

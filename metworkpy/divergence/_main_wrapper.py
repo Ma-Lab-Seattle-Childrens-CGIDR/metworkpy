@@ -1,6 +1,4 @@
-"""
-A wrapper function around methods which can calculate divergences for continuous and discrete distributions
-"""
+"""A wrapper function around methods which can calculate divergences for continuous and discrete distributions"""
 
 # Imports
 # Standard Library Imports
@@ -30,37 +28,51 @@ def _wrap_divergence_functions(
     jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
 ) -> float:
-    """
-    Calculate the divergence between two distributions represented by samples p and q
-    :param p: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If `p` is
-        one dimensional, it will be reshaped to (n_samples,1). If it is not a np.ndarray, this function will attempt to
-        coerce it into one.
-    :type p: ArrayLike
-    :param q: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If `q` is
-        one dimensional, it will be reshaped to (n_samples,1). If it is not a np.ndarray, this function will attempt to
-        coerce it into one.
-    :type q: ArrayLike
-    :param discrete_method: Method to use to calculate the divergence between two discrete distributions,
-        should take two positional arguments for p and q.
-    :param continuous_method: Method to use to calculate the divergence between two continuous distributions,
-        should take two positional arguments for p and q, as well as keyword arguments for n_neighbors, and
-        metric (which will be a float representing a Minkowski p-norm).
-    :param n_neighbors: Number of neighbors to use for computing mutual information. Will attempt to coerce into an
-        integer. Must be at least 1. Default 5.
-    :type n_neighbors: int
-    :param discrete: Whether the samples are from discrete distributions
-    :type discrete: bool
-    :param jitter: Amount of noise to add to avoid ties. If None no noise is added. If a float, that is the standard
-        deviation of the random noise added to the continuous samples. If a tuple, the first element is the standard
-        deviation of the noise added to the x array, the second element is the standard deviation added to the y array.
-    :type jitter: Union[None, float, tuple[float,float]]
-    :param jitter_seed:Seed for the random number generator used for adding noise
-    :type jitter_seed:Union[None, int]
-    :param distance_metric: Metric to use for computing distance between points in p and q, can be "Euclidean",
-        "Manhattan", or "Chebyshev". Can also be a float representing the Minkowski p-norm.
-    :type distance_metric: Union[str, float]
-    :return: The divergence between p and q
-    :rtype: float
+    """Calculate the divergence between two distributions represented by samples p and q
+
+    Parameters
+    ----------
+    p : ArrayLike
+        Array representing sample from a distribution, should have shape
+        (n_samples, n_dimensions). If `p` is one dimensional, it will be
+        reshaped to (n_samples,1). If it is not a np.ndarray, this
+        function will attempt to coerce it into one.
+    q : ArrayLike
+        Array representing sample from a distribution, should have shape
+        (n_samples, n_dimensions). If `q` is one dimensional, it will be
+        reshaped to (n_samples,1). If it is not a np.ndarray, this
+        function will attempt to coerce it into one.
+    discrete_method
+        Method to use to calculate the divergence between two discrete
+        distributions, should take two positional arguments for p and q.
+    continuous_method
+        Method to use to calculate the divergence between two continuous
+        distributions, should take two positional arguments for p and q,
+        as well as keyword arguments for n_neighbors, and metric (which
+        will be a float representing a Minkowski p-norm).
+    n_neighbors : int
+        Number of neighbors to use for computing mutual information.
+        Will attempt to coerce into an integer. Must be at least 1.
+        Default 5.
+    discrete : bool
+        Whether the samples are from discrete distributions
+    jitter : Union[None, float, tuple[float,float]]
+        Amount of noise to add to avoid ties. If None no noise is added.
+        If a float, that is the standard deviation of the random noise
+        added to the continuous samples. If a tuple, the first element
+        is the standard deviation of the noise added to the x array, the
+        second element is the standard deviation added to the y array.
+    jitter_seed : Union[None, int]
+        Seed for the random number generator used for adding noise
+    distance_metric : Union[str, float]
+        Metric to use for computing distance between points in p and q,
+        can be "Euclidean", "Manhattan", or "Chebyshev". Can also be a
+        float representing the Minkowski p-norm.
+
+    Returns
+    -------
+    float
+        The divergence between p and q
     """
     try:
         n_neighbors = int(n_neighbors)

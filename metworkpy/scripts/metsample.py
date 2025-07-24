@@ -1,6 +1,4 @@
-"""
-Script for sampling cobra models
-"""
+"""Script for sampling cobra models"""
 
 # Imports
 # Standard Library Imports
@@ -22,13 +20,17 @@ from metworkpy.utils._arguments import _parse_str_args_dict
 
 # region Parse Arguments
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
-    """
-    Parse command line arguments
+    """Parse command line arguments
 
-    :param args_list: List of command line strings (defaults to reading from stdin)
-    :type args_list: list[str] | None
-    :return: Parsed Arguments
-    :rtype: argparse.Namespace
+    Parameters
+    ----------
+    args_list : list[str] | None
+        List of command line strings (defaults to reading from stdin)
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed Arguments
     """
     parser = argparse.ArgumentParser(
         prog="metsample", description="Flux sample a Cobra metabolic model"
@@ -144,13 +146,18 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 # region Main Function
 def main_run(arg_list: list[str] | None = None) -> None:
-    """
-    Function to run the command line interface
+    """Function to run the command line interface
 
-    :param arg_list: List of command line arguments, defaults to those passed to stdin
-    :type arg_list: list[str]|None
-    :return: No return
-    :rtype: None
+    Parameters
+    ----------
+    arg_list : list[str]|None
+        List of command line arguments, defaults to those passed to
+        stdin
+
+    Returns
+    -------
+    None
+        No return
     """
     # Parse args
     args = parse_args(arg_list)
@@ -248,24 +255,26 @@ def _batch_sample(
     samples: int = 10_000,
     validate: bool = False,
 ) -> None:
-    """
-    Perform batch sampling
+    """Perform batch sampling
 
-    :param sampler: Sampler object (either OptGpSampler, or ACHRSampler)
-    :type sampler: cobra.sampling.HRSampler
-    :param out_file: Path to output file
-    :type out_file: str | pathlib.Path
-    :param out_format: Format for output file, must be csv or parquet
-    :type out_format: str
-    :param batches: Number of batches to break the sampling up into
-    :type batches: int
-    :param samples: Total number of samples to generate, if not a multiple of batches, will be increased to the
-        closest multiple of batches
-    :type samples:
-    :param validate:
-    :type validate:
-    :return:
-    :rtype:
+    Parameters
+    ----------
+    sampler : cobra.sampling.HRSampler
+        Sampler object (either OptGpSampler, or ACHRSampler)
+    out_file : str | pathlib.Path
+        Path to output file
+    out_format : str
+        Format for output file, must be csv or parquet
+    batches : int
+        Number of batches to break the sampling up into
+    samples
+        Total number of samples to generate, if not a multiple of
+        batches, will be increased to the closest multiple of batches
+    validate
+
+    Returns
+    -------
+    unknown
     """
     # Clear file, so that if you are writing to the same file as previous run it clears it rather than append
     if os.path.exists(out_file):
@@ -294,13 +303,17 @@ def _batch_sample(
 
 
 def _parse_method(method_str: str) -> str:
-    """
-    Parse a method specification string to canonical method str
+    """Parse a method specification string to canonical method str
 
-    :param method_str: String specifying desired method
-    :type method_str: str
-    :return: Method string, either optgp or achr
-    :rtype: str
+    Parameters
+    ----------
+    method_str : str
+        String specifying desired method
+
+    Returns
+    -------
+    str
+        Method string, either optgp or achr
     """
     return _parse_str_args_dict(
         method_str,
@@ -317,13 +330,17 @@ def _parse_method(method_str: str) -> str:
 
 
 def _parse_format(format_str: str) -> str:
-    """
-    Parse format specification to a file format
+    """Parse format specification to a file format
 
-    :param format_str: String specifying desired format
-    :type format_str: str
-    :return: Format string, either csv, parquet, feather, excel, or json
-    :rtype: str
+    Parameters
+    ----------
+    format_str : str
+        String specifying desired format
+
+    Returns
+    -------
+    str
+        Format string, either csv, parquet, feather, excel, or json
     """
     return _parse_str_args_dict(
         format_str,

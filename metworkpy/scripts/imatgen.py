@@ -1,6 +1,4 @@
-"""
-Script for generating IMAT models from the command line
-"""
+"""Script for generating IMAT models from the command line"""
 
 # Imports
 # Standard Library Imports
@@ -276,13 +274,17 @@ def run_multi(args: argparse.Namespace):
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
-    """
-    Parse Command Line Arguments
+    """Parse Command Line Arguments
 
-    :param arg_list: List of command line strings (defaults to reading from stdin)
-    :type arg_list: list[str]|None
-    :return: Parsed arguments
-    :rtype: argparse.Namespace
+    Parameters
+    ----------
+    arg_list : list[str]|None
+        List of command line strings (defaults to reading from stdin)
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments
     """
     # Top level parser
     toplevel_parser = argparse.ArgumentParser(
@@ -438,13 +440,17 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 # region Main function
 def main_run(arg_list: list[str] | None = None) -> None:
-    """
-    Function to run the command line interface
+    """Function to run the command line interface
 
-    :param arg_list: A list of arguments (defaults to reading the stdin)
-    :type arg_list: list[str]|None
-    :return: None
-    :rtype: None
+    Parameters
+    ----------
+    arg_list : list[str]|None
+        A list of arguments (defaults to reading the stdin)
+
+    Returns
+    -------
+    None
+        None
     """
     args = parse_args(arg_list)
     args.func(args)

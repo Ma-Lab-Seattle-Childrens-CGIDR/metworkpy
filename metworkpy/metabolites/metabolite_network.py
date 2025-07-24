@@ -1,6 +1,4 @@
-"""
-Module with functions for finding metabolite networks in cobra Models
-"""
+"""Module with functions for finding metabolite networks in cobra Models"""
 
 # Imports
 # Standard Library Imports
@@ -27,13 +25,16 @@ def find_metabolite_network_reactions(
     progress_bar: bool = False,
     **kwargs,
 ) -> pd.DataFrame[bool | float]:
-    """
-    Find which reactions are used to generate each metabolite in the model
+    """Find which reactions are used to generate each metabolite in the model
 
-    :param model: Cobra Model used to find which reactions are associated with which
-        metabolite
-    :type model: cobra.Model
-    :param method: Which method to use to associate reactions with metabolites. Either
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model used to find which reactions are associated with
+        which metabolite
+    method : Literal["pfba", "essential"]
+        Which method to use to associate reactions with metabolites.
+        Either
 
         1. 'pfba'(default):
             Use parsimonious flux analysis with the metabolite as the
@@ -43,23 +44,26 @@ def find_metabolite_network_reactions(
         2. 'essential':
             Use essentiality to find reaction-metabolite associations.
             Find which reactions are essential for each metabolite.
-    :type method: Literal["pfba", "essential"]
-    :param pfba_proportion: Proportion to use for pfba analysis. This represents the
-        fraction of optimum constraint applied before minimizing the sum of fluxes
-        during pFBA.
-    :type pfba_proportion: float
-    :param essential_proportion: Proportion to use for essentiality, gene knockouts
-        which result in an objective function value less than
-        `essential_proportion * maximum_objective` are considered
-        essential.
-    :type essential_proportion: float
-    :param progress_bar: Whether a progress bar should be displayed
-    :type progress_bar: bool
-    :param kwargs: Keyword arguments passed to `cobra.flux_analysis.variability.find_essential_genes`,
-        or to `cobra.flux_analysis.pfba` depending on the chosen method.
-    :type kwargs: dict
-    :return: A dataframe with reactions as the index and metabolites as the columns,
-        containing either
+    pfba_proportion : float
+        Proportion to use for pfba analysis. This represents the
+        fraction of optimum constraint applied before minimizing the sum
+        of fluxes during pFBA.
+    essential_proportion : float
+        Proportion to use for essentiality, gene knockouts which result
+        in an objective function value less than `essential_proportion *
+        maximum_objective` are considered essential.
+    progress_bar : bool
+        Whether a progress bar should be displayed
+    **kwargs : dict
+        Keyword arguments passed to
+        `cobra.flux_analysis.variability.find_essential_genes`, or to
+        `cobra.flux_analysis.pfba` depending on the chosen method.
+
+    Returns
+    -------
+    pd.DataFrame[bool|float]
+        A dataframe with reactions as the index and metabolites as the
+        columns, containing either
 
         1. Flux values if pfba is used.
            For a given reaction and metabolite,
@@ -68,7 +72,7 @@ def find_metabolite_network_reactions(
         2. Boolean values if essentiality is used. For a given reaction and metabolite,
            this represents whether the reaction is essential for producing the
            metabolite.
-    :rtype: pd.DataFrame[bool|float]
+
 
     .. seealso:
        | :func: `find_metabolite_network_reactions` for equivalent method with reactions
@@ -129,13 +133,15 @@ def find_metabolite_network_genes(
     progress_bar: bool = False,
     **kwargs,
 ) -> pd.DataFrame[bool | float]:
-    """
-    Find which genes are used to generate each metabolite in the model
+    """Find which genes are used to generate each metabolite in the model
 
-    :param model: Cobra Model used to find which genes are associated with which
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model used to find which genes are associated with which
         metabolite
-    :type model: cobra.Model
-    :param method: Which method to use to associate genes with metabolites. Either
+    method : Literal["pfba", "essential"]
+        Which method to use to associate genes with metabolites. Either
 
         1. 'pfba'(default):
             Use parsimonious flux analysis with the metabolite as the
@@ -147,23 +153,26 @@ def find_metabolite_network_genes(
         2. 'essential':
             Use essentiality to find gene-metabolite associations.
             Find which genes are essential for each metabolite.
-    :type method: Literal["pfba", "essential"]
-    :param pfba_proportion: Proportion to use for pfba analysis. This represents the
-        fraction of optimum constraint applied before minimizing the sum of fluxes
-        during pFBA.
-    :type pfba_proportion: float
-    :param essential_proportion: Proportion to use for essentiality, gene knockouts
-        which result in an objective function value less than
-        `essential_proportion * maximum_objective` are considered
-        essential.
-    :type essential_proportion: float
-    :param progress_bar: Whether to display a progress bar
-    :type progress_bar: bool
-    :param kwargs: Keyword arguments passed to `cobra.flux_analysis.variability.find_essential_genes`,
-        or to `cobra.flux_analysis.pfba` depending on the chosen method.
-    :type kwargs: dict
-    :return: A dataframe with genes as the index and metabolites as the columns,
-        containing either
+    pfba_proportion : float
+        Proportion to use for pfba analysis. This represents the
+        fraction of optimum constraint applied before minimizing the sum
+        of fluxes during pFBA.
+    essential_proportion : float
+        Proportion to use for essentiality, gene knockouts which result
+        in an objective function value less than `essential_proportion *
+        maximum_objective` are considered essential.
+    progress_bar : bool
+        Whether to display a progress bar
+    **kwargs : dict
+        Keyword arguments passed to
+        `cobra.flux_analysis.variability.find_essential_genes`, or to
+        `cobra.flux_analysis.pfba` depending on the chosen method.
+
+    Returns
+    -------
+    pd.DataFrame[bool|float]
+        A dataframe with genes as the index and metabolites as the
+        columns, containing either
 
         1. Flux values if pfba is used. For a given gene and metabolite,
            this represents the maximum of reaction fluxes associated with a gene,
@@ -171,14 +180,15 @@ def find_metabolite_network_genes(
         2. Boolean values if essentiality is used. For a given reaction and metabolite,
            this represents whether the reaction is essential for producing the
            metabolite.
-    :rtype: pd.DataFrame[bool|float]
 
-    .. note::
-       For converting from the reaction fluxes to gene fluxes, the gene is assigned
-       a value corresponding to the maximum magnitude flux the gene is associated
-       with (but the value assigned keeps the sign). For example, if a gene was
-       associated with reactions which had parsimonious flux values of -10, and 1 the
-       gene would be assigned a value of -10.
+    Notes
+    -----
+    For converting from the reaction fluxes to gene fluxes, the gene is assigned
+    a value corresponding to the maximum magnitude flux the gene is associated
+    with (but the value assigned keeps the sign). For example, if a gene was
+    associated with reactions which had parsimonious flux values of -10, and 1 the
+    gene would be assigned a value of -10.
+
 
     .. seealso:
        | :func: `find_metabolite_network_reactions` for equivalent method with reactions
@@ -246,13 +256,14 @@ def find_metabolite_network_genes(
 
 
 class MetaboliteObjective:
-    """
-    Context Manager for adding a metabolite sink reaction as the objective reaction
+    """Context Manager for adding a metabolite sink reaction as the objective reaction
 
-    :param model: Cobra model to add metabolite sink objective reaction to
-    :type model: cobra.Model
-    :param metabolite: Metabolite to create sink reaction objective function for
-    :type metabolite: str
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra model to add metabolite sink objective reaction to
+    metabolite : str
+        Metabolite to create sink reaction objective function for
     """
 
     def __init__(self, model: cobra.Model, metabolite: str):

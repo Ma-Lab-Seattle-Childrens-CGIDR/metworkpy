@@ -1,5 +1,4 @@
-"""
-Module containing utility functions for working with gene expression
+"""Module containing utility functions for working with gene expression
 data, and converting it into qualitative weights
 """
 
@@ -26,48 +25,53 @@ def expr_to_imat_gene_weights(
     subset: Optional[Iterable] = None,
     sample_axis: Union[int, str] = 0,
 ) -> pd.Series:
-    """
-    Convert gene expression data to qualitative gene weights
+    """Convert gene expression data to qualitative gene weights
 
-    :param expression: Normalized gene expression data. If it is a DataFrame
+    Parameters
+    ----------
+    expression : pd.Series | pd.DataFrame
+        Normalized gene expression data. If it is a DataFrame
         representing multiple samples, those samples will be aggregated
         using the aggregator function (default median).
-    :type expression: pd.Series | pd.DataFrame
-    :param quantile: Quantile or quantiles to use for binning expression data.
-        Should be between 0 and 1. If single value the bottom quantile
-        will be converted to -1, the top quantile converted to 1, and
-        all expression values between to 0. If a tuple is provided,
-        the first is treated as the low quantile cutoff, and the second
-        is treated as the high quantile cutoff.
-    :type quantile: float | tuple[float, float]
-    :param aggregator: Function used to aggregated gene expression data
-        across samples, only used if expression is a DataFrame (default
-        median).
-    :type aggregator: Callable[[np.ArrayLike], float]
-    :param subset: Subset of genes to perform calculations on. `expression` is
-        filtered to only include these genes before quantiles are calculated. If
-        any genes are present in the subset, but not in expression, they will be
-        assigned a value of 0 following the trinarization.
-    :type subset: Optional[Iterable]
-    :param sample_axis: Which axis represents samples in the expression
-        data (only used if expression is DataFrame). "index" or 0 if rows
-        represent different samples, "column" or 1 if columns represent
-        different samples (default is rows).
-    :type sample_axis: int | str
-    :return: Series of qualitative weights, -1 for low expression, 1 for
-        high expression, and 0 otherwise.
-    :rtype: pd.Series
+    quantile : float | tuple[float, float]
+        Quantile or quantiles to use for binning expression data. Should
+        be between 0 and 1. If single value the bottom quantile will be
+        converted to -1, the top quantile converted to 1, and all
+        expression values between to 0. If a tuple is provided, the
+        first is treated as the low quantile cutoff, and the second is
+        treated as the high quantile cutoff.
+    aggregator : Callable[[np.ArrayLike], float]
+        Function used to aggregated gene expression data across samples,
+        only used if expression is a DataFrame (default median).
+    subset : Optional[Iterable]
+        Subset of genes to perform calculations on. `expression` is
+        filtered to only include these genes before quantiles are
+        calculated. If any genes are present in the subset, but not in
+        expression, they will be assigned a value of 0 following the
+        trinarization.
+    sample_axis : int | str
+        Which axis represents samples in the expression data (only used
+        if expression is DataFrame). "index" or 0 if rows represent
+        different samples, "column" or 1 if columns represent different
+        samples (default is rows).
 
-    .. note::
-        The expression data should only represent biological replicates
-        as it will be aggregated. If multiple different conditions are
-        represented in your expression data, they should be seperated
-        before this function is used.
+    Returns
+    -------
+    pd.Series
+        Series of qualitative weights, -1 for low expression, 1 for high
+        expression, and 0 otherwise.
 
-        For the quantile, if a tuple like `(0.15, 0.90)` is provided,
-        the bottom 15% of genes in terms of expression will have weights
-        of -1, while the top 10% will have weights of 1, and everything
-        in between will have weights of 0.
+    Notes
+    -----
+    The expression data should only represent biological replicates
+    as it will be aggregated. If multiple different conditions are
+    represented in your expression data, they should be seperated
+    before this function is used.
+
+    For the quantile, if a tuple like `(0.15, 0.90)` is provided,
+    the bottom 15% of genes in terms of expression will have weights
+    of -1, while the top 10% will have weights of 1, and everything
+    in between will have weights of 0.
     """
     # Convert float to tuple if necessary
     if isinstance(quantile, float):
@@ -99,43 +103,51 @@ def expr_to_metchange_gene_weights(
     aggregator: Callable[[ArrayLike[float]], float] = np.median,
     sample_axis: str | int = 0,
 ) -> pd.Series:
-    """
-    Convert gene expression values into metchange gene weights
+    """Convert gene expression values into metchange gene weights
 
-    :param expression: Gene expression values. Either a series with genes as the index,
-        or a Dataframe with genes as one axis, and samples as the other. In the case
-        of a dataframe, the expression values are aggregated before the weights
-        are calculated.
-    :type expression: pd.Series | pd.DataFrame
-    :param quantile_cutoff: Cutoff used for defining the weights. The expression value
-        corresponding to this quantile is used as the threshold. Everything above
-        the threshold is weighted 0, and everything below is weighted in proportion
-        to distance from the threshold. The weight will be between 0 and 1, with
-        values near the threshold being near 0, and values near 0 being weighted 1.
-    :type quantile_cutoff: float
-    :param subset: Subset of genes to use in weighting. Default of None will use
-        all genes in `expression`. If not none, expression will be filtered down
-        to this subset of genes before the quantile threshold is calculated,
-        and the returned series will only include this subset of genes.
-    :type subset: Iterable[str] | None
-    :param aggregator: Aggregation function to use for aggregating expression
-        data across multiple samples. Should accept a single Arraylike argument,
-        and return a float.  Default is median.
-    :type aggregator: Callable[[Arraylike[float]], float]
-    :param sample_axis: Which axis in `expression` dataframe represents samples.
-        Can be 'index', 'columns', 0 or 1. A value of 0 or 'index' means rows
-        represent different samples, while a value of 1 or 'columns' means that
-        columns represent different samples.
-    :type sample_axis: str | int
-    :return: Series of gene weights (floats between 0 and 1, representing the
+    Parameters
+    ----------
+    expression : pd.Series | pd.DataFrame
+        Gene expression values. Either a series with genes as the index,
+        or a Dataframe with genes as one axis, and samples as the other.
+        In the case of a dataframe, the expression values are aggregated
+        before the weights are calculated.
+    quantile_cutoff : float
+        Cutoff used for defining the weights. The expression value
+        corresponding to this quantile is used as the threshold.
+        Everything above the threshold is weighted 0, and everything
+        below is weighted in proportion to distance from the threshold.
+        The weight will be between 0 and 1, with values near the
+        threshold being near 0, and values near 0 being weighted 1.
+    subset : Iterable[str] | None
+        Subset of genes to use in weighting. Default of None will use
+        all genes in `expression`. If not none, expression will be
+        filtered down to this subset of genes before the quantile
+        threshold is calculated, and the returned series will only
+        include this subset of genes.
+    aggregator : Callable[[Arraylike[float]], float]
+        Aggregation function to use for aggregating expression data
+        across multiple samples. Should accept a single Arraylike
+        argument, and return a float.  Default is median.
+    sample_axis : str | int
+        Which axis in `expression` dataframe represents samples. Can be
+        'index', 'columns', 0 or 1. A value of 0 or 'index' means rows
+        represent different samples, while a value of 1 or 'columns'
+        means that columns represent different samples.
+
+    Returns
+    -------
+    pd.Series
+        Series of gene weights (floats between 0 and 1, representing the
         probability that a gene product is absent), indexed by gene ids.
-    :rtype: pd.Series
 
-    .. note::
-       This does not convert the expression values into reaction weights, to do so
-       `metworkpy.parse.gpr.gene_to_rxn_weights` can be used. The function dict will need to
-       be altered from the default, with `{'AND':max, 'OR':min}` due to the metchange
-       weights being probability of absense rather than presence.
+    Notes
+    -----
+    This does not convert the expression values into reaction weights, to do so
+    `metworkpy.parse.gpr.gene_to_rxn_weights` can be used. The function dict will need to
+    be altered from the default, with `{'AND':max, 'OR':min}` due to the metchange
+    weights being probability of absense rather than presence.
+
 
     .. seealso:
        :func: `metworkpy.parse.gpr.gene_to_rxn_weights`
@@ -168,15 +180,20 @@ def _expr_to_metchange_gene_weight_series(
 
 # region Conversion functions
 def count_to_rpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFrame:
-    """
-    Normalize raw count data using RPKM
+    """Normalize raw count data using RPKM
 
-    :param count: Dataframe containing gene count data, with genes as the columns and samples as the rows
-    :type count: pd.DataFrame
-    :param feature_length: Series containing the feature length for all the genes
-    :type feature_length: pd.Series
-    :return: RPKM normalized counts
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    count : pd.DataFrame
+        Dataframe containing gene count data, with genes as the columns
+        and samples as the rows
+    feature_length : pd.Series
+        Series containing the feature length for all the genes
+
+    Returns
+    -------
+    pd.DataFrame
+        RPKM normalized counts
     """
     # Ensure that the count data frame and feature length series have the same genes
     count_genes = set(count.columns)
@@ -196,44 +213,60 @@ def count_to_rpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFram
 
 
 def count_to_fpkm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFrame:
-    """
-    Converts count data to FPKM normalized expression
+    """Converts count data to FPKM normalized expression
 
-    :param count: Dataframe containing gene count data, with genes as the columns and samples as the rows. Specifically,
-        the count data represents the number of fragments, where a fragment corresponds to a single cDNA molecule, which
-        can be represented by a pair of reads from each end.
-    :type count: pd.DataFrame
-    :param feature_length: Series containing the feature length for all the genes
-    :type feature_length: pd.Series
-    :return: FPKM normalized counts
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    count : pd.DataFrame
+        Dataframe containing gene count data, with genes as the columns
+        and samples as the rows. Specifically, the count data represents
+        the number of fragments, where a fragment corresponds to a
+        single cDNA molecule, which can be represented by a pair of
+        reads from each end.
+    feature_length : pd.Series
+        Series containing the feature length for all the genes
+
+    Returns
+    -------
+    pd.DataFrame
+        FPKM normalized counts
     """
     return count_to_rpkm(count, feature_length)
 
 
 def count_to_tpm(count: pd.DataFrame, feature_length: pd.Series) -> pd.DataFrame:
-    """
-    Converts count data to TPM normalized expression
+    """Converts count data to TPM normalized expression
 
-    :param count: Dataframe containing gene count data, with genes as the columns and samples as the rows
-    :type count: pd.DataFrame
-    :param feature_length: Series containing the feature length for all the genes
-    :type feature_length: pd.Series
-    :return: TPM normalized counts
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    count : pd.DataFrame
+        Dataframe containing gene count data, with genes as the columns
+        and samples as the rows
+    feature_length : pd.Series
+        Series containing the feature length for all the genes
+
+    Returns
+    -------
+    pd.DataFrame
+        TPM normalized counts
     """
     rpkm = count_to_rpkm(count, feature_length)
     return rpkm_to_tpm(rpkm)
 
 
 def count_to_cpm(count: pd.DataFrame) -> pd.DataFrame:
-    """
-    Converts count data to counts per million
+    """Converts count data to counts per million
 
-    :param count: Dataframe containing gene count data, with genes as the columns and samples as the rows
-    :type count: pd.DataFrame
-    :return: CPM normalized counts
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    count : pd.DataFrame
+        Dataframe containing gene count data, with genes as the columns
+        and samples as the rows
+
+    Returns
+    -------
+    pd.DataFrame
+        CPM normalized counts
     """
     total_reads = count.sum(axis=1)
     per_mil_scale = total_reads / 1e6
@@ -241,25 +274,35 @@ def count_to_cpm(count: pd.DataFrame) -> pd.DataFrame:
 
 
 def rpkm_to_tpm(rpkm: pd.DataFrame):
-    """
-    Convert RPKM normalized counts to TPM normalized counts
+    """Convert RPKM normalized counts to TPM normalized counts
 
-    :param rpkm: RPKM normalized count data, with genes as columns and samples as rows
-    :type rpkm: pd.DataFrame
-    :return: TPM normalized counts
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    rpkm : pd.DataFrame
+        RPKM normalized count data, with genes as columns and samples as
+        rows
+
+    Returns
+    -------
+    pd.DataFrame
+        TPM normalized counts
     """
     return rpkm.divide(rpkm.sum(axis=1), axis=0) * 1.0e6
 
 
 def fpkm_to_tpm(fpkm: pd.DataFrame):
-    """
-    Convert FPKM normalized counts to TPM normalized counts
+    """Convert FPKM normalized counts to TPM normalized counts
 
-    :param fpkm: RPKM normalized count data, with genes as columns and samples as rows
-    :type fpkm: pd.DataFrame
-    :return: TPM normalized counts
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    fpkm : pd.DataFrame
+        RPKM normalized count data, with genes as columns and samples as
+        rows
+
+    Returns
+    -------
+    pd.DataFrame
+        TPM normalized counts
     """
     return rpkm_to_tpm(fpkm)
 

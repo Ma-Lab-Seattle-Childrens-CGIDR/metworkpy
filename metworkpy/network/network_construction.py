@@ -37,35 +37,45 @@ def create_mutual_information_network(
     processes: Optional[int] = 1,
     progress_bar: bool = False,
 ) -> nx.Graph:
-    """
-    Create a mutual information network from the provided metabolic model
+    """Create a mutual information network from the provided metabolic model
 
-    :param model: Metabolic model to construct the mutual information network from. Only required if the flux_samples
-        parameter is None
-    :type model: Optional[cobra.Model]
-    :param flux_samples: Flux samples used to calculate mutual information between reactions. If None,
-        the passed model will be sampled to generate these flux samples.
-    :type flux_samples: Optional[pd.DataFrame|np.ndarray]
-    :param reaction_names: Names for the reactions
-    :type reaction_names: Optional[Iterable[str]]
-    :param n_samples: Number of samples to take if flux_samples is None (ignored if flux_samples is not None)
-    :type n_samples: int
-    :param n_neighbors: Number of neighbors to use during the mutual information estimation
-    :type n_neighbors: int
-    :param truncate: Whether the mutual information values should be truncated at 0. Mutual information should
-        always be greater than or equal to 0, but the estimates can be negative. If true, all the mutual
+    Parameters
+    ----------
+    model : Optional[cobra.Model]
+        Metabolic model to construct the mutual information network
+        from. Only required if the flux_samples parameter is None
+    flux_samples : Optional[pd.DataFrame|np.ndarray]
+        Flux samples used to calculate mutual information between
+        reactions. If None, the passed model will be sampled to generate
+        these flux samples.
+    reaction_names : Optional[Iterable[str]]
+        Names for the reactions
+    n_samples : int
+        Number of samples to take if flux_samples is None (ignored if
+        flux_samples is not None)
+    n_neighbors : int
+        Number of neighbors to use during the mutual information
+        estimation
+    truncate : bool
+        Whether the mutual information values should be truncated at 0.
+        Mutual information should always be greater than or equal to 0,
+        but the estimates can be negative. If true, all the mutual
         information values which are less than 0 will be set to 0.
-    :type truncate: bool
-    :param reciprocal_weights: Whether the non-zero weights in the network should be the reciprocal of mutual
-        information.
-    :type reciprocal_weights: bool
-    :param processes: Number of processes to use during the mutual information calculation
-    :type processes: Optional[int]
-    :param progress_bar: Whether a progress bar should be shown for the mutual information calculations
-    :type progress_bar: bool
-    :return: A networkx Graph, which nodes representing different reactions and edge weights corresponding to
-        estimated mutual information
-    :rtype: nx.Graph
+    reciprocal_weights : bool
+        Whether the non-zero weights in the network should be the
+        reciprocal of mutual information.
+    processes : Optional[int]
+        Number of processes to use during the mutual information
+        calculation
+    progress_bar : bool
+        Whether a progress bar should be shown for the mutual
+        information calculations
+
+    Returns
+    -------
+    nx.Graph
+        A networkx Graph, which nodes representing different reactions
+        and edge weights corresponding to estimated mutual information
     """
     if model is None and flux_samples is None:
         raise ValueError(
@@ -126,63 +136,69 @@ def create_metabolic_network(
     loopless: bool = False,
     fva_proportion: float = 1.0,
 ) -> nx.Graph | nx.DiGraph:
-    """
-    Create a metabolic network from a cobrapy Model
+    """Create a metabolic network from a cobrapy Model
 
-    :param model: Cobra Model to create the network from
-    :type model: cobra.Model
-    :param weighted: Whether the network should be weighted
-    :type weighted: bool
-    :param directed: Whether the network should be directed
-    :type directed: bool
-    :param weight_by: String indicating if the network should be weighted by
-        'stoichiometry', or 'flux' (see notes for more information). Ignored if
-        `weighted = False`
-    :type weight_by: str
-    :param reaction_data: List of additional attributes to include as node attributes
-        for each reaction
-    :type reaction_data: list[str] | None
-    :param nodes_to_remove: List of any metabolites or reactions that should be removed
-        from the final network. This can be used to remove metabolites that participate
-        in a large number of reactions, but are not desired in downstream analysis
-        such as water, or ATP, or pseudo reactions like biomass. Each
-        metabolite/reaction should be the string ID associated with them in the cobra
-        model.
-    :type nodes_to_remove: list[str] | None
-    :param metabolite_data: List of additional data to include as node
-        attributes for each metabolite. Must be an attribute of the
-        metabolites in the cobra Model
-    :type metabolite_data: list[str] | None
-    :param reciprocal_weights: Whether to use the reciprocal of the weights, useful
-        if higher flux should equate with lower weights in the final network
-        (for use with graph algorithms)
-    :type reciprocal_weights: bool
-    :param threshold: Threshold, below which to consider a bound to be 0
-    :type threshold: float
-    :param loopless: Whether to use loopless flux variability analysis when determining
-        minimum and maximum fluxes for weighting the network (ignored if
-        `weighted = False`)
-    :type loopless: bool
-    :param fva_proportion: Proportion of optimal to use for the flux variability
-        analysis when determining minimum and maximum fluxes for weighting the
-        network (ignored if `weighted = False`). Must be between 0 and 1.
-    :type fva_proportion: float
-    :return: A network representing the metabolic network from the provided
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model to create the network from
+    weighted : bool
+        Whether the network should be weighted
+    directed : bool
+        Whether the network should be directed
+    weight_by : str
+        String indicating if the network should be weighted by
+        'stoichiometry', or 'flux' (see notes for more information).
+        Ignored if `weighted = False`
+    reaction_data : list[str] | None
+        List of additional attributes to include as node attributes for
+        each reaction
+    nodes_to_remove : list[str] | None
+        List of any metabolites or reactions that should be removed from
+        the final network. This can be used to remove metabolites that
+        participate in a large number of reactions, but are not desired
+        in downstream analysis such as water, or ATP, or pseudo
+        reactions like biomass. Each metabolite/reaction should be the
+        string ID associated with them in the cobra model.
+    metabolite_data : list[str] | None
+        List of additional data to include as node attributes for each
+        metabolite. Must be an attribute of the metabolites in the cobra
+        Model
+    reciprocal_weights : bool
+        Whether to use the reciprocal of the weights, useful if higher
+        flux should equate with lower weights in the final network (for
+        use with graph algorithms)
+    threshold : float
+        Threshold, below which to consider a bound to be 0
+    loopless : bool
+        Whether to use loopless flux variability analysis when
+        determining minimum and maximum fluxes for weighting the network
+        (ignored if `weighted = False`)
+    fva_proportion : float
+        Proportion of optimal to use for the flux variability analysis
+        when determining minimum and maximum fluxes for weighting the
+        network (ignored if `weighted = False`). Must be between 0 and
+        1.
+
+    Returns
+    -------
+    nx.Graph | nx.DiGraph
+        A network representing the metabolic network from the provided
         cobrapy model
-    :rtype: nx.Graph | nx.DiGraph
 
-    .. note::
-       When creating a weighted network, the options are to weight the edges based on
-       flux, or stoichiometry. If stoichiometry is chosen the edge weight will
-       correspond to the stoichiometric coefficient of the metabolite, in a given
-       reaction.
+    Notes
+    -----
+    When creating a weighted network, the options are to weight the edges based on
+    flux, or stoichiometry. If stoichiometry is chosen the edge weight will
+    correspond to the stoichiometric coefficient of the metabolite, in a given
+    reaction.
 
-       For flux weighting, first flux variability analysis is performed. The edge
-       weight is determined by the maximum flux through a reaction in a particular
-       direction (forward if the metabolite is a product of the reaction,
-       reverse if the metabolite is a substrate) multiplied by the metabolite
-       stoichiometry. If the network is unweighted, the maximum of the forward
-       and the reverse flux is used instead.
+    For flux weighting, first flux variability analysis is performed. The edge
+    weight is determined by the maximum flux through a reaction in a particular
+    direction (forward if the metabolite is a product of the reaction,
+    reverse if the metabolite is a substrate) multiplied by the metabolite
+    stoichiometry. If the network is unweighted, the maximum of the forward
+    and the reverse flux is used instead.
     """
     adjacency_frame, index, index_dict = create_adjacency_matrix(
         model=model,
@@ -247,33 +263,39 @@ def create_adjacency_matrix(
     fva_proportion: float = 1.0,
     out_format: str = "Frame",
 ) -> tuple[ArrayLike | sparray, list[str], dict[str, str]]:
-    """
-    Create an adjacency matrix representing the metabolic network of a provided
+    """Create an adjacency matrix representing the metabolic network of a provided
         cobra Model
 
-    :param model: Cobra Model to create the network from
-    :type model: cobra.Model
-    :param weighted: Whether the network should be weighted
-    :type weighted: bool
-    :param directed: Whether the network should be directed
-    :type directed: bool
-    :param weight_by: String indicating if the network should be weighted by
-        'stoichiometry', or 'flux' (see notes for more information). Ignored if
-        `weighted = False`
-    :type weight_by: str
-    :param threshold: Threshold, below which to consider a bound to be 0
-    :type threshold: float
-    :param loopless: Whether to use loopless flux variability analysis when determining
-        minimum and maximum fluxes for weighting the network (ignored if
-        `weighted = False`)
-    :type loopless: bool
-    :param fva_proportion: Proportion of optimal to use for the flux variability
-        analysis when determining minimum and maximum fluxes for weighting the
-        network (ignored if `weighted = False`). Must be between 0 and 1.
-    :type fva_proportion: float
-    :param out_format: Format for the returned adjacency matrix
-    :type out_format: str
-    :return: Tuple of
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model to create the network from
+    weighted : bool
+        Whether the network should be weighted
+    directed : bool
+        Whether the network should be directed
+    weight_by : str
+        String indicating if the network should be weighted by
+        'stoichiometry', or 'flux' (see notes for more information).
+        Ignored if `weighted = False`
+    threshold : float
+        Threshold, below which to consider a bound to be 0
+    loopless : bool
+        Whether to use loopless flux variability analysis when
+        determining minimum and maximum fluxes for weighting the network
+        (ignored if `weighted = False`)
+    fva_proportion : float
+        Proportion of optimal to use for the flux variability analysis
+        when determining minimum and maximum fluxes for weighting the
+        network (ignored if `weighted = False`). Must be between 0 and
+        1.
+    out_format : str
+        Format for the returned adjacency matrix
+
+    Returns
+    -------
+    tuple[pd.DataFrame | sparray, list[str], dict[str,str]]
+        Tuple of
 
         1. Adjacency matrix
         2.  Index of the matrix: a list of strings with the
@@ -281,20 +303,20 @@ def create_adjacency_matrix(
         3. Index dictionary: a dictionary with keys 'reaction' and
            'metabolite', and values of lists of string ids corresponding to the
            reaction, and metabolite node respectively
-    :rtype: tuple[pd.DataFrame | sparray, list[str], dict[str,str]]
 
-    .. note::
-       When creating a weighted network, the options are to weight the edges based on
-       flux, or stoichiometry. If stoichiometry is chosen the edge weight will
-       correspond to the stoichiometric coefficient of the metabolite, in a given
-       reaction.
+    Notes
+    -----
+    When creating a weighted network, the options are to weight the edges based on
+    flux, or stoichiometry. If stoichiometry is chosen the edge weight will
+    correspond to the stoichiometric coefficient of the metabolite, in a given
+    reaction.
 
-       For flux weighting, first flux variability analysis is performed. The edge
-       weight is determined by the maximum flux through a reaction in a particular
-       direction (forward if the metabolite is a product of the reaction,
-       reverse if the metabolite is a substrate) multiplied by the metabolite
-       stoichiometry. If the network is unweighted, the maximum of the forward
-       and the reverse flux is used instead.
+    For flux weighting, first flux variability analysis is performed. The edge
+    weight is determined by the maximum flux through a reaction in a particular
+    direction (forward if the metabolite is a product of the reaction,
+    reverse if the metabolite is a substrate) multiplied by the metabolite
+    stoichiometry. If the network is unweighted, the maximum of the forward
+    and the reverse flux is used instead.
     """
     if not isinstance(model, cobra.Model):
         raise ValueError(
@@ -392,19 +414,24 @@ def create_adjacency_matrix(
 
 
 def _adj_mat_ud_uw(model: cobra.Model, threshold: float = 1e-4) -> csr_array:
-    """
-    Create an unweighted undirected adjacency matrix from a given model
+    """Create an unweighted undirected adjacency matrix from a given model
 
-    :param model: Model to create the adjacency matrix from
-    :type model: cobra.Model
-    :param threshold: Threshold for a bound to be taken as a 0
-    :type threshold: float
-    :return: Adjacency Matrix
-    :rtype: csr_array
+    Parameters
+    ----------
+    model : cobra.Model
+        Model to create the adjacency matrix from
+    threshold : float
+        Threshold for a bound to be taken as a 0
 
-    .. note::
-       The index of the adjacency matrix is the metabolites followed by the reactions
-       for both the rows and columns.
+    Returns
+    -------
+    csr_array
+        Adjacency Matrix
+
+    Notes
+    -----
+    The index of the adjacency matrix is the metabolites followed by the reactions
+    for both the rows and columns.
     """
     const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(model)
 
@@ -447,19 +474,24 @@ def _adj_mat_ud_uw(model: cobra.Model, threshold: float = 1e-4) -> csr_array:
 
 
 def _adj_mat_d_uw(model: cobra.Model, threshold: float = 1e-4) -> csr_array:
-    """
-    Create an unweighted directed adjacency matrix from a given model
+    """Create an unweighted directed adjacency matrix from a given model
 
-    :param model: Model to create the adjacency matrix from
-    :type model: cobra.Model
-    :param threshold: Threshold for a bound to be taken as a 0
-    :type threshold: float
-    :return: Adjacency Matrix
-    :rtype: csr_array
+    Parameters
+    ----------
+    model : cobra.Model
+        Model to create the adjacency matrix from
+    threshold : float
+        Threshold for a bound to be taken as a 0
 
-    .. note::
-       The index of the adjacency matrix is the metabolites followed by the reactions
-       for both the rows and columns.
+    Returns
+    -------
+    csr_array
+        Adjacency Matrix
+
+    Notes
+    -----
+    The index of the adjacency matrix is the metabolites followed by the reactions
+    for both the rows and columns.
     """
     const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(model)
 
@@ -507,27 +539,32 @@ def _adj_mat_d_uw(model: cobra.Model, threshold: float = 1e-4) -> csr_array:
 def _adj_mat_ud_w_flux(
     model: cobra.Model, rxn_bounds: tuple[csc_array, csc_array], threshold: float = 1e-4
 ) -> csr_array:
-    """
-    Create a weighted directed adjacency matrix from a given model
+    """Create a weighted directed adjacency matrix from a given model
 
-    :param model: Model to create the adjacency matrix from
-    :type model: cobra.Model
-    :param rxn_bounds: Bounds for the reactions, used to determine weights. Should
-        be tuple with first element being the minimum, and the second element
-        being the maximum.
-    :type rxn_bounds: tuple[csr_array, csr_array]
-    :param threshold: Threshold for a bound to be taken as a 0
-    :type threshold: float
-    :return: Adjacency Matrix, weighted using the bounds (higher bound translates
-        to higher weight)
-    :rtype: csr_array
+    Parameters
+    ----------
+    model : cobra.Model
+        Model to create the adjacency matrix from
+    rxn_bounds : tuple[csr_array, csr_array]
+        Bounds for the reactions, used to determine weights. Should be
+        tuple with first element being the minimum, and the second
+        element being the maximum.
+    threshold : float
+        Threshold for a bound to be taken as a 0
 
-    .. note::
-       The index of the adjacency matrix is the metabolites followed by the reactions
-       for both the rows and columns.
+    Returns
+    -------
+    csr_array
+        Adjacency Matrix, weighted using the bounds (higher bound
+        translates to higher weight)
 
-       The reaction bounds must have the same order as the reactions in the cobra
-       model.
+    Notes
+    -----
+    The index of the adjacency matrix is the metabolites followed by the reactions
+    for both the rows and columns.
+
+    The reaction bounds must have the same order as the reactions in the cobra
+    model.
     """
     const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(model)
 
@@ -577,20 +614,25 @@ def _adj_mat_ud_w_flux(
 def _adj_mat_ud_w_stoichiometry(
     model: cobra.Model, threshold: float = 1e-4
 ) -> csr_array:
-    """
-    Create an undirected adjacency matrix from a given model, with edge weights
+    """Create an undirected adjacency matrix from a given model, with edge weights
     corresponding to stoichiometry
 
-    :param model: Model to create the adjacency matrix from
-    :type model: cobra.Model
-    :param threshold: Threshold for a bound to be taken as a 0
-    :type threshold: float
-    :return: Adjacency Matrix
-    :rtype: csr_array
+    Parameters
+    ----------
+    model : cobra.Model
+        Model to create the adjacency matrix from
+    threshold : float
+        Threshold for a bound to be taken as a 0
 
-    .. note::
-       The index of the adjacency matrix is the metabolites followed by the reactions
-       for both the rows and columns.
+    Returns
+    -------
+    csr_array
+        Adjacency Matrix
+
+    Notes
+    -----
+    The index of the adjacency matrix is the metabolites followed by the reactions
+    for both the rows and columns.
     """
     const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(model)
 
@@ -636,27 +678,32 @@ def _adj_mat_ud_w_stoichiometry(
 def _adj_mat_d_w_flux(
     model: cobra.Model, rxn_bounds: tuple[csc_array, csc_array], threshold: float = 1e-4
 ) -> csr_array:
-    """
-    Create a weighted directed adjacency matrix from a given model
+    """Create a weighted directed adjacency matrix from a given model
 
-    :param model: Model to create the adjacency matrix from
-    :type model: cobra.Model
-    :param rxn_bounds: Bounds for the reactions, used to determine weights. Should
-        be tuple with first element being the minimum, and the second element
-        being the maximum.
-    :type rxn_bounds: tuple[csr_array, csr_array]
-    :param threshold: Threshold for a bound to be taken as a 0
-    :type threshold: float
-    :return: Adjacency Matrix, weighted using the bounds (higher bound translates
-        to higher weight)
-    :rtype: csr_array
+    Parameters
+    ----------
+    model : cobra.Model
+        Model to create the adjacency matrix from
+    rxn_bounds : tuple[csr_array, csr_array]
+        Bounds for the reactions, used to determine weights. Should be
+        tuple with first element being the minimum, and the second
+        element being the maximum.
+    threshold : float
+        Threshold for a bound to be taken as a 0
 
-    .. note::
-       The index of the adjacency matrix is the metabolites followed by the reactions
-       for both the rows and columns.
+    Returns
+    -------
+    csr_array
+        Adjacency Matrix, weighted using the bounds (higher bound
+        translates to higher weight)
 
-       The reaction bounds must have the same order as the reactions in the cobra
-       model.
+    Notes
+    -----
+    The index of the adjacency matrix is the metabolites followed by the reactions
+    for both the rows and columns.
+
+    The reaction bounds must have the same order as the reactions in the cobra
+    model.
     """
     const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(model)
 
@@ -709,20 +756,25 @@ def _adj_mat_d_w_flux(
 def _adj_mat_d_w_stoichiometry(
     model: cobra.Model, threshold: float = 1e-4
 ) -> csr_array:
-    """
-    Create a directed adjacency matrix from a given model, with edge weights
+    """Create a directed adjacency matrix from a given model, with edge weights
     corresponding to stoichiometry
 
-    :param model: Model to create the adjacency matrix from
-    :type model: cobra.Model
-    :param threshold: Threshold for a bound to be taken as a 0
-    :type threshold: float
-    :return: Adjacency Matrix
-    :rtype: csr_array
+    Parameters
+    ----------
+    model : cobra.Model
+        Model to create the adjacency matrix from
+    threshold : float
+        Threshold for a bound to be taken as a 0
 
-    .. note::
-       The index of the adjacency matrix is the metabolites followed by the reactions
-       for both the rows and columns.
+    Returns
+    -------
+    csr_array
+        Adjacency Matrix
+
+    Notes
+    -----
+    The index of the adjacency matrix is the metabolites followed by the reactions
+    for both the rows and columns.
     """
     const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(model)
 

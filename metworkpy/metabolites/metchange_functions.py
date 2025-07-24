@@ -1,6 +1,4 @@
-"""
-Module Implementing the Metchange Algorithm
-"""
+"""Module Implementing the Metchange Algorithm"""
 
 # Imports
 # Standard Library Imports
@@ -28,42 +26,47 @@ def metchange(
     objective_tolerance: float = 0.05,
     progress_bar: bool = False,
 ) -> pd.Series:
-    """
-    Use the Metchange algorithm to find the inconsistency scores for a set of
+    """Use the Metchange algorithm to find the inconsistency scores for a set of
     metabolites based on reaction weights.
 
-    :param model: Cobra model to use for performing the metchange algorithm
-    :type model: cobra.Model
-    :param metabolites: Metabolites to calculate consistency scores for, if None
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra model to use for performing the metchange algorithm
+    metabolites : Iterable[str]
+        Metabolites to calculate consistency scores for, if None
         (default) will calculate for all metabolites in the model
-    :type metabolites: Iterable[str]
-    :param reaction_weights: Weights for the reactions in the model, should
-        correspond to the probability that reaction should not be active.
-    :type reaction_weights: dict[str, float] | pd.Series
-    :param objective_tolerance: The tolerance for the objective value during the second
-        optimization step, where the inner product of
-        reaction weights and reaction fluxes is minimized. The flux for each metabolite
-        will be constrained to be within
-        objective-tolerance*objective-value of the unconstrained objective value for
-        a metabolite. Defaults to 0.05.
-    :type objective_tolerance: float
-    :param progress_bar: Whether a progress bar should be displayed
-    :type progress_bar: bool
-    :return: Series of inconsistency scores for all the `metabolites`
-    :rtype: pd.Series
+    reaction_weights : dict[str, float] | pd.Series
+        Weights for the reactions in the model, should correspond to the
+        probability that reaction should not be active.
+    objective_tolerance : float
+        The tolerance for the objective value during the second
+        optimization step, where the inner product of reaction weights
+        and reaction fluxes is minimized. The flux for each metabolite
+        will be constrained to be within objective-tolerance*objective-
+        value of the unconstrained objective value for a metabolite.
+        Defaults to 0.05.
+    progress_bar : bool
+        Whether a progress bar should be displayed
 
-    .. note::
-       This algorithm seeks to find an inconsistency score for metabolites based
-       on gene expression. The gene expression is represented by reaction weights,
-       which can be calculated by combining
-       :func:`metworkpy.utils.expression_utils.expr_to_metchange_gene_weights` and
-       :func:`metworkpy.gpr.gpr_functions.gene_to_rxn_weights`. The algorithm calculates the
-       inconsistency score through a two part optimization. First, for a given
-       metabolite, the maximum metabolite production is found. Then the metabolite
-       production is constrained to stay within objective_tolerance*maximum-production of
-       the maximum metabolite production, and the inner product of reaction weights,
-       and reaction fluxes is minimized.
-       This minimum inner product is the inconsistency score.
+    Returns
+    -------
+    pd.Series
+        Series of inconsistency scores for all the `metabolites`
+
+    Notes
+    -----
+    This algorithm seeks to find an inconsistency score for metabolites based
+    on gene expression. The gene expression is represented by reaction weights,
+    which can be calculated by combining
+    :func:`metworkpy.utils.expression_utils.expr_to_metchange_gene_weights` and
+    :func:`metworkpy.gpr.gpr_functions.gene_to_rxn_weights`. The algorithm calculates the
+    inconsistency score through a two part optimization. First, for a given
+    metabolite, the maximum metabolite production is found. Then the metabolite
+    production is constrained to stay within objective_tolerance*maximum-production of
+    the maximum metabolite production, and the inner product of reaction weights,
+    and reaction fluxes is minimized.
+    This minimum inner product is the inconsistency score.
     """
     if isinstance(reaction_weights, dict):
         reaction_weights = pd.Series(reaction_weights)
@@ -93,24 +96,26 @@ def metchange(
 
 
 class MetchangeObjectiveConstraint:
-    """
-    Context Manager for creating the Metchange objective
+    """Context Manager for creating the Metchange objective
 
-    :param model: Cobra model to add metchange objective to
-    :type model: cobra.Model
-    :param metabolite: String ID of metabolite to add metchange objective for
-    :type metabolite: str
-    :param reaction_weights: Weights for each reaction, representing the probability
-        of that reaction being missing. A lower value indicates that the reaction is
-        more likely to be present.
-    :type reaction_weights: pd.Series
-    :param objective_tolerance: The tolerance for the objective value during the second
-        optimization step, where the inner product of
-        reaction weights and reaction fluxes is minimized. The flux for each metabolite
-        will be constrained to be within
-        objective-tolerance*objective-value of the unconstrained objective value for
-        a metabolite. Defaults to 0.05.
-    :type objectove_tolerance: float
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra model to add metchange objective to
+    metabolite : str
+        String ID of metabolite to add metchange objective for
+    reaction_weights : pd.Series
+        Weights for each reaction, representing the probability of that
+        reaction being missing. A lower value indicates that the
+        reaction is more likely to be present.
+    objective_tolerance
+        The tolerance for the objective value during the second
+        optimization step, where the inner product of reaction weights
+        and reaction fluxes is minimized. The flux for each metabolite
+        will be constrained to be within objective-tolerance*objective-
+        value of the unconstrained objective value for a metabolite.
+        Defaults to 0.05.
+    objectove_tolerance : float
     """
 
     def __init__(

@@ -1,6 +1,4 @@
-"""
-Exceptions classes for the Rank Entropy Module
-"""
+"""Exceptions classes for the Rank Entropy Module"""
 
 # Imports
 # Standard Library Imports

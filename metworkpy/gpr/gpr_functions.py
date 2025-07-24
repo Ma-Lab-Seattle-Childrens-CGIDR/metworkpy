@@ -20,26 +20,31 @@ def gene_to_rxn_weights(
     fn_dict: Optional[dict] = None,
     fill_val: Any = 0,
 ) -> pd.Series:
-    """
-    Convert a gene weights series to a reaction weights series using the
+    """Convert a gene weights series to a reaction weights series using the
     provided function dictionary.
 
-    :param model: cobra.Model: A cobra model
-    :type model: cobra.Model
-    :param gene_weights: pd.Series: A series of gene weights
-    :type gene_weights: pd.Series
-    :param fn_dict: dict: A dictionary of functions to use for each operator
-    :type fn_dict: dict
-    :param fill_val: Any: The value to fill missing values with
-    :type fill_val: Any
-    :return: A series of reaction weights
-    :rtype: pd.Series
+    Parameters
+    ----------
+    model : cobra.Model
+        cobra.Model: A cobra model
+    gene_weights : pd.Series
+        pd.Series: A series of gene weights
+    fn_dict : dict
+        dict: A dictionary of functions to use for each operator
+    fill_val : Any
+        Any: The value to fill missing values with
 
-    .. note::
-       The fill value is applied to fill NaN values after the GPR rules have been
-       applied.
-       If there are genes missing from the expression data, they will silently be
-       assigned a value of 0 before the GPR processing is performed.
+    Returns
+    -------
+    pd.Series
+        A series of reaction weights
+
+    Notes
+    -----
+    The fill value is applied to fill NaN values after the GPR rules have been
+    applied.
+    If there are genes missing from the expression data, they will silently be
+    assigned a value of 0 before the GPR processing is performed.
     """
     # Check that all genes in the model are in the gene expression data,
     # and if not add them with a weight of 0
@@ -68,20 +73,24 @@ def gene_to_rxn_weights(
 def eval_gpr(
     gpr: str, gene_weights: pd.Series, fn_dict: Optional[dict] = None
 ) -> Any | None:
-    """
-    Evaluate a single GPR string using the provided gene weights and
+    """Evaluate a single GPR string using the provided gene weights and
     function dictionary.
 
-    :param gpr: str: A single GPR string
-    :type gpr: str
-    :param gene_weights: pd.Series: A series of gene weights
-    :type gene_weights: pd.Series
-    :param fn_dict: dict: A dictionary of functions to use for each operator,
-        in GPR the operators are normally AND and OR, by default this is
+    Parameters
+    ----------
+    gpr : str
+        str: A single GPR string
+    gene_weights : pd.Series
+        pd.Series: A series of gene weights
+    fn_dict : dict
+        dict: A dictionary of functions to use for each operator, in GPR
+        the operators are normally AND and OR, by default this is
         {"AND":min, "OR":max}
-    :type fn_dict: dict
-    :return: The GPR score
-    :rtype: float | None
+
+    Returns
+    -------
+    float | None
+        The GPR score
     """
     if not gpr:  # If GPR is empty string, return None
         return None
@@ -109,17 +118,21 @@ def _eval_gpr_deque(gpr_expr: deque, gene_weights: pd.Series, fn_dict: dict):
 
 
 def _str_to_deque(in_string: str, replacements: Optional[dict] = None) -> deque[str]:
-    """
-    Convert a string to a list of strings, splitting on whitespace and
+    """Convert a string to a list of strings, splitting on whitespace and
     parentheses.
 
-    :param in_string: str: Specify the input string
-    :type in_string: str
-    :param replacements: dict: Replace certain strings with other strings
-        before splitting, uses regex
-    :type replacements: dict
-    :return: A deque of strings
-    :rtype: deque[str]
+    Parameters
+    ----------
+    in_string : str
+        str: Specify the input string
+    replacements : dict
+        dict: Replace certain strings with other strings before
+        splitting, uses regex
+
+    Returns
+    -------
+    deque[str]
+        A deque of strings
     """
     if not replacements:
         replacements = {
@@ -137,21 +150,25 @@ def _str_to_deque(in_string: str, replacements: Optional[dict] = None) -> deque[
 def _process_token(
     token: str, postfix: deque[str], operator_stack: deque[str], precedence
 ):
-    """
-    The process_token function takes in a token, the postfix list, the
+    """The process_token function takes in a token, the postfix list, the
     operator stack and precedence dictionary. It performs the shunting
     yard algorithm for a single provided token.
 
-    :param token: Current token
-    :type token: str
-    :param postfix: Current state of output
-    :type postfix: list[str]
-    :param operator_stack: Current operator stack
-    :type operator_stack: list[str]
-    :param precedence: Determines the operators precedence
-    :type precedence: dict[str:int]
-    :return: Nothing
-    :rtype: None
+    Parameters
+    ----------
+    token : str
+        Current token
+    postfix : list[str]
+        Current state of output
+    operator_stack : list[str]
+        Current operator stack
+    precedence : dict[str:int]
+        Determines the operators precedence
+
+    Returns
+    -------
+    None
+        Nothing
     """
     # If token is not operator, add it to postfix
     if (token not in precedence) and (token != "(") and (token != ")"):
@@ -190,14 +207,19 @@ def _process_token(
 
 
 def _to_postfix(infix: deque[str], precedence: Optional[dict] = None) -> deque[str]:
-    """
-    Convert an infix expression to postfix notation.
-    :param infix: deque[str]: A deque of strings representing an infix expression
-    :type infix: deque[str]
-    :param precedence: Dictionary of operators determining precedence
-    :type precedence: dict[str:int]
-    :return: A list of strings representing the postfix expression
-    :rtype: list[str]
+    """Convert an infix expression to postfix notation.
+
+    Parameters
+    ----------
+    infix : deque[str]
+        deque[str]: A deque of strings representing an infix expression
+    precedence : dict[str:int]
+        Dictionary of operators determining precedence
+
+    Returns
+    -------
+    list[str]
+        A list of strings representing the postfix expression
     """
     # Set default precedence
     if precedence is None:

@@ -1,6 +1,4 @@
-"""
-Functions for computing differential rank conservation (DIRAC)
-"""
+"""Functions for computing differential rank conservation (DIRAC)"""
 
 # Imports
 # Standard Library Imports
@@ -33,36 +31,54 @@ def dirac_gene_set_classification(
     seed: Optional[int] = None,
     processes=1,
 ) -> Tuple[float, float]:
-    """
-    Calculate the classification rate using DIRAC rank difference scores for a given network and its significance
+    """Calculate the classification rate using DIRAC rank difference scores for a given network and its significance
 
-    :param expression_data: Gene expression data, either a numpy array or a pandas DataFrame, with rows representing
-        different samples, and columns representing different genes
-    :type expression_data: np.ndarray | pd.DataFrame
-    :param sample_group1: Which samples belong to group1. If expression_data is a numpy array, this should be
-        a something able to index the rows of the array. If expression_data is a pandas dataframe, this should be
-        something that can index rows of a dataframe inside a .loc (see pandas documentation for details)
-    :param sample_group2: Which samples belong to group2, see sample_group1 information for more details.
-    :param gene_network: Which genes belong to the gene network. If expression_data is a numpy array, this
-        should be something able to index the columns of the array. If expression_data is a pandas dataframe, this
-        should be something be anything that can index columns of a dataframe inside a .loc (see pandas documentation
-        for details)
-    :param kernel_density_estimate: Whether to use a kernel density estimate for calculating the p-value. If True,
-        will use a Gaussian Kernel Density Estimate, if False will use an empirical CDF
-    :type kernel_density_estimate: bool
-    :param bw_method: Bandwidth method, see `scipy.stats.gaussian_kde <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html>`_ for details
-    :type bw_method: Optional[Union[str|float|Callable[[gaussian_kde], float]]]
-    :param iterations: Number of iterations to perform during bootstrapping the null distribution
-    :type iterations: int
-    :param replace: Whether to sample with replacement when randomly sampling from the sample groups
-        during bootstrapping
-    :type replace: bool
-    :param seed: Seed to use for the random number generation during bootstrapping
-    :type seed: int
-    :param processes: Number of processes to use during the bootstrapping, default 1
-    :type processes: int
-    :return: Tuple of the classification rate, and the significance level found via bootstrapping
-    :rtype: Tuple[float,float]
+    Parameters
+    ----------
+    expression_data : np.ndarray | pd.DataFrame
+        Gene expression data, either a numpy array or a pandas
+        DataFrame, with rows representing different samples, and columns
+        representing different genes
+    sample_group1
+        Which samples belong to group1. If expression_data is a numpy
+        array, this should be a something able to index the rows of the
+        array. If expression_data is a pandas dataframe, this should be
+        something that can index rows of a dataframe inside a .loc (see
+        pandas documentation for details)
+    sample_group2
+        Which samples belong to group2, see sample_group1 information
+        for more details.
+    gene_network
+        Which genes belong to the gene network. If expression_data is a
+        numpy array, this should be something able to index the columns
+        of the array. If expression_data is a pandas dataframe, this
+        should be something be anything that can index columns of a
+        dataframe inside a .loc (see pandas documentation for details)
+    kernel_density_estimate : bool
+        Whether to use a kernel density estimate for calculating the
+        p-value. If True, will use a Gaussian Kernel Density Estimate,
+        if False will use an empirical CDF
+    bw_method : Optional[Union[str|float|Callable[[gaussian_kde], float]]]
+        Bandwidth method, see `scipy.stats.gaussian_kde <https://docs.sc
+        ipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.h
+        tml>`_ for details
+    iterations : int
+        Number of iterations to perform during bootstrapping the null
+        distribution
+    replace : bool
+        Whether to sample with replacement when randomly sampling from
+        the sample groups during bootstrapping
+    seed : int
+        Seed to use for the random number generation during
+        bootstrapping
+    processes : int
+        Number of processes to use during the bootstrapping, default 1
+
+    Returns
+    -------
+    Tuple[float,float]
+        Tuple of the classification rate, and the significance level
+        found via bootstrapping
     """
     return _bootstrap_rank_entropy_p_value(
         samples_array=expression_data,
@@ -91,36 +107,54 @@ def dirac_gene_set_entropy(
     seed: Optional[int] = None,
     processes=1,
 ) -> Tuple[float, float]:
-    """
-    Calculate the difference in rank conservation indices, and its significance
+    """Calculate the difference in rank conservation indices, and its significance
 
-    :param expression_data: Gene expression data, either a numpy array or a pandas DataFrame, with rows representing
-        different samples, and columns representing different genes
-    :type expression_data: np.ndarray | pd.DataFrame
-    :param sample_group1: Which samples belong to group1. If expression_data is a numpy array, this should be
-        a something able to index the rows of the array. If expression_data is a pandas dataframe, this should be
-        something that can index rows of a dataframe inside a .loc (see pandas documentation for details)
-    :param sample_group2: Which samples belong to group2, see sample_group1 information for more details.
-    :param gene_network: Which genes belong to the gene network. If expression_data is a numpy array, this
-        should be something able to index the columns of the array. If expression_data is a pandas dataframe, this
-        should be something be anything that can index columns of a dataframe inside a .loc (see pandas documentation
-        for details)
-    :param kernel_density_estimate: Whether to use a kernel density estimate for calculating the p-value. If True,
-        will use a Gaussian Kernel Density Estimate, if False will use an empirical CDF
-    :type kernel_density_estimate: bool
-    :param bw_method: Bandwidth method, see `scipy.stats.gaussian_kde <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html>`_ for details
-    :type bw_method: Optional[Union[str|float|Callable[[gaussian_kde], float]]]
-    :param iterations: Number of iterations to perform during bootstrapping the null distribution
-    :type iterations: int
-    :param replace: Whether to sample with replacement when randomly sampling from the sample groups
-        during bootstrapping
-    :type replace: bool
-    :param seed: Seed to use for the random number generation during bootstrapping
-    :type seed: int
-    :param processes: Number of processes to use during the bootstrapping, default 1
-    :type processes: int
-    :return: Tuple of the difference in rank conservation index, and the significance level found via bootstrapping
-    :rtype: Tuple[float,float]
+    Parameters
+    ----------
+    expression_data : np.ndarray | pd.DataFrame
+        Gene expression data, either a numpy array or a pandas
+        DataFrame, with rows representing different samples, and columns
+        representing different genes
+    sample_group1
+        Which samples belong to group1. If expression_data is a numpy
+        array, this should be a something able to index the rows of the
+        array. If expression_data is a pandas dataframe, this should be
+        something that can index rows of a dataframe inside a .loc (see
+        pandas documentation for details)
+    sample_group2
+        Which samples belong to group2, see sample_group1 information
+        for more details.
+    gene_network
+        Which genes belong to the gene network. If expression_data is a
+        numpy array, this should be something able to index the columns
+        of the array. If expression_data is a pandas dataframe, this
+        should be something be anything that can index columns of a
+        dataframe inside a .loc (see pandas documentation for details)
+    kernel_density_estimate : bool
+        Whether to use a kernel density estimate for calculating the
+        p-value. If True, will use a Gaussian Kernel Density Estimate,
+        if False will use an empirical CDF
+    bw_method : Optional[Union[str|float|Callable[[gaussian_kde], float]]]
+        Bandwidth method, see `scipy.stats.gaussian_kde <https://docs.sc
+        ipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.h
+        tml>`_ for details
+    iterations : int
+        Number of iterations to perform during bootstrapping the null
+        distribution
+    replace : bool
+        Whether to sample with replacement when randomly sampling from
+        the sample groups during bootstrapping
+    seed : int
+        Seed to use for the random number generation during
+        bootstrapping
+    processes : int
+        Number of processes to use during the bootstrapping, default 1
+
+    Returns
+    -------
+    Tuple[float,float]
+        Tuple of the difference in rank conservation index, and the
+        significance level found via bootstrapping
     """
     return _bootstrap_rank_entropy_p_value(
         samples_array=expression_data,
@@ -143,9 +177,7 @@ def dirac_gene_set_entropy(
 
 
 class DiracClassifier:
-    """
-    Class for using DIRAC to perform classification
-    """
+    """Class for using DIRAC to perform classification"""
 
     def __init__(self):
         self.rank_templates = None
@@ -157,21 +189,30 @@ class DiracClassifier:
         X: NDArray[float | int] | pd.DataFrame,
         y: NDArray[float | int] | pd.DataFrame | pd.Series,
     ) -> DiracClassifier:
-        """
-        Fit the classifier
+        """Fit the classifier
 
-        :param X: Features array, should be a pandas DataFrame or numpy ndarray with columns representing genes
-            in a gene network, and rows representing different samples, and values corresponding to expression level
-        :type X: NDArray[float|int]|pd.DataFrame
-        :param y: Target array, should be a pandas Series or numpy ndarray, with length equal to the number of rows in
-            X. Each entry should represent the class of the corresponding sample in X. The order should correspond
-            between X and y, and the indexes will not be aligned between them.
-        :type y:  NDArray[float|int]|pd.DataFrame|pd.Series
-        :return: Fitted DIRAC classifier object
-        :rtype: DiracClassifier
+        Parameters
+        ----------
+        X : NDArray[float|int]|pd.DataFrame
+            Features array, should be a pandas DataFrame or numpy
+            ndarray with columns representing genes in a gene network,
+            and rows representing different samples, and values
+            corresponding to expression level
+        y : NDArray[float|int]|pd.DataFrame|pd.Series
+            Target array, should be a pandas Series or numpy ndarray,
+            with length equal to the number of rows in X. Each entry
+            should represent the class of the corresponding sample in X.
+            The order should correspond between X and y, and the indexes
+            will not be aligned between them.
 
-        .. note::
-           This updates the classifier in place, and also returns itself.
+        Returns
+        -------
+        DiracClassifier
+            Fitted DIRAC classifier object
+
+        Notes
+        -----
+        This updates the classifier in place, and also returns itself.
         """
         rank_templates = []
         classes = np.unique(y)
@@ -208,15 +249,22 @@ class DiracClassifier:
     def classify(
         self, X: NDArray[float | int] | pd.DataFrame
     ) -> Union[pd.Series, NDArray]:
-        """
-        Use the fitted classifier to classify samples
+        """Use the fitted classifier to classify samples
 
-        :param X: Features array, should be a pandas DataFrame or numpy ndarray with columns representing genes
-            in a gene network, and rows representing different samples, and values corresponding to expression level
-        :type X: NDArray[float|int]|pd.DataFrame
-        :return: Predicted classes for all the samples. If X is a DataFrame, this will be a pandas Series;
-            if X is a ndarray, this will be a 1-dimensional numpy array
-        :rtype: pd.Series | NDArray
+        Parameters
+        ----------
+        X : NDArray[float|int]|pd.DataFrame
+            Features array, should be a pandas DataFrame or numpy
+            ndarray with columns representing genes in a gene network,
+            and rows representing different samples, and values
+            corresponding to expression level
+
+        Returns
+        -------
+        pd.Series | NDArray
+            Predicted classes for all the samples. If X is a DataFrame,
+            this will be a pandas Series; if X is a ndarray, this will
+            be a 1-dimensional numpy array
         """
         if self.rank_templates is None:
             raise NotFitError(

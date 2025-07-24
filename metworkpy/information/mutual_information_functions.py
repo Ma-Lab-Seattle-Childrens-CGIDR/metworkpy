@@ -1,5 +1,4 @@
-"""
-Module for finding mutual information between two sampled distributions using nearest neighbor methods. Includes
+"""Module for finding mutual information between two sampled distributions using nearest neighbor methods. Includes
 methods to compute mutual information between two continuous distributions, between two discrete distributions, and
 between a continuous and discrete distribution.
 """
@@ -37,55 +36,68 @@ def mutual_information(
     truncate: bool = False,
 ) -> float:
     """
-    :param x: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If ``x`` is
-        one dimensional, it will be reshaped to (n_samples, 1). If it is not a np.ndarray, this function will
-        attempt to coerce it into one.
-    :type x: ArrayLike
-    :param y: Array representing sample from a distribution, should have shape (n_samples, n_dimensions). If ``y`` is
-        one dimensional, it will be reshaped to  (n_samples, 1). If it is not a np.ndarray, this function will
-        attempt to coerce it into one.
-    :type y: ArrayLike
-    :param discrete_x: Whether x is discrete or continuous
-    :type discrete_x: bool
-    :param discrete_y: Whether y is discrete or continuous
-    :type discrete_y: bool
-    :param n_neighbors: Number of neighbors to use for computing mutual information. Will attempt to coerce into
-        an integer. Must be at least 1. Default 5.
-    :type n_neighbors: int
-    :param jitter: Amount of noise to add to avoid ties. If None no noise is added. If a float, that is the standard
-        deviation of the random noise added to the continuous samples. If a tuple, the first element is the standard
-        deviation of the noise added to the x array, the second element is the standard deviation added to the y array.
-    :type jitter: Union[None, float, tuple[float,float]]
-    :param jitter_seed: Seed for the random number generator used for adding noise
-    :type jitter_seed: Union[None, int]
-    :param metric_x: Metric to use for computing distance between points in x, can be "Euclidean",
-        "Manhattan", or "Chebyshev". Can also be a float representing the Minkowski p-norm.
-    :type metric_x: Union[str, int]
-    :param metric_y: Metric to use for computing distance between points in y, can be "Euclidean",
-        "Manhattan", or "Chebyshev". Can also be a float representing the Minkowski p-norm.
-    :type metric_y: Union[str, int]
-    :param truncate: Whether to ensure the mutual information is positive
-    :type truncate: bool
-    :return: The mutual information between x and y
-    :rtype: float
+    Parameters
+    ----------
+    x : ArrayLike
+        Array representing sample from a distribution, should have shape
+        (n_samples, n_dimensions). If ``x`` is one dimensional, it will
+        be reshaped to (n_samples, 1). If it is not a np.ndarray, this
+        function will attempt to coerce it into one.
+    y : ArrayLike
+        Array representing sample from a distribution, should have shape
+        (n_samples, n_dimensions). If ``y`` is one dimensional, it will
+        be reshaped to  (n_samples, 1). If it is not a np.ndarray, this
+        function will attempt to coerce it into one.
+    discrete_x : bool
+        Whether x is discrete or continuous
+    discrete_y : bool
+        Whether y is discrete or continuous
+    n_neighbors : int
+        Number of neighbors to use for computing mutual information.
+        Will attempt to coerce into an integer. Must be at least 1.
+        Default 5.
+    jitter : Union[None, float, tuple[float,float]]
+        Amount of noise to add to avoid ties. If None no noise is added.
+        If a float, that is the standard deviation of the random noise
+        added to the continuous samples. If a tuple, the first element
+        is the standard deviation of the noise added to the x array, the
+        second element is the standard deviation added to the y array.
+    jitter_seed : Union[None, int]
+        Seed for the random number generator used for adding noise
+    metric_x : Union[str, int]
+        Metric to use for computing distance between points in x, can be
+        "Euclidean", "Manhattan", or "Chebyshev". Can also be a float
+        representing the Minkowski p-norm.
+    metric_y : Union[str, int]
+        Metric to use for computing distance between points in y, can be
+        "Euclidean", "Manhattan", or "Chebyshev". Can also be a float
+        representing the Minkowski p-norm.
+    truncate : bool
+        Whether to ensure the mutual information is positive
 
-    .. note::
+    Returns
+    -------
+    float
+        The mutual information between x and y
 
-       - The metrics can either be provided as a float greater than 1 representing the Minkowski p-norm, or a string
-         representing the name of a metric such as 'Manhattan', 'Chebyshev', or 'Euclidean'.
-       - For scalar samples (samples from a 1-D distribution), all the metrics are the same.
-       - In the case of two continuous distributions, the distance in the z space (i.e. the joint (X,Y) space), is
-         determined by the maximum norm (||z-z\\`|| = max{||x-x\\`||, ||y-y\\`||}), see [1] for more details.
-       - Always returns value in nats (i.e. mutual information is calculated using the natural logarithm.
+    Notes
+    -----
 
-    .. seealso::
+    - The metrics can either be provided as a float greater than 1 representing the Minkowski p-norm, or a string
+      representing the name of a metric such as 'Manhattan', 'Chebyshev', or 'Euclidean'.
+    - For scalar samples (samples from a 1-D distribution), all the metrics are the same.
+    - In the case of two continuous distributions, the distance in the z space (i.e. the joint (X,Y) space), is
+      determined by the maximum norm (||z-z\\`|| = max{||x-x\\`||, ||y-y\\`||}), see [1] for more details.
+    - Always returns value in nats (i.e. mutual information is calculated using the natural logarithm.
 
-       1. Kraskov, A., Stögbauer, H., & Grassberger, P. (2004). Estimating mutual information. Physical Review E, 69(6), 066138.
-            Method for estimating mutual information between samples from two continuous distributions.
-       2. Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
-           Method for estimating mutual information between a sample from a discrete distribution and a sample
-           from a continuous distribution.
+    See Also
+    --------
 
+    1. Kraskov, A., Stögbauer, H., & Grassberger, P. (2004). Estimating mutual information. Physical Review E, 69(6), 066138.
+         Method for estimating mutual information between samples from two continuous distributions.
+    2. Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
+        Method for estimating mutual information between a sample from a discrete distribution and a sample
+        from a continuous distribution.
     """
     try:
         n_neighbors = int(n_neighbors)
@@ -166,24 +178,32 @@ def _mi_cont_cont(
     metric_x: float,
     metric_y: float,
 ):
-    """
-    Calculate the mutual information between two continuous distributions using the nearest neighbor method.
+    """Calculate the mutual information between two continuous distributions using the nearest neighbor method.
     Dispatches to either _mi_cont_cont_cheb_only, or _mi_cont_cont_gen depending on which is applicable (
     cheb_only is more efficient, but only applicable when both metrics are np.inf or both samples are scalar).
-    :param x: Array representing samples from a continuous distribution, shape (n_samples, n_dims_x)
-    :type x: np.ndarray
-    :param y: Array representing samples from a continuous distribution using the nearest neighbor method.
-    :type y: np.ndarray
-    :param n_neighbors: Number of neighbors to use for estimating the mutual information
-    :type n_neighbors: int
-    :param metric_x: Metric to use for computing distance between points in x (must be `float>=1` representing
-        the Minkowski p-norm)
-    :type metric_x: float
-    :param metric_y: Metric to use for computing distance between points in y (must be `float>=1` representing
-        the Minkowski p-norm)
-    :type metric_y: float
-    :return: The mutual information score between the two distributions represented by the x and y samples
-    :rtype: float
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Array representing samples from a continuous distribution, shape
+        (n_samples, n_dims_x)
+    y : np.ndarray
+        Array representing samples from a continuous distribution using
+        the nearest neighbor method.
+    n_neighbors : int
+        Number of neighbors to use for estimating the mutual information
+    metric_x : float
+        Metric to use for computing distance between points in x (must
+        be `float>=1` representing the Minkowski p-norm)
+    metric_y : float
+        Metric to use for computing distance between points in y (must
+        be `float>=1` representing the Minkowski p-norm)
+
+    Returns
+    -------
+    float
+        The mutual information score between the two distributions
+        represented by the x and y samples
     """
     if ((metric_x == np.inf) and (metric_y == np.inf)) or (
         x.shape[1] == 1 and y.shape[1] == 1
@@ -195,17 +215,25 @@ def _mi_cont_cont(
 
 
 def _mi_cont_cont_cheb_only(x: np.ndarray, y: np.ndarray, n_neighbors: int):
-    """
-    Calculate the mutual information between two continuous distributions using the nearest neighbor method.
+    """Calculate the mutual information between two continuous distributions using the nearest neighbor method.
     This version only allows for Chebyshev distances as the x and y metrics.
-    :param x: Array representing samples from a continuous distribution, shape (n_samples, n_dims_x)
-    :type x: np.ndarray
-    :param y: Array representing samples from a continuous distribution using the nearest neighbor method.
-    :type y: np.ndarray
-    :param n_neighbors: Number of neighbors to use for estimating the mutual information
-    :type n_neighbors: int
-    :return: The mutual information score between the two distributions represented by the x and y samples
-    :rtype: float
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Array representing samples from a continuous distribution, shape
+        (n_samples, n_dims_x)
+    y : np.ndarray
+        Array representing samples from a continuous distribution using
+        the nearest neighbor method.
+    n_neighbors : int
+        Number of neighbors to use for estimating the mutual information
+
+    Returns
+    -------
+    float
+        The mutual information score between the two distributions
+        represented by the x and y samples
     """
     # Stack x and y to form the z space
     z = np.hstack((x, y))
@@ -241,23 +269,31 @@ def _mi_cont_cont_gen(
     metric_x: float,
     metric_y: float,
 ):
-    """
-    Calculate the mutual information between two continuous distributions using the nearest neighbor method.
+    """Calculate the mutual information between two continuous distributions using the nearest neighbor method.
     This method allows for any x and y metrics, but is much slower than the _mi_cont_cont_cheb_only.
-    :param x: Array representing samples from a continuous distribution, shape (n_samples, n_dims_x)
-    :type x: np.ndarray
-    :param y: Array representing samples from a continuous distribution using the nearest neighbor method.
-    :type y: np.ndarray
-    :param n_neighbors: Number of neighbors to use for estimating the mutual information
-    :type n_neighbors: int
-    :param metric_x: Metric to use for computing distance between points in x (must be `float>=1` representing
-        the Minkowski p-norm)
-    :type metric_x: float
-    :param metric_y: Metric to use for computing distance between points in y (must be `float>=1` representing
-        the Minkowski p-norm)
-    :type metric_y: float
-    :return: The mutual information score between the two distributions represented by the x and y samples
-    :rtype: float
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Array representing samples from a continuous distribution, shape
+        (n_samples, n_dims_x)
+    y : np.ndarray
+        Array representing samples from a continuous distribution using
+        the nearest neighbor method.
+    n_neighbors : int
+        Number of neighbors to use for estimating the mutual information
+    metric_x : float
+        Metric to use for computing distance between points in x (must
+        be `float>=1` representing the Minkowski p-norm)
+    metric_y : float
+        Metric to use for computing distance between points in y (must
+        be `float>=1` representing the Minkowski p-norm)
+
+    Returns
+    -------
+    float
+        The mutual information score between the two distributions
+        represented by the x and y samples
     """
     x_dist = distance_matrix(x, x, p=metric_x)  # Distance in x space
     y_dist = distance_matrix(y, y, p=metric_y)  # Distance in y space
@@ -295,32 +331,41 @@ def _mi_disc_cont(
     metric_cont: float = 2.0,
     **kwargs,
 ) -> float:
-    """
-    Calculate the mutual information between a discrete and continuous distribution using the nearest neighbor method.
-    :param discrete: Array representing the samples from the discrete distribution, should have shape (n_samples, 1)
-    :type discrete: np.ndarray
-    :param continuous: Array representing the continuous distribution, should have shape (n_samples, n_dimensions), where
-        n_dimensions>=1
-    :type continuous: np.ndarray
-    :param n_neighbors: The number of neighbors to use for computing mutual information
-    :type n_neighbors: int
-    :param metric_cont: Metric to use for computing distance between points in y (must be `float>=1` representing
-        Minkowski p-norm)
-    :type metric_cont: float
-    :param kwargs: Arguments passed to KDTree
-    :return: Mutual information between x and y
-    :rtype: float
+    """Calculate the mutual information between a discrete and continuous distribution using the nearest neighbor method.
 
-    .. note::
-       Mutual information should always be positive, but this method can produce a negative value since it is an
-       estimate. Also, in order for this method to work each class must have at least n_neighbors+1 data points.
+    Parameters
+    ----------
+    discrete : np.ndarray
+        Array representing the samples from the discrete distribution,
+        should have shape (n_samples, 1)
+    continuous : np.ndarray
+        Array representing the continuous distribution, should have
+        shape (n_samples, n_dimensions), where n_dimensions>=1
+    n_neighbors : int
+        The number of neighbors to use for computing mutual information
+    metric_cont : float
+        Metric to use for computing distance between points in y (must
+        be `float>=1` representing Minkowski p-norm)
+    **kwargs
+        Arguments passed to KDTree
 
-    .. seealso::
-       `Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
-       `<https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0087357>_
-            Paper from which this method was obtained
-       :func: `_mi_disc_cont_scalar`
-            Function for calculating the mutual information when the continuous distribution is scalar
+    Returns
+    -------
+    float
+        Mutual information between x and y
+
+    Notes
+    -----
+    Mutual information should always be positive, but this method can produce a negative value since it is an
+    estimate. Also, in order for this method to work each class must have at least n_neighbors+1 data points.
+
+    See Also
+    --------
+    `Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
+    `<https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0087357>_
+         Paper from which this method was obtained
+    :func: `_mi_disc_cont_scalar`
+         Function for calculating the mutual information when the continuous distribution is scalar
     """
     discrete_classes, counts = np.unique(discrete, return_counts=True)
     if (counts < n_neighbors + 1).any():
@@ -373,14 +418,21 @@ def _mi_disc_cont(
 
 
 def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
-    """
-    Calculate the mutual information between samples from two discrete distributions
-    :param x: Array representing the samples from a discrete distribution, should have shape (n_samples, 1)
-    :type x: np.ndarray
-    :param y: Array representing the samples from a discrete distribution, should have shape (n_samples, 1)
-    :type y: np.ndarray
-    :return: The mutual information between x and y
-    :rtype: float
+    """Calculate the mutual information between samples from two discrete distributions
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Array representing the samples from a discrete distribution,
+        should have shape (n_samples, 1)
+    y : np.ndarray
+        Array representing the samples from a discrete distribution,
+        should have shape (n_samples, 1)
+
+    Returns
+    -------
+    float
+        The mutual information between x and y
     """
     z = np.hstack((x, y))
     # Get the unique elements and the counts

@@ -1,6 +1,4 @@
-"""
-Determine the divergence in the network caused by a gene knock out
-"""
+"""Determine the divergence in the network caused by a gene knock out"""
 
 # Imports
 # Standard Library Imports
@@ -42,43 +40,58 @@ def ko_divergence(
     progress_bar: bool = False,
     **kwargs,
 ) -> pd.DataFrame:
-    """
-    Determine the impacts of gene knock-outs on different target reaction or gene networks
+    """Determine the impacts of gene knock-outs on different target reaction or gene networks
 
-    :param model: Base cobra model to test effects of gene knockouts on
-    :type model: cobra.Model
-    :param genes_to_ko: List of genes to investigate impact of their knock-out
-    :type genes_to_ko: Iterable[str]
-    :param target_networks: Target networks to investigate the impact of the gene knock-outs on. Can be a list or a dict
-        of lists. If a dict, the keys will be used to name the network and the lists will specify the networks. If a
-        list should be a single network. Entries in the lists can be either reaction or gene ids. Gene ids will be
-        translated into reaction ids using the model. If a list is passed
-        the name of the target network in the returned dataframe will be target_network, if a dict is passed the
-        keys are used as the column names.
-    :type target_networks: list[str] | dict[str, list[str]]
-    :param divergence_metric: Which metric to use for divergence, can be Jensen-Shannon, or Kullback-Leibler
-    :type divergence_metric: str
-    :param n_neighbors: Number of neighbors to use when estimating divergence
-    :type n_neighbors: int
-    :param sample_count: Number of samples to take when performing flux sampling (will be repeated for each
-        gene knocked out)
-    :type sample_count: int
-    :param jitter: Amount of noise to add to avoid ties. If None no noise is added. If a float, that is the standard
-        deviation of the random noise added to the continuous samples. If a tuple, the first element is the standard
-        deviation of the noise added to the x array, the second element is the standard deviation added to the y array.
-    :type jitter: Union[None, float, tuple[float,float]]
-    :param jitter_seed: Seed for the random number generator used for adding noise
-    :type jitter_seed: Union[None, int]
-    :param distance_metric: Metric to use for computing distance between points in p and q, can be \"Euclidean\",
-        \"Manhattan\", or \"Chebyshev\". Can also be a float representing the Minkowski p-norm.
-    :type distance_metric: Union[str, float]
-    :param progress_bar: Whether a progress bar is desired
-    :type progress_bar: bool
-    :param kwargs: Arguments passed to the sample method of COBRApy, see `COBRApy Documentation <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/sampling/index.html#cobra.sampling.sample>`_
-    :return: Dataframe with index of genes, and columns representing the different target networks. Values
-        represent the divergence of a particular target network between the unperturbed model and the model
-        following the gene knock-out.
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    model : cobra.Model
+        Base cobra model to test effects of gene knockouts on
+    genes_to_ko : Iterable[str]
+        List of genes to investigate impact of their knock-out
+    target_networks : list[str] | dict[str, list[str]]
+        Target networks to investigate the impact of the gene knock-outs
+        on. Can be a list or a dict of lists. If a dict, the keys will
+        be used to name the network and the lists will specify the
+        networks. If a list should be a single network. Entries in the
+        lists can be either reaction or gene ids. Gene ids will be
+        translated into reaction ids using the model. If a list is
+        passed the name of the target network in the returned dataframe
+        will be target_network, if a dict is passed the keys are used as
+        the column names.
+    divergence_metric : str
+        Which metric to use for divergence, can be Jensen-Shannon, or
+        Kullback-Leibler
+    n_neighbors : int
+        Number of neighbors to use when estimating divergence
+    sample_count : int
+        Number of samples to take when performing flux sampling (will be
+        repeated for each gene knocked out)
+    jitter : Union[None, float, tuple[float,float]]
+        Amount of noise to add to avoid ties. If None no noise is added.
+        If a float, that is the standard deviation of the random noise
+        added to the continuous samples. If a tuple, the first element
+        is the standard deviation of the noise added to the x array, the
+        second element is the standard deviation added to the y array.
+    jitter_seed : Union[None, int]
+        Seed for the random number generator used for adding noise
+    distance_metric : Union[str, float]
+        Metric to use for computing distance between points in p and q,
+        can be \"Euclidean\", \"Manhattan\", or \"Chebyshev\". Can also
+        be a float representing the Minkowski p-norm.
+    progress_bar : bool
+        Whether a progress bar is desired
+    **kwargs
+        Arguments passed to the sample method of COBRApy, see `COBRApy
+        Documentation <https://cobrapy.readthedocs.io/en/latest/autoapi/
+        cobra/sampling/index.html#cobra.sampling.sample>`_
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with index of genes, and columns representing the
+        different target networks. Values represent the divergence of a
+        particular target network between the unperturbed model and the
+        model following the gene knock-out.
     """
     divergence_metric = _parse_divergence_method(divergence_metric)
     ko_res_list = []

@@ -1,6 +1,4 @@
-"""
-Module for translating between genes and reactions
-"""
+"""Module for translating between genes and reactions"""
 
 # region Imports
 # Standard Library Imports
@@ -21,15 +19,20 @@ from metworkpy.gpr.gpr_functions import _str_to_deque, _to_postfix, _eval_gpr_de
 
 # region Translate List
 def gene_to_reaction_list(model: cobra.Model, gene_list: list[str]) -> list[str]:
-    """
-    Translate gene symbols to reactions which are associated with them
+    """Translate gene symbols to reactions which are associated with them
 
-    :param model: Cobra model containing the genes and reactions in order to translate
-    :type model: cobra.Model
-    :param gene_list: List of genes to translate
-    :type gene_list: list[str]
-    :return: List of reactions associated with the provided list of genes
-    :rtype:
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra model containing the genes and reactions in order to
+        translate
+    gene_list : list[str]
+        List of genes to translate
+
+    Returns
+    -------
+    unknown
+        List of reactions associated with the provided list of genes
     """
     rxn_list = []
     for gene in gene_list:
@@ -41,19 +44,25 @@ def gene_to_reaction_list(model: cobra.Model, gene_list: list[str]) -> list[str]
 def reaction_to_gene_list(
     model: cobra.Model, reaction_list: list[str], essential: bool = False
 ) -> list[str]:
-    """
-    Translate reaction ids to genes which are associated with them
+    """Translate reaction ids to genes which are associated with them
 
-    :param model: Cobra model containing the genes and reactions in order to translate
-    :type model: cobra.Model
-    :param reaction_list: List of reactions to translate
-    :type reaction_list: list[str]
-    :param essential: Whether to only include genes which are essential for the reactions,
-        default False includes all genes associated with the reactions, while True will
-        only include genes essential for these reactions
-    :type essential: bool
-    :return: List of genes associated with the provided list of reactions
-    :rtype: list[str]
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra model containing the genes and reactions in order to
+        translate
+    reaction_list : list[str]
+        List of reactions to translate
+    essential : bool
+        Whether to only include genes which are essential for the
+        reactions, default False includes all genes associated with the
+        reactions, while True will only include genes essential for
+        these reactions
+
+    Returns
+    -------
+    list[str]
+        List of genes associated with the provided list of reactions
     """
     gene_list = []
     if not essential:
@@ -91,16 +100,21 @@ def reaction_to_gene_list(
 
 # region Translate to Dict
 def gene_to_reaction_dict(model: cobra.Model, gene_list: list[str]):
-    """
-    Translate gene symbols to a dict of gene symbol: reaction list
+    """Translate gene symbols to a dict of gene symbol: reaction list
 
-    :param model: Cobra model containing the genes and reactions in order to translate
-    :type model: cobra.Model
-    :param gene_list: List of genes to translate
-    :type gene_list: list[str]
-    :return: Dictionary with gene symbols as keys, and lists of reactions as
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra model containing the genes and reactions in order to
+        translate
+    gene_list : list[str]
+        List of genes to translate
+
+    Returns
+    -------
+    dict[str, list[str]]
+        Dictionary with gene symbols as keys, and lists of reactions as
         values
-    :rtype: dict[str, list[str]]
     """
     gene_rxn_dict = defaultdict(list)
     for gene in gene_list:
@@ -112,19 +126,26 @@ def gene_to_reaction_dict(model: cobra.Model, gene_list: list[str]):
 def reaction_to_gene_dict(
     model: cobra.Model, reaction_list: list[str], essential: bool = False
 ):
-    """
-    Translate reaction IDs to a dict of reaction: gene list
+    """Translate reaction IDs to a dict of reaction: gene list
 
-    :param model: Cobra model containing the genes and reactions in order to translate
-    :type model: cobra.Model
-    :param reaction_list: List of reactions to translate
-    :type reaction_list: list[str]
-    :param essential: Whether to only include genes which are essential for the reactions,
-        default False includes all genes associated with the reactions, while True will
-        only include genes essential for these reactions
-    :type essential: bool
-    :return: Dictionary with reaction ids as keys, and lists of genes as values
-    :rtype: dict[str, list[str]]
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra model containing the genes and reactions in order to
+        translate
+    reaction_list : list[str]
+        List of reactions to translate
+    essential : bool
+        Whether to only include genes which are essential for the
+        reactions, default False includes all genes associated with the
+        reactions, while True will only include genes essential for
+        these reactions
+
+    Returns
+    -------
+    dict[str, list[str]]
+        Dictionary with reaction ids as keys, and lists of genes as
+        values
     """
     rxn_gene_dict = defaultdict(list)
     for rxn in reaction_list:
@@ -145,19 +166,24 @@ def gene_to_reaction_df(
     gene_df: pd.DataFrame,
     how: Literal["left", "right", "outer", "inner", "cross"] = "left",
 ) -> pd.DataFrame:
-    """
-    Translate from a dataframe indexed by gene symbols to one indexed by reaction ids
+    """Translate from a dataframe indexed by gene symbols to one indexed by reaction ids
 
-    :param model: Cobra model to use for translating
-    :type model: cobra.Model
-    :param gene_df: DataFrame to translate, should be indexed by genes
-    :type gene_df: pd.DataFrame
-    :param how: When the reaction-indexed dataframe is joined to the
-        gene-indexed dataframe, what type of join should be used
-        (see Pandas `Merge`_ documentation)
-    :type how: Literal["left", "right", "outer", "inner", "cross"]
-    :return: Dataframe indexed by gene
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra model to use for translating
+    gene_df : pd.DataFrame
+        DataFrame to translate, should be indexed by genes
+    how : Literal["left", "right", "outer", "inner", "cross"]
+        When the reaction-indexed dataframe is joined to the gene-
+        indexed dataframe, what type of join should be used (see Pandas
+        `Merge`_ documentation)
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe indexed by gene
+
 
     .. _Merge: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html
     """
@@ -177,26 +203,32 @@ def reaction_to_gene_df(
     how: Literal["left", "right", "outer", "inner", "cross"] = "left",
     essential: bool = False,
 ) -> pd.DataFrame:
-    """
-    Translate from a dataframe indexed by reaction ids to one indexed by gene symbols
+    """Translate from a dataframe indexed by reaction ids to one indexed by gene symbols
 
-    :param model: Cobra model to use for translating
-    :type model: cobra.Model
-    :param reaction_df: DataFrame to translate, should be indexed by reactions
-    :type reaction_df: pd.DataFrame
-    :param how: When the gene-indexed dataframe is joined to the
-        reaction-indexed dataframe, what type of join should be used
-        (see Pandas `Merge`_ documentation)
-    :type how: Literal["left", "right", "outer", "inner", "cross"]
-    :param essential: Whether to only include genes which are essential for the reactions,
-        default False includes all genes associated with the reactions, while True will
-        only include genes essential for these reactions
-    :type essential: bool
-    :return: Dataframe indexed by gene
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra model to use for translating
+    reaction_df : pd.DataFrame
+        DataFrame to translate, should be indexed by reactions
+    how : Literal["left", "right", "outer", "inner", "cross"]
+        When the gene-indexed dataframe is joined to the reaction-
+        indexed dataframe, what type of join should be used (see Pandas
+        `Merge`_ documentation)
+    essential : bool
+        Whether to only include genes which are essential for the
+        reactions, default False includes all genes associated with the
+        reactions, while True will only include genes essential for
+        these reactions
 
-    .. seealso::
-       _Merge: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe indexed by gene
+
+    See Also
+    --------
+    _Merge: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html
     """
     rxn_list = reaction_df.index.to_list()
     rxn_gene_dict = {"genes": [], "reactions": []}

@@ -1,6 +1,4 @@
-"""
-Utility methods for array manipulation for creating adjacency matrices
-"""
+"""Utility methods for array manipulation for creating adjacency matrices"""
 
 # Imports
 # Future
@@ -22,20 +20,25 @@ from scipy.sparse import csc_array, csr_array, dok_array
 def _split_arr_col(
     arr: ArrayLike | csc_array | csr_array, into: int = 2
 ) -> tuple[ArrayLike | csc_array | csr_array, ...]:
-    """
-    Splits an interleaved array by column
+    """Splits an interleaved array by column
 
-    :param arr: Array to split
-    :type arr: ArrayLike | csc_array | csr_array
-    :param into: Number of arrays to split the original array into
-    :type into: int
-    :return: Tuple of split arrays
-    :rtype: tuple[ArrayLike | csc_array | csr_array, ...]
+    Parameters
+    ----------
+    arr : ArrayLike | csc_array | csr_array
+        Array to split
+    into : int
+        Number of arrays to split the original array into
 
-    .. note::
-       This method treats the original array as though the columns were interleaved.
-       So, if into is 2, it will return a tuple with each even column in the first
-       subarray, and each odd column in the second subarray.
+    Returns
+    -------
+    tuple[ArrayLike | csc_array | csr_array, ...]
+        Tuple of split arrays
+
+    Notes
+    -----
+    This method treats the original array as though the columns were interleaved.
+    So, if into is 2, it will return a tuple with each even column in the first
+    subarray, and each odd column in the second subarray.
     """
     return tuple(arr[:, i::into] for i in range(into))
 
@@ -43,20 +46,24 @@ def _split_arr_col(
 def _split_arr_row(
     arr: ArrayLike | csc_array | csr_array, into: int = 2
 ) -> tuple[ArrayLike | csc_array | csr_array, ...]:
-    """
-    Splits an interleaved array by row
+    """Splits an interleaved array by row
 
-    :param arr: Array to split
-    :type arr: ArrayLike | csc_array | csr_array
-    :param into: Number of arrays to split the original array into
-    :type into:
-    :return:
-    :rtype: ArrayLike | csc_array | csr_array
+    Parameters
+    ----------
+    arr : ArrayLike | csc_array | csr_array
+        Array to split
+    into
+        Number of arrays to split the original array into
 
-    .. note::
-       This method treats the original array as though the rows were interleaved.
-       So, if into is 2, it will return a tuple with each even row in the first
-       subarray, and each odd row in the second subarray.
+    Returns
+    -------
+    ArrayLike | csc_array | csr_array
+
+    Notes
+    -----
+    This method treats the original array as though the rows were interleaved.
+    So, if into is 2, it will return a tuple with each even row in the first
+    subarray, and each odd row in the second subarray.
     """
     return tuple(arr[i::into, :] for i in range(into))
 
@@ -64,14 +71,18 @@ def _split_arr_row(
 def _split_arr_sign(
     arr: ArrayLike | csc_array | csr_array,
 ) -> tuple[ArrayLike | csc_array | csr_array, ArrayLike | csc_array | csr_array]:
-    """
-    Split an array based on signs of entries
+    """Split an array based on signs of entries
 
-    :param arr: Array to split, can be dense or scipy.sparse csc, csr, dok, lil
-    :type arr: ArrayLike | sparray
-    :return: Tuple of arrays, first will be all the positive entries,
-        and second will be all the negative entries
-    :rtype: tuple[ArrayLike | sparray, ArrayLike | sparray]
+    Parameters
+    ----------
+    arr : ArrayLike | sparray
+        Array to split, can be dense or scipy.sparse csc, csr, dok, lil
+
+    Returns
+    -------
+    tuple[ArrayLike | sparray, ArrayLike | sparray]
+        Tuple of arrays, first will be all the positive entries, and
+        second will be all the negative entries
     """
     # Handle sparse array
     if sparse.issparse(arr):
@@ -104,38 +115,51 @@ def _split_arr_sign(
 
 
 def _sparse_max(*arr_list: csc_array | csr_array) -> csc_array | csr_array:
-    """
-    Find the element wise max of a list of sparse arrays
+    """Find the element wise max of a list of sparse arrays
 
-    :param arr_list: Sequence of csc or csr sparse arrays
-    :type arr_list: list[csc_array| csr_array, ...]
-    :return: Element wise maximum of sparse arrays
-    :rtype: csc_array | csr_array
+    Parameters
+    ----------
+    *arr_list : list[csc_array| csr_array, ...]
+        Sequence of csc or csr sparse arrays
+
+    Returns
+    -------
+    csc_array | csr_array
+        Element wise maximum of sparse arrays
     """
     return functools.reduce(lambda x, y: x.maximum(y), arr_list)
 
 
 def _sparse_mean(*arr_list: csc_array | csr_array) -> csc_array | csr_array:
-    """
-    Find the element wise max of a list of sparse arrays
+    """Find the element wise max of a list of sparse arrays
 
-    :param arr_list: Sequence of csc or csr sparse arrays
-    :type arr_list: list[csc_array| csr_array, ...]
-    :return: Element wise maximum of sparse arrays
-    :rtype: csc_array | csr_array
+    Parameters
+    ----------
+    *arr_list : list[csc_array| csr_array, ...]
+        Sequence of csc or csr sparse arrays
+
+    Returns
+    -------
+    csc_array | csr_array
+        Element wise maximum of sparse arrays
     """
     return functools.reduce(lambda x, y: x + y, arr_list) / len(arr_list)
 
 
 def _broadcast_mult_arr_vec(arr: csr_array, vec: csc_array):
-    """
-    Elementwise multiplication of each row of arr by vec.
-    :param arr: Array to multiply
-    :type arr: csr_array
-    :param vec: Vector to multiply
-    :type vec: csc_array
-    :return: Result of multiplication
-    :rtype: csr_array
+    """Elementwise multiplication of each row of arr by vec.
+
+    Parameters
+    ----------
+    arr : csr_array
+        Array to multiply
+    vec : csc_array
+        Vector to multiply
+
+    Returns
+    -------
+    csr_array
+        Result of multiplication
     """
     if arr.shape[1] != vec.shape[0]:
         raise ValueError("Shape mismatch")

@@ -1,6 +1,4 @@
-"""
-Functions for performing fast gene and reaction essentiality analysis
-"""
+"""Functions for performing fast gene and reaction essentiality analysis"""
 
 # Standard Library Imports
 from __future__ import annotations
@@ -20,26 +18,32 @@ def fast_ess_rxn(
     pfba_tolerance: float = 1e-7,
     **kwargs,
 ) -> list[str]:
-    """
-    Find which reactions are essential for the model to grow
+    """Find which reactions are essential for the model to grow
 
-    :param model: The genome scale metabolic model for which to find essential
+    Parameters
+    ----------
+    model : cobra.Model
+        The genome scale metabolic model for which to find essential
         reactions
-    :type model: cobra.Model
-    :param essentiality_threshold: The proportion of optimal growth, below
-        which a reaction knockout is considered essential (default 0.1)
-    :type essentiality_threshold: float
-    :param pfba_tolerance: Value below which reaction fluxes are
-        considered 0 (default 1e-7)
-    :type pfba_tolerance: 1e-7
-    :param kwargs: Keyword arguments passed to COBRApy's
-        single_reaction_deletion
-    :returns: List of reactions which are essential for the model to be
-        able to grow
+    essentiality_threshold : float
+        The proportion of optimal growth, below which a reaction
+        knockout is considered essential (default 0.1)
+    pfba_tolerance : 1e-7
+        Value below which reaction fluxes are considered 0 (default
+        1e-7)
+    **kwargs
+        Keyword arguments passed to COBRApy's single_reaction_deletion
 
-    .. note::
-       Uses parsimonious flux balance analysis filter out non-essential reactions,
-       then iterates through remaining reactions to check if they are essential.
+    Returns
+    -------
+    unknown
+        List of reactions which are essential for the model to be able
+        to grow
+
+    Notes
+    -----
+    Uses parsimonious flux balance analysis filter out non-essential reactions,
+    then iterates through remaining reactions to check if they are essential.
     """
     # First use pFBA to identify candidate reactions
     pfba_res = cobra.flux_analysis.parsimonious.pfba(
@@ -75,26 +79,33 @@ def fast_ess_genes(
     pfba_tolerance: float = 1e-7,
     **kwargs,
 ) -> list[str]:
-    """
-    Find which genes are essential for the model to grow
+    """Find which genes are essential for the model to grow
 
-    :param model: The genome scale metabolic model for which to find essential
+    Parameters
+    ----------
+    model : cobra.Model
+        The genome scale metabolic model for which to find essential
         genes
-    :type model: cobra.Model
-    :param essentiality_threshold: The proportion of optimal growth, below
-        which a gene knockout is considered essential (default 0.1)
-    :type essentiality_threshold: float
-    :param pfba_tolerance: Value below which reaction fluxes are
-        considered 0 (default 1e-7)
-    :type pfba_tolerance: 1e-7
-    :param kwargs: Keyword arguments passed to COBRApy's
-        single_gene_deletion function
-    :returns: List of reactions which are essential for the model to be
-        able to grow
+    essentiality_threshold : float
+        The proportion of optimal growth, below which a gene knockout is
+        considered essential (default 0.1)
+    pfba_tolerance : 1e-7
+        Value below which reaction fluxes are considered 0 (default
+        1e-7)
+    **kwargs
+        Keyword arguments passed to COBRApy's single_gene_deletion
+        function
 
-    .. note::
-       Uses parsimonious flux balance analysis filter out non-essential genes,
-       then iterates through remaining genes to check if they are essential.
+    Returns
+    -------
+    unknown
+        List of reactions which are essential for the model to be able
+        to grow
+
+    Notes
+    -----
+    Uses parsimonious flux balance analysis filter out non-essential genes,
+    then iterates through remaining genes to check if they are essential.
     """
     # First use pFBA to identify candidate reactions
     pfba_res = cobra.flux_analysis.parsimonious.pfba(

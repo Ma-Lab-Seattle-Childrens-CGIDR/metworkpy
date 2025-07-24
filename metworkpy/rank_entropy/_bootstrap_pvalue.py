@@ -1,6 +1,4 @@
-"""
-Bootstrap p-values for the various rank entropy methods
-"""
+"""Bootstrap p-values for the various rank entropy methods"""
 
 # Imports
 # Standard Library Imports
@@ -33,37 +31,55 @@ def _bootstrap_rank_entropy_p_value(
     seed: Optional[int] = None,
     processes=1,
 ) -> Tuple[float, float]:
-    """
-    Generate a rank entropy value from the rank_entropy_fun function, and bootstrap a p-value for it
+    """Generate a rank entropy value from the rank_entropy_fun function, and bootstrap a p-value for it
 
-    :param samples_array: Gene expression data, either a numpy array or a pandas DataFrame, with rows representing
-        different samples, and columns representing different genes
-    :type samples_array: NDArray[int|float] | pd.DataFrame
-    :param sample_group1: Which samples belong to group1. If expression_data is a numpy array, this should be
-        a list/array/iterable of ints. If expression_data is a pandas dataframe, this can be anything that can index
-        a dataframe inside a .loc (see pandas documentation for details)
-    :param sample_group2: Which samples belong to group2, see sample_group1 information for more details.
-    :param gene_network: List of indices for genes in the gene network
-    :param rank_entropy_fun: Function used to calculate the rank entropy difference between two sample groups,
-        should take two np.ndarrays as arguments and return a float
-    :type rank_entropy_fun: Callable[[NDArray[float | int], NDArray[float | int]], float]
-    :param kernel_density_estimate: Whether to use a kernel density estimate for calculating the p-value. If True,
-        will use a Gaussian Kernel Density Estimate, if False will use an empirical CDF
-    :type kernel_density_estimate: bool
-    :param bw_method: Bandwidth method, see `scipy.stats.gaussian_kde <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html>`_ for details
-    :type bw_method: Optional[Union[str|float|Callable[[gaussian_kde], float]]]
-    :param iterations: Number of iterations to perform during bootstrapping the null distribution
-    :type iterations: int
-    :param replace: Whether to sample with replacement when randomly sampling from the sample groups
-        during bootstrapping
-    :type replace: bool
-    :param seed: Seed to use for the random number generation during bootstrapping
-    :type seed: int
-    :param processes: Number of processes to use during the bootstrapping, default 1
-    :type processes: int
-    :return: Tuple of the return value from rank_entropy_fun(sample_group1 array, sample_group2 array), and the
-        p-value found by bootstrapping
-    :rtype: Tuple[float, float]
+    Parameters
+    ----------
+    samples_array : NDArray[int|float] | pd.DataFrame
+        Gene expression data, either a numpy array or a pandas
+        DataFrame, with rows representing different samples, and columns
+        representing different genes
+    sample_group1
+        Which samples belong to group1. If expression_data is a numpy
+        array, this should be a list/array/iterable of ints. If
+        expression_data is a pandas dataframe, this can be anything that
+        can index a dataframe inside a .loc (see pandas documentation
+        for details)
+    sample_group2
+        Which samples belong to group2, see sample_group1 information
+        for more details.
+    gene_network
+        List of indices for genes in the gene network
+    rank_entropy_fun : Callable[[NDArray[float | int], NDArray[float | int]], float]
+        Function used to calculate the rank entropy difference between
+        two sample groups, should take two np.ndarrays as arguments and
+        return a float
+    kernel_density_estimate : bool
+        Whether to use a kernel density estimate for calculating the
+        p-value. If True, will use a Gaussian Kernel Density Estimate,
+        if False will use an empirical CDF
+    bw_method : Optional[Union[str|float|Callable[[gaussian_kde], float]]]
+        Bandwidth method, see `scipy.stats.gaussian_kde <https://docs.sc
+        ipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.h
+        tml>`_ for details
+    iterations : int
+        Number of iterations to perform during bootstrapping the null
+        distribution
+    replace : bool
+        Whether to sample with replacement when randomly sampling from
+        the sample groups during bootstrapping
+    seed : int
+        Seed to use for the random number generation during
+        bootstrapping
+    processes : int
+        Number of processes to use during the bootstrapping, default 1
+
+    Returns
+    -------
+    Tuple[float, float]
+        Tuple of the return value from rank_entropy_fun(sample_group1
+        array, sample_group2 array), and the p-value found by
+        bootstrapping
     """
     # Begin by converting the expression data into the proper form
     # Convert dataframe into numpy array
