@@ -47,6 +47,7 @@ def find_metabolite_synthesis_network_reactions(
         2. 'essential':
             Use essentiality to find reaction-metabolite associations.
             Find which reactions are essential for each metabolite.
+
     pfba_proportion : float
         Proportion to use for pfba analysis. This represents the
         fraction of optimum constraint applied before minimizing the sum
@@ -67,6 +68,7 @@ def find_metabolite_synthesis_network_reactions(
     pd.DataFrame[bool|float]
         A dataframe with reactions as the index and metabolites as the
         columns, containing either
+
         1. Flux values if pfba is used.
            For a given reaction and metabolite,
            this represents the reaction flux found during pFBA required to maximally
@@ -75,9 +77,9 @@ def find_metabolite_synthesis_network_reactions(
            this represents whether the reaction is essential for producing the
            metabolite.
 
-
-    .. seealso:
-       | :func: `find_metabolite_network_reactions` for equivalent method with reactions
+    See Also
+    --------
+    find_metabolite_synthesis_network_genes : Equivalent method with genes
     """
     if method == "pfba":
         res_dtype = "float"
@@ -142,7 +144,8 @@ def find_metabolite_synthesis_network_genes(
         Cobra Model used to find which genes are associated with which
         metabolite
     method : Literal["pfba", "essential"]
-        Which method to use to associate genes with metabolites. Either
+        Which method to use to associate genes with metabolites.
+        Either
 
         1. 'pfba'(default):
             Use parsimonious flux analysis with the metabolite as the
@@ -154,6 +157,7 @@ def find_metabolite_synthesis_network_genes(
         2. 'essential':
             Use essentiality to find gene-metabolite associations.
             Find which genes are essential for each metabolite.
+
     pfba_proportion : float
         Proportion to use for pfba analysis. This represents the
         fraction of optimum constraint applied before minimizing the sum
@@ -191,8 +195,9 @@ def find_metabolite_synthesis_network_genes(
     gene would be assigned a value of -10.
 
 
-    .. seealso:
-       | :func: `find_metabolite_network_reactions` for equivalent method with reactions
+    See Also
+    --------
+    find_metabolite_synthesis_network_reactions : Equivalent method with reactions
     """
     if method == "pfba":
         res_dtype = "float"
@@ -253,6 +258,7 @@ def find_metabolite_synthesis_network_genes(
 def find_metabolite_consuming_network_reactions(
     model: cobra.Model,
     reaction_proportion: float = 0.05,
+    check_reverse: bool = True,
     progress_bar: bool = False,
     **kwargs,
 ) -> pd.DataFrame[bool]:
@@ -267,6 +273,10 @@ def find_metabolite_consuming_network_reactions(
         if the maximum flux for a reaction drops below reaction_proportion * maximum flux
         when a metabolite is forced into a sink psuedo-reaction then that reaction
         will be considered to be a consumer of a metabolite.
+    check_reverse : bool, default=True
+        Whether to check for metabolite consumption in reverse reactions,
+        i.e. whether to check if a metabolite or its derivatives is a
+        product of a reversible reaction
     progress_bar : bool
         Whether to display a progress bar
     kwargs
@@ -292,12 +302,14 @@ def find_metabolite_consuming_network_reactions(
             eliminate_maintenance_requirements_(m)
             # Perform FVA for the model
             fva_results = cobra.flux_analysis.variability.flux_variability_analysis(
-                m, **kwargs
+                m, fraction_of_optimum=0.0, **kwargs
             )
             # Add the absorbing reaction
             add_metabolite_absorb_reaction_(m, metabolite)
             fva_results_remove_metabolite = (
-                cobra.flux_analysis.variability.flux_variability_analysis(m, **kwargs)
+                cobra.flux_analysis.variability.flux_variability_analysis(
+                    m, fraction_of_optimum=0.0, **kwargs
+                )
             )
             # Now determine which reactions consume the metabolite
             for rxn in res_df.index:
@@ -307,7 +319,11 @@ def find_metabolite_consuming_network_reactions(
                 rxn_min_no_met = fva_results_remove_metabolite.loc[rxn, "minimum"]
                 if (rxn_max > 0.0) and (rxn_max_no_met < rxn_max * reaction_proportion):
                     res_df.loc[rxn, metabolite] = True
-                if (rxn_min < 0.0) and (rxn_min_no_met > rxn_min * reaction_proportion):
+                if (
+                    check_reverse
+                    and (rxn_min < 0.0)
+                    and (rxn_min_no_met > rxn_min * reaction_proportion)
+                ):
                     res_df.loc[rxn, metabolite] = True
     return res_df
 
@@ -316,7 +332,7 @@ def find_metabolite_consuming_network_genes(
     model: cobra.Model,
     reaction_proportion: float = 0.05,
     essential: bool = False,
-    progres_bar: bool = False,
+    progress_bar: bool = False,
     **kwargs,
 ) -> pd.DataFrame[bool]:
     """
@@ -356,7 +372,7 @@ def find_metabolite_consuming_network_genes(
     metabolite_reaction_network = find_metabolite_consuming_network_reactions(
         model=model,
         reaction_proportion=reaction_proportion,
-        progress_bar=progres_bar,
+        progress_bar=progress_bar,
         **kwargs,
     )
     for metabolite in metabolite_reaction_network.columns:

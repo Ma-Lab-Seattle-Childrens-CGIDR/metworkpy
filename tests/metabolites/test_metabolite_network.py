@@ -13,6 +13,8 @@ from cobra.core.configuration import Configuration
 from metworkpy.metabolites.metabolite_network import (
     find_metabolite_synthesis_network_reactions,
     find_metabolite_synthesis_network_genes,
+    find_metabolite_consuming_network_reactions,
+    find_metabolite_consuming_network_genes,
     add_metabolite_objective_,
     add_metabolite_absorb_reaction_,
     eliminate_maintenance_requirements_,
@@ -142,6 +144,95 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
             self.assertAlmostEqual(pfba_f[gene], 50)
         for gene in ["g_C_H"]:
             self.assertAlmostEqual(pfba_f[gene], 0)
+
+
+class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
+    model = None
+    data_path = None
+
+    @classmethod
+    def setUpClass(cls):
+        setup(cls)
+
+    def test_find_metabolite_consuming_network_reactions(self):
+        original_model = self.model.copy()
+        consuming_network = find_metabolite_consuming_network_reactions(
+            model=self.model, reaction_proportion=0.05, progress_bar=False
+        )
+        self.assertTrue(model_eq(self.model, original_model))
+        b_network = consuming_network["B_c"]
+        expected_network_rxns = [
+            "r_A_B_D_E",
+            "r_C_E_F",
+            "r_D_G",
+            "R_G_exp",
+            "R_F_exp",
+            "R_G_e_ex",
+            "R_F_e_ex",
+            "R_A_e_ex",  # Reverse uses the metabolite
+            "R_A_imp",  # Reverse uses the metabolite
+        ]
+        actual_network_rxns = list(b_network[b_network].index)
+        self.assertCountEqual(expected_network_rxns, actual_network_rxns)
+
+    def test_find_metabolite_consuming_network_reactions_ignore_reverse(self):
+        original_model = self.model.copy()
+        consuming_network = find_metabolite_consuming_network_reactions(
+            model=self.model,
+            reaction_proportion=0.05,
+            check_reverse=False,
+            progress_bar=False,
+        )
+        self.assertTrue(model_eq(self.model, original_model))
+        b_network = consuming_network["B_c"]
+        expected_network_rxns = [
+            "r_A_B_D_E",
+            "r_C_E_F",
+            "r_D_G",
+            "R_G_exp",
+            "R_F_exp",
+            "R_G_e_ex",
+            "R_F_e_ex",
+            "R_A_imp",  # Can't run because there is nowhere for the internal A to go...
+        ]
+        actual_network_rxns = list(b_network[b_network].index)
+        self.assertCountEqual(expected_network_rxns, actual_network_rxns)
+
+    def test_find_metabolite_consuming_network_genes(self):
+        original_model = self.model.copy()
+        consuming_network = find_metabolite_consuming_network_genes(
+            model=self.model, reaction_proportion=0.05, progress_bar=False
+        )
+        self.assertTrue(model_eq(self.model, original_model))
+        b_network = consuming_network["B_c"]
+        expected_network_rxns = [
+            "g_A_imp",
+            "g_A_B_D_E",
+            "g_C_E_F",
+            "g_D_G",
+            "g_G_exp",
+            "g_F_exp",
+        ]
+        actual_network_rxns = list(b_network[b_network].index)
+        self.assertCountEqual(expected_network_rxns, actual_network_rxns)
+
+    def test_find_metabolite_consuming_network_genes_ignore_reverse(self):
+        original_model = self.model.copy()
+        consuming_network = find_metabolite_consuming_network_genes(
+            model=self.model, reaction_proportion=0.05, progress_bar=False
+        )
+        self.assertTrue(model_eq(self.model, original_model))
+        b_network = consuming_network["B_c"]
+        expected_network_rxns = [
+            "g_A_imp",  # Still included as it is unable to run if B is absorbed due to equilibrium assumption
+            "g_A_B_D_E",
+            "g_C_E_F",
+            "g_D_G",
+            "g_G_exp",
+            "g_F_exp",
+        ]
+        actual_network_rxns = list(b_network[b_network].index)
+        self.assertCountEqual(expected_network_rxns, actual_network_rxns)
 
 
 class TestHelperFunctions(unittest.TestCase):
