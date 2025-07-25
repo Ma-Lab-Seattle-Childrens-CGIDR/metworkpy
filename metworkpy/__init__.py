@@ -33,7 +33,6 @@ __all__ = [
     "find_metabolite_synthesis_network_genes",
     "find_metabolite_synthesis_network_reactions",
     "metchange",
-    "MetchangeObjectiveConstraint",
     "metabolites",
     "eval_gpr",
     "gene_to_rxn_weights",
@@ -87,7 +86,6 @@ from metworkpy.network import (
 from metworkpy.metabolites import (
     find_metabolite_synthesis_network_reactions,
     find_metabolite_synthesis_network_genes,
-    MetchangeObjectiveConstraint,
     metchange,
 )
 

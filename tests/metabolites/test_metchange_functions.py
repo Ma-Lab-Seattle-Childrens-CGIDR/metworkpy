@@ -3,17 +3,19 @@
 import pathlib
 import unittest
 
-# External Imports
-from cobra.core.configuration import Configuration
 import numpy as np
 import pandas as pd
 
+# External Imports
+from cobra.core.configuration import Configuration
+
+from metworkpy.metabolites.metchange_functions import (
+    metchange,
+    add_metchange_objective_constraint_,
+)
+
 # Local Imports
 from metworkpy.utils import read_model, model_eq
-from metworkpy.metabolites.metchange_functions import (
-    MetchangeObjectiveConstraint,
-    metchange,
-)
 
 
 def setup(cls):
@@ -47,16 +49,17 @@ class TestMetchangeObjectiveConstraint(unittest.TestCase):
                 "r_D_G",
             ],
         )
-        with MetchangeObjectiveConstraint(
-            model=test_model,
-            metabolite="F_c",
-            reaction_weights=weights,
-            objective_tolerance=0.05,
-        ) as m:
+        with test_model as m:
+            sink_rxn_id = add_metchange_objective_constraint_(
+                model=m,
+                metabolite="F_c",
+                reaction_weights=weights,
+                objective_tolerance=0.05,
+            )
             # Know that the inconsistency score will be 0
             self.assertAlmostEqual(m.slim_optimize(), 0.0)
             self.assertEqual(m.objective_direction, "min")
-            rxn = m.reactions.get_by_id("tmp_F_c_sink")
+            rxn = m.reactions.get_by_id(sink_rxn_id)
             self.assertAlmostEqual(rxn.lower_bound, 0.95 * 50)
         # Make sure model was reverted
         self.assertTrue(model_eq(test_model, self.model))
@@ -78,12 +81,13 @@ class TestMetchangeObjectiveConstraint(unittest.TestCase):
                 "r_D_G",
             ],
         )
-        with MetchangeObjectiveConstraint(
-            model=test_model,
-            metabolite="F_c",
-            reaction_weights=weights,
-            objective_tolerance=0.0,
-        ) as m:
+        with test_model as m:
+            add_metchange_objective_constraint_(
+                model=m,
+                metabolite="F_c",
+                reaction_weights=weights,
+                objective_tolerance=0.0,
+            )
             self.assertAlmostEqual(m.slim_optimize(), 50.0)
             self.assertEqual(m.objective_direction, "min")
         self.assertTrue(model_eq(test_model, self.model))

@@ -1428,6 +1428,7 @@ version = "0.1.29"
 source = { editable = "." }
 dependencies = [
     { name = "cobra" },
+    { name = "joblib" },
     { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -1484,6 +1485,7 @@ requires-dist = [
     { name = "fastparquet", marker = "extra == 'fastparquet'", specifier = ">=2024.5.0" },
     { name = "gurobipy", marker = "extra == 'gurobi'", specifier = ">=11.0.0" },
     { name = "highspy", marker = "extra == 'hybrid'", specifier = ">=1.10.0" },
+    { name = "joblib", specifier = ">=1.4.2" },
     { name = "networkx", specifier = ">=3.2.1" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "openpyxl", marker = "extra == 'excel'", specifier = ">=3.1.4" },

@@ -14,7 +14,7 @@ import sympy
 from tqdm import tqdm
 
 # Local Imports
-from metworkpy.utils import reaction_to_gene_df
+from metworkpy.utils import reaction_to_gene_df, reaction_to_gene_list
 
 
 # region Main Functions
@@ -250,6 +250,129 @@ def find_metabolite_synthesis_network_genes(
     return res_df
 
 
+def find_metabolite_consuming_network_reactions(
+    model: cobra.Model,
+    reaction_proportion: float = 0.05,
+    progress_bar: bool = False,
+    **kwargs,
+) -> pd.DataFrame[bool]:
+    """Find reactions which consume a metabolite, or its derivatives
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model used to find which reactions are associated with which metabolites
+    reaction_proportion : float
+        Proportion used to judge if a reaction consumes a metabolite or its derivatives,
+        if the maximum flux for a reaction drops below reaction_proportion * maximum flux
+        when a metabolite is forced into a sink psuedo-reaction then that reaction
+        will be considered to be a consumer of a metabolite.
+    progress_bar : bool
+        Whether to display a progress bar
+    kwargs
+        Keyword arguments passed to `cobra.flux_analysis.variability.flux_variability_analysis`,
+        which is used to find changes in maximal reaction flux.
+
+    Returns
+    -------
+    metabolite_network : pd.DataFrame[bool]
+        A dataframe with reactions as the index and metabolites as the columns,
+        a True value indicates that a particular reaction consumes a metabolite
+        or one of its derivatives
+    """
+    res_df = pd.DataFrame(
+        False,
+        columns=model.metabolites.list_attr("id"),
+        index=model.reactions.list_attr("id"),
+        dtype=bool,
+    )
+    for metabolite in tqdm(res_df.columns, disable=not progress_bar):
+        with model as m:
+            # Remove maintenance reactions to avoid issues with infeasibility
+            eliminate_maintenance_requirements_(m)
+            # Perform FVA for the model
+            fva_results = cobra.flux_analysis.variability.flux_variability_analysis(
+                m, **kwargs
+            )
+            # Add the absorbing reaction
+            add_metabolite_absorb_reaction_(m, metabolite)
+            fva_results_remove_metabolite = (
+                cobra.flux_analysis.variability.flux_variability_analysis(m, **kwargs)
+            )
+            # Now determine which reactions consume the metabolite
+            for rxn in res_df.index:
+                rxn_max = fva_results.loc[rxn, "maximum"]
+                rxn_min = fva_results.loc[rxn, "minimum"]
+                rxn_max_no_met = fva_results_remove_metabolite.loc[rxn, "maximum"]
+                rxn_min_no_met = fva_results_remove_metabolite.loc[rxn, "minimum"]
+                if (rxn_max > 0.0) and (rxn_max_no_met < rxn_max * reaction_proportion):
+                    res_df.loc[rxn, metabolite] = True
+                if (rxn_min < 0.0) and (rxn_min_no_met > rxn_min * reaction_proportion):
+                    res_df.loc[rxn, metabolite] = True
+    return res_df
+
+
+def find_metabolite_consuming_network_genes(
+    model: cobra.Model,
+    reaction_proportion: float = 0.05,
+    essential: bool = False,
+    progres_bar: bool = False,
+    **kwargs,
+) -> pd.DataFrame[bool]:
+    """
+    Find genes associated with reactions which consume a metabolite or its derivatives
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra model used to find which reactions are association with which metabolites
+    reaction_proportion: float
+        Proportion used to judge if a reaction consumes a metabolite or its derivatives,
+        if the maximum flux for a reaction drops below reaction_proportion * maximum flux
+        when a metabolite is forced into a sink psuedo-reaction then that reaction
+        will be considered to be a consumer of a metabolite.
+    essential : bool
+        Whether to only include genes which are essential for the reactions that consume the
+        metabolite or its derivatives
+    progres_bar : bool
+        Whether to display a progress bar
+    kwargs
+        Keyword arguments passed to `cobra.flux_analysis.variability.flux_variability_analysis`,
+        which is used to find changes in maximal reaction flux.
+
+    Returns
+    -------
+    metabolite_network : pd.DataFrame[bool]
+        A dataframe with genes as the index, and metabolites as the columns,
+        a True value indicates that a particular gene is associated with a reaction
+        that consumes a metabolite or one of its derivatives
+    """
+    res_df = pd.DataFrame(
+        False,
+        columns=model.metabolites.list_attr("id"),
+        index=model.genes.list_attr("id"),
+        dtype=bool,
+    )
+    metabolite_reaction_network = find_metabolite_consuming_network_reactions(
+        model=model,
+        reaction_proportion=reaction_proportion,
+        progress_bar=progres_bar,
+        **kwargs,
+    )
+    for metabolite in metabolite_reaction_network.columns:
+        gene_list = reaction_to_gene_list(
+            model=model,
+            reaction_list=list(
+                metabolite_reaction_network[
+                    metabolite_reaction_network[metabolite]
+                ].index
+            ),
+            essential=essential,
+        )
+        res_df.loc[gene_list, metabolite] = True
+    return res_df
+
+
 # endregion Main Functions
 
 # region Helper Functions
@@ -291,7 +414,7 @@ def add_metabolite_objective_(model: cobra.Model, metabolite: str) -> str:
 def add_metabolite_absorb_reaction_(
     model: cobra.Model,
     metabolite: str,
-)-> str:
+) -> str:
     """Add a reaction which consumes the metabolite, and constrain it to consume all
     the metabolite which is generated, stopping it from being used for any other reactions
 
