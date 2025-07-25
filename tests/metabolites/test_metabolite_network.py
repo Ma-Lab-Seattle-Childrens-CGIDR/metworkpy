@@ -4,15 +4,18 @@ import pathlib
 import unittest
 
 import cobra
+import numpy as np
 
 # External Imports
 from cobra.core.configuration import Configuration
 
 # Local Imports
 from metworkpy.metabolites.metabolite_network import (
-    find_metabolite_network_reactions,
-    find_metabolite_network_genes,
-    MetaboliteObjective,
+    find_metabolite_synthesis_network_reactions,
+    find_metabolite_synthesis_network_genes,
+    add_metabolite_objective_,
+    add_metabolite_absorb_reaction_,
+    eliminate_maintenance_requirements_,
 )
 from metworkpy.utils.models import model_eq, read_model
 
@@ -33,10 +36,11 @@ class TestMetaboliteObjective(unittest.TestCase):
 
     def test_adding_metabolite_objective(self):
         original_model = self.model.copy()
-        with MetaboliteObjective(model=self.model, metabolite="F_c") as m:
+        with self.model as m:
+            add_metabolite_objective_(m, "F_c")
             self.assertEqual(
                 str(self.model.objective.expression),
-                "1.0*tmp_F_c_sink_rxn - 1.0*tmp_F_c_sink_rxn_reverse_132c6",
+                "1.0*F_c_sink_objective_cd67707b - 1.0*F_c_sink_objective_cd67707b_reverse_e263c",
             )
             self.assertAlmostEqual(m.slim_optimize(), 50)
         self.assertTrue(model_eq(self.model, original_model))
@@ -53,7 +57,7 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
     def test_find_metabolite_network_reactions(self):
         # Test Essential Method
         original_model = self.model.copy()
-        ess_met_net = find_metabolite_network_reactions(
+        ess_met_net = find_metabolite_synthesis_network_reactions(
             model=self.model, method="essential", essential_proportion=0.05
         )
         self.assertTrue(model_eq(self.model, original_model))
@@ -78,7 +82,7 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
 
     def test_find_metabolite_network_reactions_pfba(self):
         original_model = self.model.copy()
-        pfba_met_net = find_metabolite_network_reactions(
+        pfba_met_net = find_metabolite_synthesis_network_reactions(
             model=self.model, method="pfba", pfba_proportion=1.0
         )
         self.assertTrue(model_eq(self.model, original_model))
@@ -103,7 +107,7 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
 
     def test_find_metabolite_network_genes_essential(self):
         # Test essential method
-        ess_met_net = find_metabolite_network_genes(
+        ess_met_net = find_metabolite_synthesis_network_genes(
             model=self.model, method="essential", essential_proportion=0.05
         )
         ess_f = ess_met_net["F_c"]
@@ -122,7 +126,7 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
 
     def test_find_metabolite_network_genes_pfba(self):
         # Test pfba method
-        pfba_met_net = find_metabolite_network_genes(
+        pfba_met_net = find_metabolite_synthesis_network_genes(
             model=self.model, method="pfba", pfba_proportion=1.0
         )
         pfba_f = pfba_met_net["F_c"]
@@ -138,6 +142,63 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
             self.assertAlmostEqual(pfba_f[gene], 50)
         for gene in ["g_C_H"]:
             self.assertAlmostEqual(pfba_f[gene], 0)
+
+
+class TestHelperFunctions(unittest.TestCase):
+    model = None
+    data_path = None
+
+    @classmethod
+    def setUpClass(cls):
+        Configuration().solver = "glpk"  # Use GLPK solver for testing
+        cls.data_path = pathlib.Path(__file__).parent.parent.absolute() / "data"
+        cls.model = read_model(cls.data_path / "textbook_model.xml")
+
+    def test_add_absorbing_reaction(self):
+        test_model = self.model.copy()
+        for metabolite in test_model.metabolites:
+            with test_model as m:
+                max_generation = m.slim_optimize()
+                if np.isclose(max_generation, 0.0) or np.isnan(max_generation):
+                    pass
+                else:
+                    add_metabolite_objective_(m, metabolite.id)
+                    add_metabolite_absorb_reaction_(m, metabolite.id)
+                    new_max_gen = m.slim_optimize()
+                    if np.isnan(new_max_gen):
+                        # If the metabolite is required to generate ATP,
+                        # absorbing it will cause an infeasible problem, in this test just skip these
+                        continue
+                    self.assertAlmostEqual(m.slim_optimize(), 0.0, delta=m.tolerance)
+            # Test that the remove worked as expected
+            self.assertAlmostEqual(
+                test_model.slim_optimize(), max_generation, delta=m.tolerance
+            )
+
+    def test_add_absorbing_reaction_no_maintenance(self):
+        test_model = self.model.copy()
+        initial_max_objective = test_model.slim_optimize()
+        for metabolite in test_model.metabolites:
+            with test_model as m:
+                max_generation = m.slim_optimize()
+                add_metabolite_objective_(m, metabolite.id)
+                eliminate_maintenance_requirements_(m)
+                add_metabolite_absorb_reaction_(m, metabolite.id)
+                new_max_gen = m.slim_optimize()
+                if np.isnan(new_max_gen):
+                    # If the metabolite is required to generate ATP,
+                    # absorbing it will cause an infeasible problem, in this test just skip these
+                    continue
+                self.assertAlmostEqual(m.slim_optimize(), 0.0, delta=m.tolerance)
+            # Test that the remove worked as expected
+            self.assertAlmostEqual(
+                test_model.slim_optimize(), max_generation, delta=m.tolerance
+            )
+        self.assertAlmostEqual(
+            test_model.slim_optimize(),
+            initial_max_objective,
+            delta=test_model.tolerance,
+        )
 
 
 if __name__ == "__main__":

@@ -1,5 +1,4 @@
 # Standard Library Imports
-import os
 import pathlib
 import unittest
 
@@ -14,7 +13,7 @@ from metworkpy.synleth.fastess import fast_ess_genes, fast_ess_rxn
 BASE_PATH = pathlib.Path(__file__).parent.parent.absolute()
 # Set cobra to use GLPK by default since that is bundled with
 # cobrapy, and so is always available
-cobra.Configuration().solver="glpk"
+cobra.Configuration().solver = "glpk"
 
 
 class TestFastEss(unittest.TestCase):

@@ -30,10 +30,9 @@ __all__ = [
     "reaction_to_gene_dict",
     "reaction_to_gene_list",
     "bipartite_project",
-    "find_metabolite_network_genes",
-    "find_metabolite_network_reactions",
+    "find_metabolite_synthesis_network_genes",
+    "find_metabolite_synthesis_network_reactions",
     "metchange",
-    "MetaboliteObjective",
     "MetchangeObjectiveConstraint",
     "metabolites",
     "eval_gpr",
@@ -86,9 +85,8 @@ from metworkpy.network import (
 )
 
 from metworkpy.metabolites import (
-    find_metabolite_network_reactions,
-    find_metabolite_network_genes,
-    MetaboliteObjective,
+    find_metabolite_synthesis_network_reactions,
+    find_metabolite_synthesis_network_genes,
     MetchangeObjectiveConstraint,
     metchange,
 )

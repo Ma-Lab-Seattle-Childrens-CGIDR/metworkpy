@@ -1,13 +1,16 @@
 """Module with functions for finding metabolite networks in cobra Models"""
 
 # Imports
-# Standard Library Imports
 from __future__ import annotations
+
+# Standard Library Imports
+import hashlib
 from typing import Literal
 
 # External Imports
 import cobra
 import pandas as pd
+import sympy
 from tqdm import tqdm
 
 # Local Imports
@@ -17,7 +20,7 @@ from metworkpy.utils import reaction_to_gene_df
 # region Main Functions
 
 
-def find_metabolite_network_reactions(
+def find_metabolite_synthesis_network_reactions(
     model: cobra.Model,
     method: Literal["pfba", "essential"] = "pfba",
     pfba_proportion: float = 0.95,
@@ -64,7 +67,6 @@ def find_metabolite_network_reactions(
     pd.DataFrame[bool|float]
         A dataframe with reactions as the index and metabolites as the
         columns, containing either
-
         1. Flux values if pfba is used.
            For a given reaction and metabolite,
            this represents the reaction flux found during pFBA required to maximally
@@ -82,9 +84,7 @@ def find_metabolite_network_reactions(
     elif method == "essential":
         res_dtype = "bool"
     else:
-        raise ValueError(
-            f"Method must be 'pfba' or 'essential' but received" f"{method}"
-        )
+        raise ValueError(f"Method must be 'pfba' or 'essential' but received{method}")
     res_df = pd.DataFrame(
         None,
         columns=model.metabolites.list_attr("id"),
@@ -92,7 +92,8 @@ def find_metabolite_network_reactions(
         dtype=res_dtype,
     )
     for metabolite in tqdm(res_df.columns, disable=not progress_bar):
-        with MetaboliteObjective(model=model, metabolite=metabolite) as m:
+        with model as m:
+            metabolite_sink_reaction_id = add_metabolite_objective_(m, metabolite)
             if method == "essential":
                 ess_rxns = [
                     rxn.id
@@ -103,7 +104,7 @@ def find_metabolite_network_reactions(
                             **kwargs,
                         )
                     )
-                    if rxn.id != f"tmp_{metabolite}_sink_rxn"
+                    if rxn.id != metabolite_sink_reaction_id
                 ]
                 res_df.loc[ess_rxns, metabolite] = True
                 res_df.loc[~res_df.index.isin(ess_rxns), metabolite] = False
@@ -116,16 +117,16 @@ def find_metabolite_network_reactions(
                         **kwargs,
                     )
                 ).fluxes
-                pfba_sol.drop(f"tmp_{metabolite}_sink_rxn", inplace=True)
+                pfba_sol.drop(metabolite_sink_reaction_id, inplace=True)
                 res_df.loc[pfba_sol.index, metabolite] = pfba_sol
             else:
                 raise ValueError(
-                    f"Method must be 'pfba' or 'essential' but received" f"{method}"
+                    f"Method must be 'pfba' or 'essential' but received {method}"
                 )
     return res_df
 
 
-def find_metabolite_network_genes(
+def find_metabolite_synthesis_network_genes(
     model: cobra.Model,
     method: Literal["pfba", "essential"] = "pfba",
     pfba_proportion: float = 0.95,
@@ -198,9 +199,7 @@ def find_metabolite_network_genes(
     elif method == "essential":
         res_dtype = "bool"
     else:
-        raise ValueError(
-            f"Method must be 'pfba' or 'essential' but received" f"{method}"
-        )
+        raise ValueError(f"Method must be 'pfba' or 'essential' but received {method}")
     res_df = pd.DataFrame(
         None,
         columns=model.metabolites.list_attr("id"),
@@ -208,7 +207,8 @@ def find_metabolite_network_genes(
         dtype=res_dtype,
     )
     for metabolite in tqdm(res_df.columns, disable=not progress_bar):
-        with MetaboliteObjective(model=model, metabolite=metabolite) as m:
+        with model as m:
+            _ = add_metabolite_objective_(m, metabolite)
             if method == "essential":
                 ess_genes = [
                     gene.id
@@ -245,50 +245,143 @@ def find_metabolite_network_genes(
                 ] = gene_fluxes_min[gene_fluxes_max.abs() < gene_fluxes_min.abs()]
             else:
                 raise ValueError(
-                    f"Method must be 'pfba' or 'essential' but received" f"{method}"
+                    f"Method must be 'pfba' or 'essential' but received {method}"
                 )
     return res_df
 
 
 # endregion Main Functions
 
-# region Context Manager
+# region Helper Functions
 
 
-class MetaboliteObjective:
-    """Context Manager for adding a metabolite sink reaction as the objective reaction
+def add_metabolite_objective_(model: cobra.Model, metabolite: str) -> str:
+    """
+    Adds a sink reaction for a metabolite, and sets it as the objective function
 
     Parameters
     ----------
     model : cobra.Model
-        Cobra model to add metabolite sink objective reaction to
+        The model to update
     metabolite : str
-        Metabolite to create sink reaction objective function for
+        The id of the metabolite to set as the objective
+
+    Returns
+    -------
+    reaction : str
+        id of the added reaction
+
+    Note
+    ----
+    If used within a model context everything this function alters
+    will be reset upon leaving the context
     """
-
-    def __init__(self, model: cobra.Model, metabolite: str):
-        self.metabolite = metabolite
-        self.model = model
-
-    def __enter__(self):
-        self.rxn_added = f"tmp_{self.metabolite}_sink_rxn"
-        self.original_objective = self.model.objective
-        self.original_objective_direction = self.model.objective_direction
-        met_sink_reaction = cobra.Reaction(
-            id=self.rxn_added, name=f"Temporary {self.metabolite} sink", lower_bound=0.0
-        )
-        met_sink_reaction.add_metabolites(
-            {self.model.metabolites.get_by_id(self.metabolite): -1}
-        )
-        self.model.add_reactions([met_sink_reaction])
-        self.model.objective = self.rxn_added
-        self.model.objective_direction = "max"
-        return self.model
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        self.model.objective = self.original_objective
-        self.model.objective_direction = self.original_objective_direction
-        self.model.remove_reactions([self.model.reactions.get_by_id(self.rxn_added)])
+    metabolite_hash = hashlib.md5(metabolite.encode("utf-8")).hexdigest()[-8:]
+    metabolite_sink_rxn_id = f"{metabolite}_sink_objective_{metabolite_hash}"
+    metabolite_sink_rxn = cobra.Reaction(
+        id=metabolite_sink_rxn_id, name=f"{metabolite} sink reaction", lower_bound=0.0
+    )
+    metabolite_sink_rxn.add_metabolites({model.metabolites.get_by_id(metabolite): -1.0})
+    model.add_reactions([metabolite_sink_rxn])
+    model.objective = metabolite_sink_rxn_id
+    model.objective_direction = "max"
+    return metabolite_sink_rxn_id
 
 
-# region Context Manager
+def add_metabolite_absorb_reaction_(
+    model: cobra.Model,
+    metabolite: str,
+)-> str:
+    """Add a reaction which consumes the metabolite, and constrain it to consume all
+    the metabolite which is generated, stopping it from being used for any other reactions
+
+    Parameters
+    ----------
+    model : cobra.Model
+        The model to add the absorbing reaction to
+    metabolite : str
+        The metabolite id for the metabolite to add the absorbing reaction for
+
+    Returns
+    -------
+    reaction_id : str
+        The id of the added reaction
+    """
+    # Start by adding the sink reaction for the metabolite to the model
+    met_to_absorb = model.metabolites.get_by_id(metabolite)
+    # Create a name for the reaction (<metabolite>_absorb_<partial hash>)
+    metabolite_hash = hashlib.md5(met_to_absorb.id.encode("utf-8")).hexdigest()[-8:]
+    absorbing_reaction_id = f"{met_to_absorb.id}_absorb_reaction_{metabolite_hash}"
+    absorbing_reaction = cobra.Reaction(
+        id=absorbing_reaction_id,
+        name=f"{met_to_absorb.id} Absorbing Reaction",
+        lower_bound=0.0,
+    )
+    absorbing_reaction.add_metabolites(
+        {
+            met_to_absorb: -1,
+        }
+    )
+    # Add the absorbing reaction to the model
+    model.add_reactions([absorbing_reaction])
+    # Now get a list consisting of optlang expressions (variable and coefficient)
+    # which will be summed to equal the total amount of the metabolite being produced
+    metabolite_gen_exprs = []
+    for rxn in met_to_absorb.reactions:
+        if rxn.id == absorbing_reaction_id:
+            continue  # Don't want to add the absorbing reaction
+        met_coef = rxn.metabolites[met_to_absorb]
+        if met_coef > 0.0:
+            # The metabolite is generated by the forward reaction
+            forward_var = rxn.forward_variable
+            if forward_var is None:
+                raise ValueError(
+                    "Metabolite is associated with reaction not found in model"
+                )
+            metabolite_gen_exprs.append(met_coef * forward_var)
+        elif met_coef < 0.0:
+            # The metabolite is generated by the reverse reaction
+            reverse_var = rxn.reverse_variable
+            if reverse_var is None:
+                raise ValueError(
+                    "Metabolite is associated with reaction not found in model"
+                )
+            metabolite_gen_exprs.append(abs(met_coef) * reverse_var)
+        else:
+            pass  # If the value is exactly 0.0, doesn't actually get generated
+    # Create a constraint such that the sum of all the metabolite generated, minus the amount
+    # being consumed by the absorbing reaction is 0
+    absorbing_constraint_name = f"{met_to_absorb}_absorb_constraint_{metabolite_hash}"
+    absorbing_constraint = model.problem.Constraint(
+        sympy.Add(*metabolite_gen_exprs, -1 * absorbing_reaction.forward_variable),
+        name=absorbing_constraint_name,
+        lb=0.0,
+        ub=0.0,  # Allows for the maintenance reactions to run
+    )
+    model.add_cons_vars(absorbing_constraint)
+    return absorbing_reaction_id
+
+
+def eliminate_maintenance_requirements_(model: cobra.Model):
+    """
+    Change bounds of maintenance reactions to remove maintenance requirements
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Model to eliminate maintenance requirements from
+
+    Note
+    ----
+    When used within a model context, all changes will be reversed on leaving the model context
+    """
+    for rxn in model.reactions:
+        if rxn.lower_bound > 0.0:
+            rxn.lower_bound = 0.0
+        elif rxn.upper_bound < 0.0:
+            rxn.upper_bound = 0.0
+        else:
+            pass
+
+
+# endregion Helper Functions

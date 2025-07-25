@@ -320,7 +320,7 @@ def create_adjacency_matrix(
     """
     if not isinstance(model, cobra.Model):
         raise ValueError(
-            f"Model must be a cobra.Model, received a " f"{type(model)} instead"
+            f"Model must be a cobra.Model, received a {type(model)} instead"
         )
     try:
         out_format = _parse_str_args_dict(
