@@ -164,27 +164,7 @@ def imat_constraint_model(
     original_objective = model.objective
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
     add_imat_objective_(imat_model, rxn_weights)
-    imat_solution = imat_model.optimize()
-    imat_obj_val = imat_solution.objective_value
-    rh = rxn_weights[rxn_weights > 0].index.tolist()
-    rl = rxn_weights[rxn_weights < 0].index.tolist()
-    rh_obj = []
-    rl_obj = []
-    for rxn in rh:  # For each highly expressed reaction
-        # Get the forward and reverse variables from the model
-        forward_variable = imat_model.solver.variables[f"y_pos_{rxn}"]
-        reverse_variable = imat_model.solver.variables[f"y_neg_{rxn}"]
-        # Adds the two variables to the rh list which will be used for sum
-        rh_obj += [forward_variable, reverse_variable]
-    for rxn in rl:  # For each lowly expressed reaction
-        variable = imat_model.solver.variables[f"y_pos_{rxn}"]
-        rl_obj += [variable]  # Note: Only one variable for lowly expressed reactions
-    imat_obj_constraint = imat_model.solver.interface.Constraint(
-        sym.Add(*rh_obj) + sym.Add(*rl_obj),
-        lb=imat_obj_val - objective_tolerance * imat_obj_val,
-        name="imat_obj_constraint",
-    )
-    imat_model.solver.add(imat_obj_constraint)
+    cobra.util.fix_objective_as_constraint(imat_model, fraction=(1-objective_tolerance), name="imat_objective_constraint")
     imat_model.objective = original_objective
     return imat_model
 
@@ -391,7 +371,7 @@ def fva_model(
             if warn_tolerance:
                 warnings.warn(
                     f"Problem with bounds computed for {rxn}, calculated "
-                    f"lowerbound as {new_lb} and upperbound as {new_ub}."
+                    f"lower bound as {new_lb} and upper bound as {new_ub}."
                     f"This should only occur due to the the tolerance of "
                     f"the solver, and so the bounds should differ by at most "
                     f"that tolerance. Swapping the computed bounds to "
@@ -400,7 +380,7 @@ def fva_model(
             # This should force valid bounds
             # And should only happen due to solver tolerance
             # So the new_lb should be at most solver tolerance
-            # less than the previous, (simmilarly with the upperbound)
+            # less than the previous, (similarly with the upperbound)
             new_lb, new_ub = new_ub, new_lb
         reaction.bounds = (
             new_lb,
@@ -581,7 +561,8 @@ def _parse_method(method: str) -> str:
                     "milp",
                     "milp-model",
                     "milp_model",
-                    "milp modelmixed_integer_linear_programming",
+                    "milp model",
+                    "mixed_integer_linear_programming",
                     "mixed integer linear programming",
                     "mixed-integer-linear-programming",
                 ],
@@ -590,8 +571,7 @@ def _parse_method(method: str) -> str:
     except ValueError as err:
         raise ValueError(
             f"Invalid method: {method}. Valid methods are: 'simple_bounds', "
-            f"'imat_restrictions', "
-            f"'eliminate_below_threshold', 'fva', 'milp'."
+            f"'imat_restrictions', 'eliminate_below_threshold', 'fva', 'milp'."
         ) from err
 
 

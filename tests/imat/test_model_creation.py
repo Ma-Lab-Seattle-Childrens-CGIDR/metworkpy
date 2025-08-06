@@ -11,6 +11,7 @@ import metworkpy.imat
 
 # Local Imports
 from metworkpy.utils import read_model
+from metworkpy.imat.imat_functions import _get_rxn_imat_binary_variable_name
 from metworkpy.imat.model_creation import (
     imat_constraint_model,
     simple_bounds_model,
@@ -68,14 +69,14 @@ class TestModelCreation(unittest.TestCase):
             self.objective_tolerance,
         )
         # Check that the binary variables were added
-        self.assertTrue("y_pos_r_C_H" in imat_model.solver.variables)
-        self.assertTrue("y_pos_r_C_E_F" in imat_model.solver.variables)
-        self.assertTrue("y_pos_r_D_G" in imat_model.solver.variables)
-        self.assertTrue("y_pos_r_A_B_D_E" in imat_model.solver.variables)
-        self.assertTrue("y_neg_r_A_B_D_E" in imat_model.solver.variables)
-        self.assertTrue("y_neg_r_D_G" in imat_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_C_H", expression="low", version="positive") in imat_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_C_E_F", expression="low", version="positive") in imat_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_D_G", expression="high", version="positive") in imat_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_D_G", expression="high", version="negative") in imat_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_A_B_D_E", expression="high", version="positive") in imat_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_A_B_D_E", expression="high", version="negative") in imat_model.solver.variables)
         # Check that the imat constraint was added
-        self.assertTrue("imat_obj_constraint" in imat_model.solver.constraints)
+        self.assertTrue("imat_objective_constraint" in imat_model.solver.constraints)
         # Check that the objective is the same as before
         self.assertTrue(_check_objective_eq(test_model.objective, imat_model.objective))
         # Check that the test_model hasn't been modified
@@ -104,13 +105,13 @@ class TestModelCreation(unittest.TestCase):
         )
         # Check that the test_model hasn't been modified
         self.assertTrue(model_eq(test_model, self.model))
-        # Check that the binary vaiables weren't added
-        self.assertTrue("y_pos_r_C_H" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_C_E_F" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_D_G" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_A_B_D_E" not in updated_model.solver.variables)
-        self.assertTrue("y_neg_r_A_B_D_E" not in updated_model.solver.variables)
-        self.assertTrue("y_neg_r_D_G" not in updated_model.solver.variables)
+        # Check that the binary variables weren't added
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_C_H", expression="low", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_C_E_F", expression="low", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_D_G", expression="high", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_D_G", expression="high", version="negative") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_A_B_D_E", expression="high", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_A_B_D_E", expression="high", version="negative") not in updated_model.solver.variables)
         # Check that the model has been changed
         self.assertFalse(model_eq(test_model, updated_model))
         # Check that the model can be optimized
@@ -128,12 +129,12 @@ class TestModelCreation(unittest.TestCase):
         # Check that the test_model hasn't been modified
         self.assertTrue(model_eq(test_model, self.model))
         # Check that the binary variables weren't added
-        self.assertTrue("y_pos_r_C_H" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_C_E_F" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_D_G" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_A_B_D_E" not in updated_model.solver.variables)
-        self.assertTrue("y_neg_r_A_B_D_E" not in updated_model.solver.variables)
-        self.assertTrue("y_neg_r_D_G" not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_C_H", expression="low", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_C_E_F", expression="low", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_D_G", expression="high", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_D_G", expression="high", version="negative") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_A_B_D_E", expression="high", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_A_B_D_E", expression="high", version="negative") not in updated_model.solver.variables)
         # Check that the model has been changed
         self.assertFalse(model_eq(test_model, updated_model))
         # Check that the model can be optimized
@@ -155,12 +156,12 @@ class TestModelCreation(unittest.TestCase):
         # Check that the test_model hasn't been modified
         self.assertTrue(model_eq(test_model, self.model))
         # Check that the binary variables weren't added
-        self.assertTrue("y_pos_r_C_H" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_C_E_F" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_D_G" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_A_B_D_E" not in updated_model.solver.variables)
-        self.assertTrue("y_neg_r_A_B_D_E" not in updated_model.solver.variables)
-        self.assertTrue("y_neg_r_D_G" not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_C_H", expression="low", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_C_E_F", expression="low", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_D_G", expression="high", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_D_G", expression="high", version="negative") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_A_B_D_E", expression="high", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_A_B_D_E", expression="high", version="negative") not in updated_model.solver.variables)
         # Check that the model has been changed
         self.assertFalse(model_eq(test_model, updated_model))
         # Check that the model can be optimized
@@ -178,12 +179,12 @@ class TestModelCreation(unittest.TestCase):
         # Check that the test_model hasn't been modified
         self.assertTrue(model_eq(test_model, self.model))
         # Check that the binary variables weren't added
-        self.assertTrue("y_pos_r_C_H" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_C_E_F" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_D_G" not in updated_model.solver.variables)
-        self.assertTrue("y_pos_r_A_B_D_E" not in updated_model.solver.variables)
-        self.assertTrue("y_neg_r_A_B_D_E" not in updated_model.solver.variables)
-        self.assertTrue("y_neg_r_D_G" not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_C_H", expression="low", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_C_E_F", expression="low", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_D_G", expression="high", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_D_G", expression="high", version="negative") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_A_B_D_E", expression="high", version="positive") not in updated_model.solver.variables)
+        self.assertTrue(_get_rxn_imat_binary_variable_name("r_A_B_D_E", expression="high", version="negative") not in updated_model.solver.variables)
         # Check that the model has been changed
         self.assertFalse(model_eq(test_model, updated_model))
         # Check that the model can be optimized

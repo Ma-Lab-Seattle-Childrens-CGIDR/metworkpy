@@ -44,9 +44,9 @@ class TestAddSingleConstraints(unittest.TestCase):
             model=test_model, rxn="r_C_H", threshold=self.threshold
         )  # Add constraint
         # Check that the binary variable was added
-        self.assertTrue("y_pos_r_C_H" in test_model.solver.variables)
+        self.assertTrue(imat_functions._get_rxn_imat_binary_variable_name("r_C_H", expression="low", version="positive") in test_model.solver.variables)
         # Check the type of the added variable
-        self.assertEqual(test_model.solver.variables["y_pos_r_C_H"].type, "binary")
+        self.assertEqual(test_model.solver.variables[imat_functions._get_rxn_imat_binary_variable_name("r_C_H", expression="low", version="positive")].type, "binary")
         # Check that the forward constraint was added
         self.assertTrue("forward_constraint_r_C_H" in test_model.solver.constraints)
         # Check that the reverse constraint was added
@@ -62,9 +62,9 @@ class TestAddSingleConstraints(unittest.TestCase):
             model=test_model, rxn="r_C_H", epsilon=self.epsilon
         )
         # CHeck that the positive binary variable was added
-        self.assertTrue("y_pos_r_C_H" in test_model.solver.variables)
+        self.assertTrue(imat_functions._get_rxn_imat_binary_variable_name("r_C_H", expression="high", version="positive") in test_model.solver.variables)
         # Check that the negative binary variable was added
-        self.assertTrue("y_neg_r_C_H" in test_model.solver.variables)
+        self.assertTrue(imat_functions._get_rxn_imat_binary_variable_name("r_C_H", expression="high", version="negative") in test_model.solver.variables)
         # Check that the forward constraint was added
         self.assertTrue("forward_constraint_r_C_H" in test_model.solver.constraints)
         # Check that the reverse constraint was added

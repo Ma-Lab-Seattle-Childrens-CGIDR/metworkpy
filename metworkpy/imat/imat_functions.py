@@ -3,15 +3,16 @@ model, and running iMAT
 """
 
 # Standard Library Imports
-import re
-from typing import Union
+from __future__ import annotations
+import hashlib
+from typing import Union, Literal
 
 # External Imports
 import cobra
-from cobra.core.configuration import Configuration
 import numpy as np
 import pandas as pd
 import sympy as sym
+from cobra.core.configuration import Configuration
 
 # Local Imports
 
@@ -22,15 +23,13 @@ DEFAULTS = {
     "tolerance": Configuration().tolerance,
 }
 
-BINARY_REGEX = re.compile(r"y_(pos|neg)_(.+)")
-
 
 # region: Main iMat Function
 def imat(
-    model: cobra.Model,
-    rxn_weights: Union[pd.Series, dict],
-    epsilon: float = DEFAULTS["epsilon"],
-    threshold: float = DEFAULTS["threshold"],
+        model: cobra.Model,
+        rxn_weights: Union[pd.Series, dict],
+        epsilon: float = DEFAULTS["epsilon"],
+        threshold: float = DEFAULTS["threshold"],
 ) -> cobra.Solution:
     """Function for performing iMAT analysis. Returns a cobra Solution object,
     with objective value and fluxes.
@@ -53,6 +52,9 @@ def imat(
     cobra.Solution
         A cobra Solution object with the objective value and fluxes.
     """
+    assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
+    assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
+    assert epsilon > threshold, f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
     add_imat_objective_(imat_model, rxn_weights)
     return imat_model.optimize()
@@ -63,11 +65,11 @@ def imat(
 
 # region: iMAT extension functions
 def flux_to_binary(
-    fluxes: pd.Series,
-    which_reactions: str = "active",
-    epsilon: float = DEFAULTS["epsilon"],
-    threshold: float = DEFAULTS["threshold"],
-    tolerance=DEFAULTS["tolerance"],
+        fluxes: pd.Series,
+        which_reactions: str = "active",
+        epsilon: float = DEFAULTS["epsilon"],
+        threshold: float = DEFAULTS["threshold"],
+        tolerance=DEFAULTS["tolerance"],
 ) -> pd.Series:
     """Convert a pandas series of fluxes to a pandas series of binary values.
 
@@ -106,6 +108,9 @@ def flux_to_binary(
     This doesn't account for gene expression level, to determine highly expressed reactions which are
     considered on/off, the output of this function will need to be compared with reaction weights.
     """
+    assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
+    assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
+    assert epsilon > threshold, f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
     which_reactions = _parse_which_reactions(which_reactions)
     if which_reactions == "forward":
         return (fluxes >= (epsilon - tolerance)).astype(int)
@@ -113,11 +118,11 @@ def flux_to_binary(
         return (fluxes <= (-epsilon + tolerance)).astype(int)
     elif which_reactions == "active":
         return (
-            (fluxes >= epsilon - tolerance) | (fluxes <= -epsilon + tolerance)
+                (fluxes >= epsilon - tolerance) | (fluxes <= -epsilon + tolerance)
         ).astype(int)
     elif which_reactions == "inactive":
         return (
-            (fluxes <= threshold + tolerance) & (fluxes >= -threshold - tolerance)
+                (fluxes <= threshold + tolerance) & (fluxes >= -threshold - tolerance)
         ).astype(int)
     else:
         raise ValueError(
@@ -127,10 +132,10 @@ def flux_to_binary(
 
 
 def compute_imat_objective(
-    fluxes: pd.Series,
-    rxn_weights,
-    epsilon: float = DEFAULTS["epsilon"],
-    threshold: float = DEFAULTS["threshold"],
+        fluxes: pd.Series,
+        rxn_weights,
+        epsilon: float = DEFAULTS["epsilon"],
+        threshold: float = DEFAULTS["threshold"],
 ):
     """Compute the iMAT objective value for a given set of fluxes.
 
@@ -149,9 +154,12 @@ def compute_imat_objective(
 
     Returns
     -------
-    unknown
+    imat_objective : float
         The iMAT objective value.
     """
+    assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
+    assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
+    assert epsilon > threshold, f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
     if isinstance(rxn_weights, dict):
         rxn_weights = pd.Series(rxn_weights)
     rh = rxn_weights[rxn_weights > 0]
@@ -171,10 +179,10 @@ def compute_imat_objective(
 
 # region: iMAT Helper Functions
 def add_imat_constraints_(
-    model: cobra.Model,
-    rxn_weights: Union[pd.Series, dict],
-    epsilon: float = DEFAULTS["epsilon"],
-    threshold: float = DEFAULTS["threshold"],
+        model: cobra.Model,
+        rxn_weights: Union[pd.Series, dict],
+        epsilon: float = DEFAULTS["epsilon"],
+        threshold: float = DEFAULTS["threshold"],
 ) -> cobra.Model:
     """Add the IMAT constraints to the model (updates the model in place).
 
@@ -196,6 +204,9 @@ def add_imat_constraints_(
     cobra.Model
         The updated model.
     """
+    assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
+    assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
+    assert epsilon > threshold, f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
     for rxn, weight in rxn_weights.items():
         # Don't add any restrictions for 0 weight reactions
         if np.isclose(weight, 0):
@@ -208,7 +219,7 @@ def add_imat_constraints_(
 
 
 def add_imat_constraints(
-    model, rxn_weights, epsilon: float = 1e-3, threshold: float = 1e-4
+        model, rxn_weights, epsilon: float = 1e-3, threshold: float = 1e-4
 ) -> cobra.Model:
     """Add the IMAT constraints to the model (returns new model, doesn't
     update model in place).
@@ -237,7 +248,7 @@ def add_imat_constraints(
 
 
 def add_imat_objective_(
-    model: cobra.Model, rxn_weights: Union[pd.Series, dict]
+        model: cobra.Model, rxn_weights: Union[pd.Series, dict]
 ) -> None:
     """Add the IMAT objective to the model (updates the model in place).
     Model must already have iMAT constraints added.
@@ -248,36 +259,32 @@ def add_imat_objective_(
         A cobra.Model object to update with iMAT constraints.
     rxn_weights : dict | pandas.Series
         A dictionary or pandas series of reaction weights.
-
-    Returns
-    -------
-    unknown
-        None
     """
     if isinstance(rxn_weights, dict):
         rxn_weights = pd.Series(rxn_weights)
-    rh = rxn_weights[rxn_weights > 0].index.tolist()
-    rl = rxn_weights[rxn_weights < 0].index.tolist()
+    rh = rxn_weights[rxn_weights > 5e-17].index.tolist()
+    rl = rxn_weights[rxn_weights < -5e-17].index.tolist()
     rh_obj = []
     rl_obj = []
     for rxn in rh:  # For each highly expressed reaction
         # Get the forward and reverse variables from the model
-        forward_variable = model.solver.variables[f"y_pos_{rxn}"]
-        reverse_variable = model.solver.variables[f"y_neg_{rxn}"]
+        forward_variable = model.solver.variables[
+            _get_rxn_imat_binary_variable_name(rxn, expression="high", version="positive")]
+        reverse_variable = model.solver.variables[_get_rxn_imat_binary_variable_name(rxn, expression="high", version="negative")]
         # Adds the two variables to the rh list which will be used for sum
         rh_obj += [forward_variable, reverse_variable]
     for rxn in rl:  # For each lowly expressed reaction
-        variable = model.solver.variables[f"y_pos_{rxn}"]
+        variable = model.solver.variables[_get_rxn_imat_binary_variable_name(rxn, expression="low", version="positive")]
         # Note: Only one variable for lowly expressed reactions
         rl_obj += [variable]
     imat_obj = model.solver.interface.Objective(
-        sym.Add(*rh_obj) + sym.Add(*rl_obj), direction="max"
+        sym.Add(*rh_obj, *rl_obj), direction="max"
     )
     model.objective = imat_obj
 
 
 def add_imat_objective(
-    model: cobra.Model, rxn_weights: Union[pd.Series, dict]
+        model: cobra.Model, rxn_weights: Union[pd.Series, dict]
 ) -> cobra.Model:
     """Add the IMAT objective to the model (doesn't change passed model).
     Model must already have iMAT constraints added.
@@ -295,7 +302,6 @@ def add_imat_objective(
         None
     """
     imat_model = model.copy()
-    # _enforce_binary(imat_model)
     add_imat_objective_(imat_model, rxn_weights)
     return imat_model
 
@@ -322,11 +328,12 @@ def _imat_pos_weight_(model: cobra.Model, rxn: str, epsilon: float) -> None:
     unknown
         None
     """
+    assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
     reaction = model.reactions.get_by_id(rxn)
     lb = reaction.lower_bound
     ub = reaction.upper_bound
     reaction_flux = reaction.forward_variable - reaction.reverse_variable
-    y_pos = model.solver.interface.Variable(f"y_pos_{reaction.id}", type="binary")
+    y_pos = model.solver.interface.Variable(_get_rxn_imat_binary_variable_name(reaction.id, expression="high", version="positive"), type="binary")
     model.solver.add(y_pos)
     forward_constraint = model.solver.interface.Constraint(
         reaction_flux + (y_pos * (lb - epsilon)),
@@ -334,7 +341,7 @@ def _imat_pos_weight_(model: cobra.Model, rxn: str, epsilon: float) -> None:
         name=f"forward_constraint_{reaction.id}",
     )
     model.solver.add(forward_constraint)
-    y_neg = model.solver.interface.Variable(f"y_neg_{reaction.id}", type="binary")
+    y_neg = model.solver.interface.Variable(_get_rxn_imat_binary_variable_name(reaction.id, expression="high", version="negative"), type="binary")
     model.solver.add(y_neg)
     reverse_constraint = model.solver.interface.Constraint(
         reaction_flux + y_neg * (ub + epsilon),
@@ -366,7 +373,7 @@ def _imat_neg_weight_(model: cobra.Model, rxn: str, threshold: float) -> None:
     lb = reaction.lower_bound
     ub = reaction.upper_bound
     reaction_flux = reaction.forward_variable - reaction.reverse_variable
-    y_pos = model.solver.interface.Variable(f"y_pos_{reaction.id}", type="binary")
+    y_pos = model.solver.interface.Variable(_get_rxn_imat_binary_variable_name(reaction.id, expression="low", version="positive"), type="binary")
     model.solver.add(y_pos)
     forward_constraint = model.solver.interface.Constraint(
         reaction_flux - ub * (1 - y_pos) - threshold * y_pos,
@@ -380,15 +387,6 @@ def _imat_neg_weight_(model: cobra.Model, rxn: str, threshold: float) -> None:
         name=f"reverse_constraint_{reaction.id}",
     )
     model.solver.add(reverse_constraint)
-
-
-# def _enforce_binary(model: cobra.Model):
-#     """
-#     Internal method for enforcing binary type for added binary variables
-#     """
-#     for var in model.solver.variables:
-#         if BINARY_REGEX.search(var.name):
-#             model.solver.variables[var.name].type = "binary"
 
 
 def _parse_which_reactions(which_reactions: str) -> str:
@@ -405,6 +403,42 @@ def _parse_which_reactions(which_reactions: str) -> str:
             "Couldn't Parse which_reactions, should be one of: \
                          active, inactive, forward, reverse"
         )
+
+def _get_rxn_imat_binary_variable_name(rxn_id: str, expression: Literal["high", "low"], version: Literal["positive", "negative"]):
+    """
+    Get the binary variable associated with the reaction in the imat problem
+    
+    Parameters
+    ----------
+    rxn_id : str    
+        ID of the reaction to get the binary variable name for 
+    expression : "high" or "low" 
+        Whether the variable is for a high expression, or low expression reaction
+    version : "positive" or "negative
+        Which of the associated variables to get the name for (only used for high expression reactions),
+        the positive (associated with the reaction being active in the forward direction) or negative (
+        associated with the reaction being active in the reverse direction)
+
+    Raises
+    ------
+    ValueError
+        If expression is not 'high' or 'low', or version is not 'positive' or 'negative
+    """
+    initial_name: str|None =None
+    if expression == "high":
+        if (version != "positive") and (version!="negative"):
+            raise ValueError(f"Version must be either 'positive' or 'negative' but received {version}")
+        initial_name = f"y_{expression}_{version[:3]}_{rxn_id}"
+    elif expression == "low":
+        initial_name = f"y_{expression}_{rxn_id}"
+    else:
+        raise ValueError(f"Expression must be 'high' or 'low' but received {expression}")
+    # Get a hash of the initial name to "ensure" no name collisions
+    if initial_name is not None:
+        name_hash = hashlib.md5(initial_name.encode("utf-8")).hexdigest()[-8:]
+        return f"{initial_name}_{name_hash}"
+    else:
+        raise ValueError(f"Expression must be 'high' or 'low' but received {expression}")
 
 
 # endregion: Internal Methods
