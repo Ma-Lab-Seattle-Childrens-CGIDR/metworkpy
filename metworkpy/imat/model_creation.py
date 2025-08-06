@@ -9,7 +9,6 @@ import warnings
 import cobra
 import numpy as np
 import pandas as pd
-import sympy as sym
 
 # Local Imports
 from metworkpy.imat.imat_functions import (
@@ -164,7 +163,9 @@ def imat_constraint_model(
     original_objective = model.objective
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
     add_imat_objective_(imat_model, rxn_weights)
-    cobra.util.fix_objective_as_constraint(imat_model, fraction=(1-objective_tolerance), name="imat_objective_constraint")
+    cobra.util.fix_objective_as_constraint(
+        imat_model, fraction=(1 - objective_tolerance), name="imat_objective_constraint"
+    )
     imat_model.objective = original_objective
     return imat_model
 
