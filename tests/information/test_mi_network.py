@@ -1,6 +1,5 @@
 # Standard Library Imports
 import itertools
-import os
 import unittest
 
 # External Imports
@@ -15,7 +14,7 @@ import metworkpy.information.mutual_information_functions as mi
 class TestMiNetwork(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Create multivariate Gaussians for testing the mutual information network
+        # Create multivariate Gaussian's for testing the mutual information network
         norm_2d_0 = scipy.stats.multivariate_normal(
             mean=[0, 0], cov=[[1, 0], [0, 1]], seed=314
         )
@@ -109,7 +108,6 @@ class TestMiNetwork(unittest.TestCase):
         mi_network_serial = mi_network_adjacency_matrix(
             self.samples, n_neighbors=3, processes=1
         )
-        print(os.getpid())
         mi_network_parallel = mi_network_adjacency_matrix(
             self.samples, n_neighbors=3, processes=2
         )

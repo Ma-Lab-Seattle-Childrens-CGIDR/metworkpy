@@ -5,12 +5,13 @@ import pathlib
 import unittest
 from unittest import skipIf
 
-# External Imports
-from cobra.core.configuration import Configuration
 import pandas as pd
 
+# External Imports
+from cobra.core.configuration import Configuration
+
 # Local Imports
-import metworkpy.imat.imat_functions as imat_functions
+from metworkpy.imat import imat_functions
 from metworkpy.utils.models import read_model, model_eq, _check_expression_eq
 
 
@@ -46,7 +47,7 @@ class TestAddSingleConstraints(unittest.TestCase):
         # Check that the binary variable was added
         self.assertTrue(
             imat_functions._get_rxn_imat_binary_variable_name(
-                "r_C_H", expression="low", version="positive"
+                "r_C_H", expression_weight="low", which="positive"
             )
             in test_model.solver.variables
         )
@@ -54,15 +55,25 @@ class TestAddSingleConstraints(unittest.TestCase):
         self.assertEqual(
             test_model.solver.variables[
                 imat_functions._get_rxn_imat_binary_variable_name(
-                    "r_C_H", expression="low", version="positive"
+                    "r_C_H", expression_weight="low", which="positive"
                 )
             ].type,
             "binary",
         )
         # Check that the forward constraint was added
-        self.assertTrue("forward_constraint_r_C_H" in test_model.solver.constraints)
+        self.assertTrue(
+            imat_functions._get_rxn_imat_constraint_name(
+                "r_C_H", expression_weight="low", which="forward"
+            )
+            in test_model.solver.constraints
+        )
         # Check that the reverse constraint was added
-        self.assertTrue("reverse_constraint_r_C_H" in test_model.solver.constraints)
+        self.assertTrue(
+            imat_functions._get_rxn_imat_constraint_name(
+                "r_C_H", expression_weight="low", which="reverse"
+            )
+            in test_model.solver.constraints
+        )
         # TODO: Read expression into sympy to check that it behaves
         # equivalently, instead of checking the bounds
         # For above, see
@@ -76,21 +87,31 @@ class TestAddSingleConstraints(unittest.TestCase):
         # CHeck that the positive binary variable was added
         self.assertTrue(
             imat_functions._get_rxn_imat_binary_variable_name(
-                "r_C_H", expression="high", version="positive"
+                "r_C_H", expression_weight="high", which="positive"
             )
             in test_model.solver.variables
         )
         # Check that the negative binary variable was added
         self.assertTrue(
             imat_functions._get_rxn_imat_binary_variable_name(
-                "r_C_H", expression="high", version="negative"
+                "r_C_H", expression_weight="high", which="negative"
             )
             in test_model.solver.variables
         )
         # Check that the forward constraint was added
-        self.assertTrue("forward_constraint_r_C_H" in test_model.solver.constraints)
+        self.assertTrue(
+            imat_functions._get_rxn_imat_constraint_name(
+                "r_C_H", expression_weight="high", which="forward"
+            )
+            in test_model.solver.constraints
+        )
         # Check that the reverse constraint was added
-        self.assertTrue("reverse_constraint_r_C_H" in test_model.solver.constraints)
+        self.assertTrue(
+            imat_functions._get_rxn_imat_constraint_name(
+                "r_C_H", expression_weight="high", which="reverse"
+            )
+            in test_model.solver.constraints
+        )
         # TODO: Add checks for the behavior of the constraints
 
 

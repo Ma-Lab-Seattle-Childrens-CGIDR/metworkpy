@@ -71,37 +71,37 @@ class TestModelCreation(unittest.TestCase):
         # Check that the binary variables were added
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_C_H", expression="low", version="positive"
+                "r_C_H", expression_weight="low", which="positive"
             )
             in imat_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_C_E_F", expression="low", version="positive"
+                "r_C_E_F", expression_weight="low", which="positive"
             )
             in imat_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_D_G", expression="high", version="positive"
+                "r_D_G", expression_weight="high", which="positive"
             )
             in imat_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_D_G", expression="high", version="negative"
+                "r_D_G", expression_weight="high", which="negative"
             )
             in imat_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_A_B_D_E", expression="high", version="positive"
+                "r_A_B_D_E", expression_weight="high", which="positive"
             )
             in imat_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_A_B_D_E", expression="high", version="negative"
+                "r_A_B_D_E", expression_weight="high", which="negative"
             )
             in imat_model.solver.variables
         )
@@ -138,37 +138,37 @@ class TestModelCreation(unittest.TestCase):
         # Check that the binary variables weren't added
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_C_H", expression="low", version="positive"
+                "r_C_H", expression_weight="low", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_C_E_F", expression="low", version="positive"
+                "r_C_E_F", expression_weight="low", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_D_G", expression="high", version="positive"
+                "r_D_G", expression_weight="high", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_D_G", expression="high", version="negative"
+                "r_D_G", expression_weight="high", which="negative"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_A_B_D_E", expression="high", version="positive"
+                "r_A_B_D_E", expression_weight="high", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_A_B_D_E", expression="high", version="negative"
+                "r_A_B_D_E", expression_weight="high", which="negative"
             )
             not in updated_model.solver.variables
         )
@@ -191,37 +191,37 @@ class TestModelCreation(unittest.TestCase):
         # Check that the binary variables weren't added
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_C_H", expression="low", version="positive"
+                "r_C_H", expression_weight="low", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_C_E_F", expression="low", version="positive"
+                "r_C_E_F", expression_weight="low", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_D_G", expression="high", version="positive"
+                "r_D_G", expression_weight="high", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_D_G", expression="high", version="negative"
+                "r_D_G", expression_weight="high", which="negative"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_A_B_D_E", expression="high", version="positive"
+                "r_A_B_D_E", expression_weight="high", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_A_B_D_E", expression="high", version="negative"
+                "r_A_B_D_E", expression_weight="high", which="negative"
             )
             not in updated_model.solver.variables
         )
@@ -248,37 +248,37 @@ class TestModelCreation(unittest.TestCase):
         # Check that the binary variables weren't added
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_C_H", expression="low", version="positive"
+                "r_C_H", expression_weight="low", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_C_E_F", expression="low", version="positive"
+                "r_C_E_F", expression_weight="low", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_D_G", expression="high", version="positive"
+                "r_D_G", expression_weight="high", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_D_G", expression="high", version="negative"
+                "r_D_G", expression_weight="high", which="negative"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_A_B_D_E", expression="high", version="positive"
+                "r_A_B_D_E", expression_weight="high", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_A_B_D_E", expression="high", version="negative"
+                "r_A_B_D_E", expression_weight="high", which="negative"
             )
             not in updated_model.solver.variables
         )
@@ -301,37 +301,37 @@ class TestModelCreation(unittest.TestCase):
         # Check that the binary variables weren't added
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_C_H", expression="low", version="positive"
+                "r_C_H", expression_weight="low", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_C_E_F", expression="low", version="positive"
+                "r_C_E_F", expression_weight="low", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_D_G", expression="high", version="positive"
+                "r_D_G", expression_weight="high", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_D_G", expression="high", version="negative"
+                "r_D_G", expression_weight="high", which="negative"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_A_B_D_E", expression="high", version="positive"
+                "r_A_B_D_E", expression_weight="high", which="positive"
             )
             not in updated_model.solver.variables
         )
         self.assertTrue(
             _get_rxn_imat_binary_variable_name(
-                "r_A_B_D_E", expression="high", version="negative"
+                "r_A_B_D_E", expression_weight="high", which="negative"
             )
             not in updated_model.solver.variables
         )

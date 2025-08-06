@@ -4,6 +4,7 @@ model, and running iMAT
 
 # Standard Library Imports
 from __future__ import annotations
+
 import hashlib
 from typing import Union, Literal
 
@@ -278,12 +279,12 @@ def add_imat_objective_(
         # Get the forward and reverse variables from the model
         forward_variable = model.solver.variables[
             _get_rxn_imat_binary_variable_name(
-                rxn, expression="high", version="positive"
+                rxn, expression_weight="high", which="positive"
             )
         ]
         reverse_variable = model.solver.variables[
             _get_rxn_imat_binary_variable_name(
-                rxn, expression="high", version="negative"
+                rxn, expression_weight="high", which="negative"
             )
         ]
         # Adds the two variables to the rh list which will be used for sum
@@ -291,7 +292,7 @@ def add_imat_objective_(
     for rxn in rl:  # For each lowly expressed reaction
         variable = model.solver.variables[
             _get_rxn_imat_binary_variable_name(
-                rxn, expression="low", version="positive"
+                rxn, expression_weight="low", which="positive"
             )
         ]
         # Note: Only one variable for lowly expressed reactions
@@ -354,7 +355,7 @@ def _imat_pos_weight_(model: cobra.Model, rxn: str, epsilon: float) -> None:
     reaction_flux = reaction.forward_variable - reaction.reverse_variable
     y_pos = model.solver.interface.Variable(
         _get_rxn_imat_binary_variable_name(
-            reaction.id, expression="high", version="positive"
+            reaction.id, expression_weight="high", which="positive"
         ),
         type="binary",
     )
@@ -362,12 +363,14 @@ def _imat_pos_weight_(model: cobra.Model, rxn: str, epsilon: float) -> None:
     forward_constraint = model.solver.interface.Constraint(
         reaction_flux + (y_pos * (lb - epsilon)),
         lb=lb,
-        name=f"forward_constraint_{reaction.id}",
+        name=_get_rxn_imat_constraint_name(
+            reaction.id, expression_weight="high", which="forward"
+        ),
     )
     model.solver.add(forward_constraint)
     y_neg = model.solver.interface.Variable(
         _get_rxn_imat_binary_variable_name(
-            reaction.id, expression="high", version="negative"
+            reaction.id, expression_weight="high", which="negative"
         ),
         type="binary",
     )
@@ -375,7 +378,9 @@ def _imat_pos_weight_(model: cobra.Model, rxn: str, epsilon: float) -> None:
     reverse_constraint = model.solver.interface.Constraint(
         reaction_flux + y_neg * (ub + epsilon),
         ub=ub,
-        name=f"reverse_constraint_{reaction.id}",
+        name=_get_rxn_imat_constraint_name(
+            reaction.id, expression_weight="high", which="reverse"
+        ),
     )
     model.solver.add(reverse_constraint)
 
@@ -404,7 +409,7 @@ def _imat_neg_weight_(model: cobra.Model, rxn: str, threshold: float) -> None:
     reaction_flux = reaction.forward_variable - reaction.reverse_variable
     y_pos = model.solver.interface.Variable(
         _get_rxn_imat_binary_variable_name(
-            reaction.id, expression="low", version="positive"
+            reaction.id, expression_weight="low", which="positive"
         ),
         type="binary",
     )
@@ -412,13 +417,17 @@ def _imat_neg_weight_(model: cobra.Model, rxn: str, threshold: float) -> None:
     forward_constraint = model.solver.interface.Constraint(
         reaction_flux - ub * (1 - y_pos) - threshold * y_pos,
         ub=0,
-        name=f"forward_constraint_{reaction.id}",
+        name=_get_rxn_imat_constraint_name(
+            reaction.id, expression_weight="low", which="forward"
+        ),
     )
     model.solver.add(forward_constraint)
     reverse_constraint = model.solver.interface.Constraint(
         reaction_flux - lb * (1 - y_pos) + threshold * y_pos,
         lb=0,
-        name=f"reverse_constraint_{reaction.id}",
+        name=_get_rxn_imat_constraint_name(
+            reaction.id, expression_weight="low", which="reverse"
+        ),
     )
     model.solver.add(reverse_constraint)
 
@@ -441,19 +450,19 @@ def _parse_which_reactions(which_reactions: str) -> str:
 
 def _get_rxn_imat_binary_variable_name(
     rxn_id: str,
-    expression: Literal["high", "low"],
-    version: Literal["positive", "negative"],
+    expression_weight: Literal["high", "low"],
+    which: Literal["positive", "negative"],
 ):
     """
-    Get the binary variable associated with the reaction in the imat problem
+    Get the name for the binary variable associated with the reaction in the imat problem
 
     Parameters
     ----------
     rxn_id : str
         ID of the reaction to get the binary variable name for
-    expression : "high" or "low"
+    expression_weight : "high" or "low"
         Whether the variable is for a high expression, or low expression reaction
-    version : "positive" or "negative
+    which : "positive" or "negative
         Which of the associated variables to get the name for (only used for high expression reactions),
         the positive (associated with the reaction being active in the forward direction) or negative (
         associated with the reaction being active in the reverse direction)
@@ -461,20 +470,20 @@ def _get_rxn_imat_binary_variable_name(
     Raises
     ------
     ValueError
-        If expression is not 'high' or 'low', or version is not 'positive' or 'negative
+        If expression_weight is not 'high' or 'low', or which is not 'positive' or 'negative
     """
     initial_name: str | None = None
-    if expression == "high":
-        if (version != "positive") and (version != "negative"):
+    if expression_weight == "high":
+        if (which != "positive") and (which != "negative"):
             raise ValueError(
-                f"Version must be either 'positive' or 'negative' but received {version}"
+                f"Version must be either 'positive' or 'negative' but received {which}"
             )
-        initial_name = f"y_{expression}_{version[:3]}_{rxn_id}"
-    elif expression == "low":
-        initial_name = f"y_{expression}_{rxn_id}"
+        initial_name = f"y_{expression_weight}_{which[:3]}_{rxn_id}"
+    elif expression_weight == "low":
+        initial_name = f"y_{expression_weight}_{rxn_id}"
     else:
         raise ValueError(
-            f"Expression must be 'high' or 'low' but received {expression}"
+            f"Expression must be 'high' or 'low' but received {expression_weight}"
         )
     # Get a hash of the initial name to "ensure" no name collisions
     if initial_name is not None:
@@ -482,8 +491,43 @@ def _get_rxn_imat_binary_variable_name(
         return f"{initial_name}_{name_hash}"
     else:
         raise ValueError(
-            f"Expression must be 'high' or 'low' but received {expression}"
+            f"Expression must be 'high' or 'low' but received {expression_weight}"
         )
+
+
+def _get_rxn_imat_constraint_name(
+    rxn_id: str,
+    expression_weight: Literal["high", "low"],
+    which: Literal["forward", "reverse"],
+):
+    """
+    Get the name for the constraint associated with the reaction in the imat problem
+
+    Parameters
+    ----------
+    rxn_id : str
+        ID of the reaction to get the constraint name for
+    expression_weight : "high" or "low"
+        Whether the constraint is for a high expression, or low expression reaction
+    which : "forward" or "reverse"
+        Which direction of constraint to get the name for
+
+    Raises
+    ------
+    ValueError
+        If expression is not 'high' or 'low', or which is not 'forward', or 'reverse'
+    """
+    if (expression_weight != "high") and (expression_weight != "low"):
+        raise ValueError(
+            f"Expression must be either 'high' or 'low', but received {expression_weight}"
+        )
+    if (which != "forward") and (which != "reverse"):
+        raise ValueError(
+            f"Which must be either 'forward' or 'reverse', but received {which}"
+        )
+    initial_name = f"imat_{expression_weight}_{which}_{rxn_id}_constraint"
+    name_hash = hashlib.md5(initial_name.encode("utf-8")).hexdigest()[-8:]
+    return f"{initial_name}_{name_hash}"
 
 
 # endregion: Internal Methods

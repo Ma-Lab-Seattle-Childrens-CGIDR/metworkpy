@@ -163,13 +163,13 @@ class TestContinuousKL(unittest.TestCase):
         )
 
     def test_jitter(self):
-        js_no_jitter = metworkpy.divergence.kl_divergence_functions.kl_divergence(
+        kl_no_jitter = metworkpy.divergence.kl_divergence_functions.kl_divergence(
             self.norm_0_3, self.norm_2_10
         )
-        js_jitter = metworkpy.divergence.kl_divergence_functions.kl_divergence(
+        kl_jitter = metworkpy.divergence.kl_divergence_functions.kl_divergence(
             self.norm_0_3, self.norm_2_10, jitter_seed=42, jitter=1e-10
         )
-        self.assertTrue(np.isclose(js_jitter, js_no_jitter))
+        self.assertTrue(np.isclose(kl_jitter, kl_no_jitter))
 
 
 class TestDiscreteKL(unittest.TestCase):

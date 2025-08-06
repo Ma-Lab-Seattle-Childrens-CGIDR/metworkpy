@@ -2,52 +2,51 @@
 
 # Standard Library Imports
 from __future__ import annotations
-import functools
-import math
+
 import itertools
-from multiprocessing import shared_memory, Pool, cpu_count
-from typing import Tuple
+from typing import Tuple, TypeVar, TypeAlias, Union
 
 # External Imports
+import joblib
 import numpy as np
 import pandas as pd
+import scipy
 import tqdm
+from numpy.typing import ArrayLike
+from .mutual_information_functions import mutual_information
 
 # Local Imports
-from metworkpy.utils._parallel import _create_shared_memory_numpy_array
-from metworkpy.information.mutual_information_functions import _mi_cont_cont_cheb_only
 
 
 # region Main Function
+T = TypeVar("T", bound=ArrayLike)
+
+
 def mi_network_adjacency_matrix(
-    samples: pd.DataFrame | np.ndarray,
-    n_neighbors: int = 5,
-    processes: int = 1,
-    progress_bar: bool = False,
-) -> np.ndarray:
+    samples: T, processes: int = -1, progress_bar: bool = False, **kwargs
+) -> T:
     """Create a Mutual Information Network Adjacency matrix from flux samples. Uses kth nearest neighbor method
     for estimating mutual information.
 
     Parameters
     ----------
-    samples : np.ndarray|pd.DataFrame
-        Numpy array or Pandas DataFrame containing the samples, columns
+    samples : ArrayLike
+        ArrayLike containing the samples, columns
         should represent different reactions while rows should represent
         different samples
-    n_neighbors : int
-        Number of neighbors to use for the Mutual Information estimation
     processes : int
-        Number of processes to use when
+        Number of processes to use when calculating the mutual information
     progress_bar : bool
         Whether a progress bar should be displayed
+    kwargs
+        Keyword arguments passed to the mutual_information function
 
     Returns
     -------
-    np.ndarray
-        Square numpy array with values at i,j representing the mutual
-        information between the ith and jth columns in the original
-        samples array. This array is symmetrical since mutual
-        information is symmetrical.
+    mutual_information_ : ArrayLike
+        The mutual information adjacency matrix, will share a type with the ArrayLike passed in, and
+        be a square symmetrical array, with the value at the ith row, jth column representing the mutual
+        information between the ith and jth columns of the input samples dataset
 
     See Also
     --------
@@ -55,105 +54,102 @@ def mi_network_adjacency_matrix(
     1. Kraskov, A., Stögbauer, H., & Grassberger, P. (2004). Estimating mutual information. Physical Review E, 69(6), 066138.
          Method for estimating mutual information between samples from two continuous distributions.
     """
-    if isinstance(samples, pd.DataFrame):
-        samples_array = samples.to_numpy()
-    elif isinstance(samples, np.ndarray):
-        samples_array = samples
+    # Wraps mi_pariwise, here for backward compatibility
+    mi_adj_mat = mi_pairwise(
+        dataset=samples, processes=processes, progress_bar=progress_bar, **kwargs
+    )
+    if isinstance(mi_adj_mat, pd.DataFrame):
+        mi_adj_mat = mi_adj_mat.to_numpy()
     else:
-        raise ValueError(
-            f"samples is of an invalid type, expected numpy ndarray or "
-            f"pandas DataFrame but received {type(samples)}"
-        )
-    processes = min(processes, cpu_count())
-    (
-        shared_nrows,
-        shared_ncols,
-        shared_dtype,
-        shared_mem_name,
-    ) = _create_shared_memory_numpy_array(samples_array)
-    shm = shared_memory.SharedMemory(name=shared_mem_name)
-    # Wrapped in try finally so that upon an error, the shared memory will be released
-    try:
-        # Currently this maps over a results matrix, returns the indices and uses those to write the results to
-        # A matrix in the main process
-        # It could be more memory efficient to put the results array into shared memory, and have each
-        # process write its results there without returning, depending on if this means the main
-        # process needs to hold on to a list of the returned values, or if it eagerly writes the results...
-        mi_array = np.zeros((shared_ncols, shared_ncols), dtype=float)
-        with (
-            Pool(processes=processes) as pool,
-            tqdm.tqdm(
-                total=math.comb(shared_ncols, 2), disable=not progress_bar
-            ) as pbar,
-        ):
-            for x, y, mi in pool.imap_unordered(
-                functools.partial(
-                    _mi_network_worker,
-                    shared_nrows=shared_nrows,
-                    shared_ncols=shared_ncols,
-                    shared_dtype=shared_dtype,
-                    shared_mem_name=shared_mem_name,
-                    n_neighbors=n_neighbors,
-                ),
-                itertools.combinations(range(shared_ncols), 2),
-                chunksize=shared_ncols // processes,
-            ):
-                if progress_bar:
-                    pbar.update()
-                    pbar.refresh()
-                # Set the value in the results matrix
-                mi_array[x, y] = mi
-                mi_array[y, x] = mi
-    finally:
-        shm.unlink()
-    return mi_array
+        mi_adj_mat = np.array(mi_adj_mat)
+    return mi_adj_mat
 
 
 # endregion Main Function
 
 
-# region Worker Function
-def _mi_network_worker(
-    index: Tuple[int, int],
-    shared_nrows: int,
-    shared_ncols: int,
-    shared_dtype: np.dtype,
-    shared_mem_name: str,
-    n_neighbors: int,
-) -> Tuple[int, int, float]:
-    """Calculate the mutual information between two columns in the shared numpy array
+# region Pairwise Mutual Information
+def mi_pairwise(
+    dataset: T, processes: int = -1, progress_bar: bool = False, **kwargs
+) -> T:
+    """
+    Calculate all pairwise values of mutual information for columns in dataset
 
     Parameters
     ----------
-    index : Tuple[int, int]
-        Tuple representing the index of the two columns
-    shared_nrows : int
-        Number of rows in the shared numpy array
-    shared_ncols : int
-        Number of columns in the shared numpy array
-    shared_dtype : np.dtype
-        Data type of the shared numpy array
-    shared_mem_name : str
-        Name of the shared memory
-    n_neighbors : int
-        Number of neighbors to use for estimating the mutual information
+    dataset : ArrayLike
+        The dataset to calculate pairwise mutual information values for,
+        should be a 2-dimensional array or dataframe
+    processes : int, default=-1
+        The number of processes to use for calculating the pairwise mutual information
+    progress_bar : bool, default=False
+        Whether a progress bar is desired
+    kwargs
+        Keyword arguments passed into the mutual_information function
+
+    Notes
+    -----
+    The parallelization uses joblib, and so can be configured with joblib's parallel_config context manager
+    """
+    if isinstance(dataset, pd.DataFrame):
+        mi_result = pd.DataFrame(0.0, index=dataset.columns, columns=dataset.columns)
+        num_combinations = scipy.special.comb(dataset.shape[1], 2)
+        for idx1, idx2, mi in tqdm.tqdm(
+            joblib.Parallel(n_jobs=processes, return_as="generator")(
+                joblib.delayed(_mi_single_pair)(dataset[i], dataset[j], i, j, **kwargs)
+                for i, j in itertools.combinations(dataset.columns, 2)
+            ),
+            disable=not progress_bar,
+            total=num_combinations,
+        ):
+            mi_result.loc[idx1, idx2] = mi
+            mi_result.loc[idx2, idx1] = mi
+    else:
+        dataset = np.array(dataset)
+        mi_result = np.zeros((dataset.shape[1], dataset.shape[1]))
+        num_combinations = scipy.special.comb(dataset.shape[1], 2)
+        for idx1, idx2, mi in tqdm.tqdm(
+            joblib.Parallel(n_jobs=processes, return_as="generator")(
+                joblib.delayed(_mi_single_pair)(
+                    dataset[:, i], dataset[:, j], i, j, **kwargs
+                )
+                for i, j in itertools.combinations(range(dataset.shape[1]), 2)
+            ),
+            disable=not progress_bar,
+            total=num_combinations,
+        ):
+            mi_result[idx1, idx2] = mi
+            mi_result[idx2, idx1] = mi
+    return mi_result
+
+
+Indexer: TypeAlias = Union[int, str]
+U = TypeVar("U", bound=Indexer)
+V = TypeVar("V", bound=Indexer)
+
+
+def _mi_single_pair(
+    item1: ArrayLike, item2: ArrayLike, idx1: U, idx2: V, **kwargs
+) -> Tuple[U, V, float]:
+    """
+    Calculate the mutual information for a single pair of features
+
+    Parameters
+    ----------
+    item1, item2 : ArrayLike
+        The pair to calculate the mutual information for, must be coercable into 1-D arrays
+    idx1, idx2 : int or str
+        The index of pair for which the mutual information is being calculated (just passed through
+        but simplified the mi_pairwise function)
+    kwargs
+        Keyword arguments passed through to the mutual_information_function
 
     Returns
     -------
-    Tuple[int, int, float]
-        Tuple of (column 1, column 2, mutual information between two
-        columns)
+    A tuple of the first index, the second index, and the mutual information between
+    the two items
     """
-    # Get access to the shared memory, and create array from it
-    shm = shared_memory.SharedMemory(name=shared_mem_name)
-    shared_array = np.ndarray(
-        (shared_nrows, shared_ncols), dtype=shared_dtype, buffer=shm.buf
-    )
-    # Get the x and y columns
-    xcol, ycol = index
-    x = shared_array[:, (xcol,)]
-    y = shared_array[:, (ycol,)]
-    return xcol, ycol, _mi_cont_cont_cheb_only(x=x, y=y, n_neighbors=n_neighbors)
+    return idx1, idx2, mutual_information(item1, item2, **kwargs)
 
 
-# endregion Worker Function
+# endregion Pairwise Mutual Information
