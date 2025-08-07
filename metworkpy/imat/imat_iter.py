@@ -2,22 +2,27 @@
 
 # Standard Library Imports
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from enum import Enum
-import re
 from typing import Union, Literal, Optional, Any
 
 # External Imports
 import cobra
-from cobra import Configuration
 import numpy as np
 import optlang
 import pandas as pd
+from cobra import Configuration
+
+from metworkpy.imat import model_creation
 
 # Local Imports
-from metworkpy.imat.imat_functions import add_imat_objective_, add_imat_constraints_
-from metworkpy.imat import model_creation
+from metworkpy.imat.imat_functions import (
+    add_imat_objective_,
+    add_imat_constraints_,
+    _get_rxn_imat_binary_variable_name,
+)
 
 # define defaults for the iMAT functions
 DEFAULTS = {
@@ -27,8 +32,6 @@ DEFAULTS = {
     "objective_tolerance": 5e-2,
     "max_iter": 20,
 }
-
-BINARY_REGEX = re.compile(r"y_(pos|neg)_(.+)")
 
 
 # region Reaction Activity Enum
@@ -348,7 +351,9 @@ class ImatIterBase(ABC):
         high_expr_pos_variables = {}
         for rxn in self._get_high_expr_rxns():
             high_expr_pos_variables[rxn] = self._imat_model.variables.get(
-                f"y_pos_{rxn}"
+                _get_rxn_imat_binary_variable_name(
+                    rxn, expression_weight="high", which="positive"
+                )
             )
         return high_expr_pos_variables
 
@@ -364,7 +369,9 @@ class ImatIterBase(ABC):
         high_expr_neg_variables = {}
         for rxn in self._get_high_expr_rxns():
             high_expr_neg_variables[rxn] = self._imat_model.variables.get(
-                f"y_neg_{rxn}"
+                _get_rxn_imat_binary_variable_name(
+                    rxn, expression_weight="high", which="negative"
+                )
             )
         return high_expr_neg_variables
 
@@ -379,7 +386,11 @@ class ImatIterBase(ABC):
         """
         low_expr_pos_variables = {}
         for rxn in self._get_low_expr_rxns():
-            low_expr_pos_variables[rxn] = self._imat_model.variables.get(f"y_pos_{rxn}")
+            low_expr_pos_variables[rxn] = self._imat_model.variables.get(
+                _get_rxn_imat_binary_variable_name(
+                    rxn, expression_weight="low", which="positive"
+                )
+            )
         return low_expr_pos_variables
 
     def _get_high_expr_variables(self) -> dict[str, dict[str, optlang.Variable]]:
@@ -449,12 +460,30 @@ class ImatIterBase(ABC):
         # Start with the high expr reactions
         for rxn in self._get_high_expr_rxns():
             # Get the y_pos
-            all_binary_variables.append(self._imat_model.variables.get(f"y_pos_{rxn}"))
+            all_binary_variables.append(
+                self._imat_model.variables.get(
+                    _get_rxn_imat_binary_variable_name(
+                        rxn, expression_weight="high", which="positive"
+                    )
+                )
+            )
             # and the y_neg
-            all_binary_variables.append(self._imat_model.variables.get(f"y_neg_{rxn}"))
+            all_binary_variables.append(
+                self._imat_model.variables.get(
+                    _get_rxn_imat_binary_variable_name(
+                        rxn, expression_weight="high", which="negative"
+                    )
+                )
+            )
         # Then all the low expr reactions
         for rxn in self._get_low_expr_rxns():
-            all_binary_variables.append(self._imat_model.variables.get(f"y_pos_{rxn}"))
+            all_binary_variables.append(
+                self._imat_model.variables.get(
+                    _get_rxn_imat_binary_variable_name(
+                        rxn, expression_weight="low", which="positive"
+                    )
+                )
+            )
         return all_binary_variables
 
     def _iter_update(self):
@@ -593,10 +622,22 @@ class ImatIterBinaryVariables(ImatIterBase):
         rl_y_pos = pd.Series(0.0, index=pd.Index(self._get_low_expr_rxns()))
         # Iterate through the different groups of binary variables to determine the values
         for rxn in rh_y_pos.index:
-            rh_y_pos[rxn] = self._imat_model.variables.get(f"y_pos_{rxn}").primal
-            rh_y_neg[rxn] = self._imat_model.variables.get(f"y_neg_{rxn}").primal
+            rh_y_pos[rxn] = self._imat_model.variables.get(
+                _get_rxn_imat_binary_variable_name(
+                    rxn, expression_weight="high", which="positive"
+                )
+            ).primal
+            rh_y_neg[rxn] = self._imat_model.variables.get(
+                _get_rxn_imat_binary_variable_name(
+                    rxn, expression_weight="high", which="negative"
+                )
+            ).primal
         for rxn in rl_y_pos.index:
-            rl_y_pos[rxn] = self._imat_model.variables.get(f"y_pos_{rxn}").primal
+            rl_y_pos[rxn] = self._imat_model.variables.get(
+                _get_rxn_imat_binary_variable_name(
+                    rxn, expression_weight="low", which="positive"
+                )
+            ).primal
         # Add the integer cut constraint
         self._add_integer_cut()
         # Return the tuple of binary variable
