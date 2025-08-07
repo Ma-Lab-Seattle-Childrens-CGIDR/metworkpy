@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import Tuple, TypeVar, TypeAlias, Union
+from typing import Tuple, TypeVar
 
 # External Imports
 import joblib
@@ -19,7 +19,7 @@ from .mutual_information_functions import mutual_information
 
 
 # region Main Function
-T = TypeVar("T", bound=ArrayLike)
+T = TypeVar("T", np.ndarray, pd.DataFrame, ArrayLike)
 
 
 def mi_network_adjacency_matrix(
@@ -123,9 +123,8 @@ def mi_pairwise(
     return mi_result
 
 
-Indexer: TypeAlias = Union[int, str]
-U = TypeVar("U", bound=Indexer)
-V = TypeVar("V", bound=Indexer)
+U = TypeVar("U", int, str)
+V = TypeVar("V", int, str)
 
 
 def _mi_single_pair(
