@@ -4,24 +4,22 @@ groups of columns
 """
 
 # Standard Library Imports
-from typing import Literal
+from typing import Literal, Hashable
 
 # External Imports
 import joblib
 import numpy as np
 import pandas as pd
 
+# Local Imports
 from .kl_divergence_functions import kl_divergence
 from .js_divergence_functions import js_divergence
-
-
-# Local Imports
 
 
 def calculate_divergence_grouped(
     dataset1: pd.DataFrame,
     dataset2: pd.DataFrame,
-    divergence_groups: dict[str, list[str]],
+    divergence_groups: dict[str, list[Hashable]],
     divergence_type: Literal["kl", "js"] = "kl",
     processes: int = -1,
     **kwargs,
@@ -34,7 +32,7 @@ def calculate_divergence_grouped(
     dataset1,dataset2 : pd.DataFrame
         Datasets to calculate the divergence between, rows should represent different samples, and
         columns should represent different features
-    divergence_groups : dict of str to list of str
+    divergence_groups : dict of str to list of Hashable
         The groups to calculate divergence for, indexed by name of the group, with values
         of lists of features that belong to the group (the feature names must match names
         of columns in the dataframes)

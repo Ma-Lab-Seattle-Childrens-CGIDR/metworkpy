@@ -69,8 +69,8 @@ def kl_divergence(
     Notes
     -----
 
-    - This function is not symetrical, and q is treated as representing the reference condition. If you want a
-      symetric metric try the Jenson-Shannon divergence.
+    - This function is not symmetrical, and q is treated as representing the reference condition. If you want a
+      symmetric metric try the Jenson-Shannon divergence.
 
     See Also
     --------
@@ -218,8 +218,10 @@ def _kl_cont(p: np.ndarray, q: np.ndarray, n_neighbors: int = 5, metric: float =
 
     # Find the distance to the kth nearest neighbor of each p point in both p and q samples
     # Note: The distance arrays are column vectors
-    p_dist, _ = p_tree.query(p, k=[n_neighbors + 1], p=metric)
-    q_dist, _ = q_tree.query(p, k=[n_neighbors], p=metric)
+    p_dist, _ = p_tree.query(
+        p, k=[n_neighbors + 1], p=metric
+    )  # rho in wang et al. eq 5
+    q_dist, _ = q_tree.query(p, k=[n_neighbors], p=metric)  # nu in wang et al. eq 5
 
     # Reshape p and q_dist into 1D arrays
     p_dist = p_dist.squeeze()
