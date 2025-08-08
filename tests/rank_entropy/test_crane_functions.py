@@ -128,6 +128,7 @@ class TestCraneGeneSetEntropy(unittest.TestCase):
             sample_group2=unordered_samples,
             gene_network=unordered_genes,
             kernel_density_estimate=True,
+            seed=42,
         )
         self.assertLess(rank_conservation_diff, 2.0)
         self.assertGreaterEqual(pval, 0.05)
@@ -159,6 +160,7 @@ class TestCraneGeneSetEntropy(unittest.TestCase):
             gene_network=ordered_genes,
             kernel_density_estimate=True,
             processes=1,
+            seed=42,
         )
         (
             rank_conservation_diff_parallel,
@@ -170,6 +172,7 @@ class TestCraneGeneSetEntropy(unittest.TestCase):
             gene_network=ordered_genes,
             kernel_density_estimate=True,
             processes=2,
+            seed=42,
         )
         self.assertAlmostEqual(
             rank_conservation_diff_parallel, rank_conservation_diff_serial
@@ -203,6 +206,7 @@ class TestCraneGeneSetEntropy(unittest.TestCase):
             sample_group2=unordered_samples,
             gene_network=ordered_genes,
             kernel_density_estimate=False,
+            seed=42,
         )
         self.assertGreater(rank_conservation_diff, 0.0)
         self.assertLessEqual(pval, 0.05)
