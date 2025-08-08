@@ -6,11 +6,13 @@ from __future__ import annotations
 # Standard Library Imports
 import hashlib
 from typing import Literal
+import warnings
 
 # External Imports
 import cobra
 import pandas as pd
 import sympy
+from cobra.exceptions import OptimizationError
 from tqdm import tqdm
 
 # Local Imports
@@ -296,21 +298,32 @@ def find_metabolite_consuming_network_reactions(
         index=model.reactions.list_attr("id"),
         dtype=bool,
     )
+    with model as m:
+        # Remove maintenance reactions to avoid issues with infeasibility
+        eliminate_maintenance_requirements_(m)
+        # Perform FVA for the model
+        fva_results = cobra.flux_analysis.variability.flux_variability_analysis(
+            m, fraction_of_optimum=0.0, **kwargs
+        )
     for metabolite in tqdm(res_df.columns, disable=not progress_bar):
         with model as m:
             # Remove maintenance reactions to avoid issues with infeasibility
             eliminate_maintenance_requirements_(m)
-            # Perform FVA for the model
-            fva_results = cobra.flux_analysis.variability.flux_variability_analysis(
-                m, fraction_of_optimum=0.0, **kwargs
-            )
             # Add the absorbing reaction
             add_metabolite_absorb_reaction_(m, metabolite)
-            fva_results_remove_metabolite = (
-                cobra.flux_analysis.variability.flux_variability_analysis(
-                    m, fraction_of_optimum=0.0, **kwargs
+            try:
+                fva_results_remove_metabolite = (
+                    cobra.flux_analysis.variability.flux_variability_analysis(
+                        m, fraction_of_optimum=0.0, **kwargs
+                    )
                 )
-            )
+            except OptimizationError:
+                warnings.warn(
+                    f"Optimization error occurred when finding consuming reactions "
+                    f"for metabolite {metabolite}, no reactions will be marked as consuming "
+                    f"this metabolite."
+                )
+                continue
             # Now determine which reactions consume the metabolite
             for rxn in res_df.index:
                 rxn_max = fva_results.loc[rxn, "maximum"]
