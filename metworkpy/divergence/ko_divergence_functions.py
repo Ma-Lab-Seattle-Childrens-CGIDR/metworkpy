@@ -94,6 +94,14 @@ def ko_divergence(
         model following the gene knock-out.
     """
     divergence_metric = _parse_divergence_method(divergence_metric)
+    if divergence_metric == "js":
+        divergence_function = js_divergence
+    elif divergence_metric == "kl":
+        divergence_function = kl_divergence
+    else:
+        raise ValueError(
+            f"Invalid specification for divergence metric, must be js or kl, but received {divergence_metric}"
+        )
     ko_res_list = []
     unperturbed_sample = cobra.sampling.sample(model, sample_count, **kwargs)
     # If needed, convert the gene network into a dict
@@ -105,6 +113,7 @@ def ko_divergence(
         raise ValueError(
             f"target_gene_network must be a list or a dict, but received a {type(target_networks)}"
         )
+
     for key, target_list in target_networks.items():
         target_networks[key] = _convert_target_network(model, target_list)
     for gene_to_ko in tqdm.tqdm(genes_to_ko, disable=not progress_bar):
@@ -125,30 +134,15 @@ def ko_divergence(
         for network, rxn_list in tqdm.tqdm(
             target_networks.items(), disable=not progress_bar, leave=False
         ):
-            if divergence_metric == "js":
-                res_series[network] = js_divergence(
-                    p=perturbed_sample[rxn_list],
-                    q=unperturbed_sample[rxn_list],
-                    n_neighbors=n_neighbors,
-                    discrete=False,
-                    jitter=jitter,
-                    jitter_seed=jitter_seed,
-                    distance_metric=distance_metric,
-                )
-            elif divergence_metric == "kl":
-                res_series[network] = kl_divergence(
-                    p=perturbed_sample[rxn_list],
-                    q=unperturbed_sample[rxn_list],
-                    n_neighbors=n_neighbors,
-                    discrete=False,
-                    jitter=jitter,
-                    jitter_seed=jitter_seed,
-                    distance_metric=distance_metric,
-                )
-            else:
-                raise ValueError(
-                    f"Invalid specification for divergence metric, must be js or kl, but received {divergence_metric}"
-                )
+            res_series[network] = divergence_function(
+                p=unperturbed_sample[rxn_list],
+                q=perturbed_sample[rxn_list],
+                n_neighbors=n_neighbors,
+                discrete=False,
+                jitter=jitter,
+                jitter_seed=jitter_seed,
+                distance_metric=distance_metric,
+            )
         res_series.name = gene_to_ko
         ko_res_list.append(res_series)
     return pd.concat(ko_res_list, axis=1).T

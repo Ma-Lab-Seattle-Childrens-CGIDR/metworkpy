@@ -55,9 +55,9 @@ def imat(
     """
     assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
     assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
-    assert (
-        epsilon > threshold
-    ), f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
+    assert epsilon > threshold, (
+        f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
+    )
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
     add_imat_objective_(imat_model, rxn_weights)
     return imat_model.optimize()
@@ -113,9 +113,9 @@ def flux_to_binary(
     """
     assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
     assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
-    assert (
-        epsilon > threshold
-    ), f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
+    assert epsilon > threshold, (
+        f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
+    )
     which_reactions = _parse_which_reactions(which_reactions)
     if which_reactions == "forward":
         return (fluxes >= (epsilon - tolerance)).astype(int)
@@ -164,9 +164,9 @@ def compute_imat_objective(
     """
     assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
     assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
-    assert (
-        epsilon > threshold
-    ), f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
+    assert epsilon > threshold, (
+        f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
+    )
     if isinstance(rxn_weights, dict):
         rxn_weights = pd.Series(rxn_weights)
     rh = rxn_weights[rxn_weights > 0]
@@ -213,9 +213,9 @@ def add_imat_constraints_(
     """
     assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
     assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
-    assert (
-        epsilon > threshold
-    ), f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
+    assert epsilon > threshold, (
+        f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
+    )
     for rxn, weight in rxn_weights.items():
         # Don't add any restrictions for 0 weight reactions
         if np.isclose(weight, 0):

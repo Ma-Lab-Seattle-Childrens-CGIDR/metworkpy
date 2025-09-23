@@ -16,7 +16,7 @@ dependencies = [
   "joblib>=1.4.2",
 ]
 name = "metworkpy"
-version = "0.2.2"
+version = "0.2.3"
 description = "Tools for creating and working with network models of metabolism."
 readme = "README.md"
 keywords = ["FBA", "metabolism", "IMAT", "metchange"]
