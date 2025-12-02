@@ -169,7 +169,6 @@ class TestGeneTargetDensity(unittest.TestCase):
         # Since there is only one targeted gene, with a radius of 0,
         # every reaction but r_A_B_D_E should have a density of 0
         # and r_A_B_D_E should have a density of 1.0
-        print(test_density)
         for rxn, density in test_density.items():
             if rxn == "r_A_B_D_E" or rxn == "r_C_E_F":
                 self.assertAlmostEqual(density, 0.2, delta=1e-7)
