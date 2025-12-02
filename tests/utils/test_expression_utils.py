@@ -67,7 +67,9 @@ class TestConversionFunctions(unittest.TestCase):
         # Should have the same index as count data
         self.assertTrue(rpkm.index.equals(self.count_data.index))
         # Use known values for the small examples
-        small_rpkm = count_to_rpkm(self.small_counts, self.small_feature_length)
+        small_rpkm = count_to_rpkm(
+            self.small_counts, self.small_feature_length
+        )
         known_rpkm = pd.DataFrame(
             {
                 "A": [
@@ -165,7 +167,8 @@ class TestConversionFunctions(unittest.TestCase):
             }
         )
         np.testing.assert_array_almost_equal(
-            count_to_tpm(self.small_counts, self.small_feature_length), known_tpm
+            count_to_tpm(self.small_counts, self.small_feature_length),
+            known_tpm,
         )
 
     def test_count_to_cpm(self):
@@ -248,7 +251,21 @@ class TestConversionToWeights(unittest.TestCase):
                 "S",
             ],
         )
-        subset = ["A", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "S", "Z"]
+        subset = [
+            "A",
+            "D",
+            "E",
+            "F",
+            "G",
+            "H",
+            "I",
+            "J",
+            "K",
+            "L",
+            "M",
+            "S",
+            "Z",
+        ]
         result_series = expr_to_imat_gene_weights(
             test_series, quantile=(0.1, 0.9), subset=subset
         )

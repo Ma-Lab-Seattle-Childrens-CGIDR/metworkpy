@@ -15,19 +15,36 @@ class TestMainKL(unittest.TestCase):
     def setUpClass(cls):
         generator = np.random.default_rng(314)
         # Setup for Continuous Case
-        cls.norm_0_3 = generator.normal(loc=0, scale=3, size=500).reshape(-1, 1)
-        cls.norm_2_10 = generator.normal(loc=2, scale=10, size=500).reshape(-1, 1)
-        cls.norm_2_10_rep = generator.normal(loc=2, scale=10, size=500).reshape(-1, 1)
-        cls.theory_kl_div = np.log(10 / 3) + (3**2 + (0 - 2) ** 2) / (2 * 10**2) - 0.5
+        cls.norm_0_3 = generator.normal(loc=0, scale=3, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_10 = generator.normal(loc=2, scale=10, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_10_rep = generator.normal(
+            loc=2, scale=10, size=500
+        ).reshape(-1, 1)
+        cls.theory_kl_div = (
+            np.log(10 / 3) + (3**2 + (0 - 2) ** 2) / (2 * 10**2) - 0.5
+        )
         # Setup for the discrete case
         cls.known_p = generator.choice(
-            [0, 1, 2, 3], size=50000, replace=True, p=[7 / 25, 12 / 25, 4 / 25, 2 / 25]
+            [0, 1, 2, 3],
+            size=50000,
+            replace=True,
+            p=[7 / 25, 12 / 25, 4 / 25, 2 / 25],
         )
         cls.known_p_rep = generator.choice(
-            [0, 1, 2, 3], size=10000, replace=True, p=[7 / 25, 12 / 25, 4 / 25, 2 / 25]
+            [0, 1, 2, 3],
+            size=10000,
+            replace=True,
+            p=[7 / 25, 12 / 25, 4 / 25, 2 / 25],
         )
         cls.known_q = generator.choice(
-            [0, 1, 2, 3], size=50000, replace=True, p=[1 / 4, 1 / 4, 1 / 4, 1 / 4]
+            [0, 1, 2, 3],
+            size=50000,
+            replace=True,
+            p=[1 / 4, 1 / 4, 1 / 4, 1 / 4],
         )
         cls.theory_kl_p_q = (
             (7 / 25) * np.log((7 / 25) / (1 / 4))
@@ -43,13 +60,17 @@ class TestMainKL(unittest.TestCase):
         )
 
     def test_kl_cont(self):
-        calc_kl_div = metworkpy.divergence.kl_divergence_functions.kl_divergence(
-            p=self.norm_0_3, q=self.norm_2_10, n_neighbors=3
+        calc_kl_div = (
+            metworkpy.divergence.kl_divergence_functions.kl_divergence(
+                p=self.norm_0_3, q=self.norm_2_10, n_neighbors=3
+            )
         )
         self.assertTrue(np.isclose(calc_kl_div, self.theory_kl_div, rtol=2e-1))
 
-        calc_kl_div_0 = metworkpy.divergence.kl_divergence_functions.kl_divergence(
-            p=self.norm_2_10, q=self.norm_2_10_rep, n_neighbors=4
+        calc_kl_div_0 = (
+            metworkpy.divergence.kl_divergence_functions.kl_divergence(
+                p=self.norm_2_10, q=self.norm_2_10_rep, n_neighbors=4
+            )
         )
         self.assertTrue(np.isclose(calc_kl_div_0, 0.0, rtol=1e-1, atol=0.05))
 
@@ -67,11 +88,15 @@ class TestMainKL(unittest.TestCase):
 
     def test_known_kl(self):
         # Test against theory KL values
-        calc_kl_p_q = metworkpy.divergence.kl_divergence_functions.kl_divergence(
-            self.known_p, self.known_q, discrete=True
+        calc_kl_p_q = (
+            metworkpy.divergence.kl_divergence_functions.kl_divergence(
+                self.known_p, self.known_q, discrete=True
+            )
         )
-        calc_kl_q_p = metworkpy.divergence.kl_divergence_functions.kl_divergence(
-            self.known_q, self.known_p, discrete=True
+        calc_kl_q_p = (
+            metworkpy.divergence.kl_divergence_functions.kl_divergence(
+                self.known_q, self.known_p, discrete=True
+            )
         )
         self.assertTrue(np.isclose(calc_kl_p_q, self.theory_kl_p_q, rtol=1e-1))
         self.assertTrue(np.isclose(calc_kl_q_p, self.theory_kl_q_p, rtol=1e-1))
@@ -127,10 +152,18 @@ class TestContinuousKL(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         generator = np.random.default_rng(314)
-        cls.norm_0_3 = generator.normal(loc=0, scale=3, size=500).reshape(-1, 1)
-        cls.norm_2_10 = generator.normal(loc=2, scale=10, size=500).reshape(-1, 1)
-        cls.norm_2_10_rep = generator.normal(loc=2, scale=10, size=500).reshape(-1, 1)
-        cls.theory_kl_div = np.log(10 / 3) + (3**2 + (0 - 2) ** 2) / (2 * 10**2) - 0.5
+        cls.norm_0_3 = generator.normal(loc=0, scale=3, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_10 = generator.normal(loc=2, scale=10, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_10_rep = generator.normal(
+            loc=2, scale=10, size=500
+        ).reshape(-1, 1)
+        cls.theory_kl_div = (
+            np.log(10 / 3) + (3**2 + (0 - 2) ** 2) / (2 * 10**2) - 0.5
+        )
 
         # Multidimensional case
         norm_2d_2d_0_3_0_6 = multivariate_normal(
@@ -163,8 +196,10 @@ class TestContinuousKL(unittest.TestCase):
         )
 
     def test_jitter(self):
-        kl_no_jitter = metworkpy.divergence.kl_divergence_functions.kl_divergence(
-            self.norm_0_3, self.norm_2_10
+        kl_no_jitter = (
+            metworkpy.divergence.kl_divergence_functions.kl_divergence(
+                self.norm_0_3, self.norm_2_10
+            )
         )
         kl_jitter = metworkpy.divergence.kl_divergence_functions.kl_divergence(
             self.norm_0_3, self.norm_2_10, jitter_seed=42, jitter=1e-10
@@ -177,13 +212,22 @@ class TestDiscreteKL(unittest.TestCase):
     def setUpClass(cls):
         generator = np.random.default_rng(42)
         cls.known_p = generator.choice(
-            [0, 1, 2, 3], size=5000, replace=True, p=[7 / 25, 12 / 25, 4 / 25, 2 / 25]
+            [0, 1, 2, 3],
+            size=5000,
+            replace=True,
+            p=[7 / 25, 12 / 25, 4 / 25, 2 / 25],
         )
         cls.known_p_rep = generator.choice(
-            [0, 1, 2, 3], size=5000, replace=True, p=[7 / 25, 12 / 25, 4 / 25, 2 / 25]
+            [0, 1, 2, 3],
+            size=5000,
+            replace=True,
+            p=[7 / 25, 12 / 25, 4 / 25, 2 / 25],
         )
         cls.known_q = generator.choice(
-            [0, 1, 2, 3], size=5000, replace=True, p=[1 / 4, 1 / 4, 1 / 4, 1 / 4]
+            [0, 1, 2, 3],
+            size=5000,
+            replace=True,
+            p=[1 / 4, 1 / 4, 1 / 4, 1 / 4],
         )
         cls.theory_kl_p_q = (
             (7 / 25) * np.log((7 / 25) / (1 / 4))
@@ -231,16 +275,18 @@ class TestDivergenceArrayKL(unittest.TestCase):
         NROW = 10000
         cls.NCOL = NCOL
         cls.NROW = NROW
-        cls.norm_0_3 = generator.normal(loc=0, scale=3, size=NROW * NCOL).reshape(
-            NROW, NCOL
+        cls.norm_0_3 = generator.normal(
+            loc=0, scale=3, size=NROW * NCOL
+        ).reshape(NROW, NCOL)
+        cls.norm_2_10 = generator.normal(
+            loc=2, scale=10, size=NROW * NCOL
+        ).reshape(NROW, NCOL)
+        cls.norm_2_10_rep = generator.normal(
+            loc=2, scale=10, size=NROW * NCOL
+        ).reshape(NROW, NCOL)
+        cls.theory_kl_div = (
+            np.log(10 / 3) + (3**2 + (0 - 2) ** 2) / (2 * 10**2) - 0.5
         )
-        cls.norm_2_10 = generator.normal(loc=2, scale=10, size=NROW * NCOL).reshape(
-            NROW, NCOL
-        )
-        cls.norm_2_10_rep = generator.normal(loc=2, scale=10, size=NROW * NCOL).reshape(
-            NROW, NCOL
-        )
-        cls.theory_kl_div = np.log(10 / 3) + (3**2 + (0 - 2) ** 2) / (2 * 10**2) - 0.5
 
     def test_serial(self):
         # Test Known Divergence
@@ -249,7 +295,9 @@ class TestDivergenceArrayKL(unittest.TestCase):
         )
         self.assertEqual(len(test_kl_divergence), self.NCOL)
         self.assertTrue(
-            np.all(np.isclose(test_kl_divergence, self.theory_kl_div, rtol=2e-1))
+            np.all(
+                np.isclose(test_kl_divergence, self.theory_kl_div, rtol=2e-1)
+            )
         )
         # Test 0 Divergence
         test_kl_divergence = kl_divergence_array(

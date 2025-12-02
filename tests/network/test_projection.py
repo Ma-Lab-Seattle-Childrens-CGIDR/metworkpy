@@ -51,7 +51,9 @@ class TestBipartiteProject(unittest.TestCase):
         cls.node_set = ["A", "B", "C"]
 
     def test_unweighted_undirected(self):
-        projected_graph = bipartite_project(self.test_graph, node_set=self.node_set)
+        projected_graph = bipartite_project(
+            self.test_graph, node_set=self.node_set
+        )
         # Test that only nodes in node set are in final graph
         self.assertListEqual(list(projected_graph.nodes()), self.node_set)
         # Test edges
@@ -81,7 +83,9 @@ class TestBipartiteProject(unittest.TestCase):
             self.test_digraph, node_set=self.node_set, directed=False
         )
         self.assertFalse(isinstance(undirected_projection, nx.DiGraph))
-        self.assertListEqual(list(undirected_projection.nodes()), self.node_set)
+        self.assertListEqual(
+            list(undirected_projection.nodes()), self.node_set
+        )
         self.assertTrue(
             nx.utils.graphs_equal(
                 undirected_projection, nx.complete_graph(["A", "B", "C"])
@@ -98,7 +102,9 @@ class TestBipartiteProject(unittest.TestCase):
         )
         self.assertListEqual(list(weighted_projection.nodes()), self.node_set)
         self.assertTrue(weighted_projection.has_edge("A", "C"))
-        self.assertEqual(weighted_projection.get_edge_data("A", "C")["weight"], 3)
+        self.assertEqual(
+            weighted_projection.get_edge_data("A", "C")["weight"], 3
+        )
 
     def test_weighted_undirected(self):
         weighted_projection = bipartite_project(
@@ -110,9 +116,15 @@ class TestBipartiteProject(unittest.TestCase):
         )
         self.assertListEqual(list(weighted_projection.nodes()), self.node_set)
         self.assertTrue(weighted_projection.has_edge("A", "C"))
-        self.assertEqual(weighted_projection.get_edge_data("A", "C")["weight"], 3)
-        self.assertEqual(weighted_projection.get_edge_data("A", "B")["weight"], 2)
-        self.assertEqual(weighted_projection.get_edge_data("B", "C")["weight"], 2)
+        self.assertEqual(
+            weighted_projection.get_edge_data("A", "C")["weight"], 3
+        )
+        self.assertEqual(
+            weighted_projection.get_edge_data("A", "B")["weight"], 2
+        )
+        self.assertEqual(
+            weighted_projection.get_edge_data("B", "C")["weight"], 2
+        )
 
 
 if __name__ == "__main__":

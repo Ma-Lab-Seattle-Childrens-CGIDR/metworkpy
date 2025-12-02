@@ -7,7 +7,11 @@ import numpy as np
 import pandas as pd
 
 # Local Imports
-from metworkpy.network.density import label_density, find_dense_clusters, _node_density
+from metworkpy.network.density import (
+    label_density,
+    find_dense_clusters,
+    _node_density,
+)
 
 
 class TestLabelDensity(unittest.TestCase):
@@ -15,19 +19,35 @@ class TestLabelDensity(unittest.TestCase):
     def setUpClass(cls):
         g = nx.Graph()
         g.add_edges_from(
-            [(0, 1), (0, 2), (2, 3), (3, 4), (3, 5), (2, 6), (5, 7), (0, 8), (1, 5)]
+            [
+                (0, 1),
+                (0, 2),
+                (2, 3),
+                (3, 4),
+                (3, 5),
+                (2, 6),
+                (5, 7),
+                (0, 8),
+                (1, 5),
+            ]
         )
         cls.test_graph = g
         cls.test_labels = {0: 2, 5: 3, 7: 2}
 
     def test_node_density(self):
         node_density_calc1 = _node_density(
-            self.test_graph, labels=pd.Series(self.test_labels), node=4, radius=2
+            self.test_graph,
+            labels=pd.Series(self.test_labels),
+            node=4,
+            radius=2,
         )
         node_density_expected1 = 0.75
         self.assertTrue(np.isclose(node_density_calc1, node_density_expected1))
         node_density_calc2 = _node_density(
-            self.test_graph, labels=pd.Series(self.test_labels), node=6, radius=1
+            self.test_graph,
+            labels=pd.Series(self.test_labels),
+            node=6,
+            radius=1,
         )
         node_density_expected2 = 0.0
         self.assertTrue(np.isclose(node_density_calc2, node_density_expected2))
@@ -49,7 +69,9 @@ class TestLabelDensity(unittest.TestCase):
                 8: (2 / 2),
             }
         ).sort_index()
-        self.assertTrue(np.isclose(label_density_exp, label_density_calc).all())
+        self.assertTrue(
+            np.isclose(label_density_exp, label_density_calc).all()
+        )
 
 
 class TestFindDenseClusters(unittest.TestCase):
@@ -57,7 +79,17 @@ class TestFindDenseClusters(unittest.TestCase):
     def setUpClass(cls):
         g = nx.Graph()
         g.add_edges_from(
-            [(0, 1), (0, 2), (2, 3), (3, 4), (3, 5), (2, 6), (5, 7), (0, 8), (1, 5)]
+            [
+                (0, 1),
+                (0, 2),
+                (2, 3),
+                (3, 4),
+                (3, 5),
+                (2, 6),
+                (5, 7),
+                (0, 8),
+                (1, 5),
+            ]
         )
         cls.test_graph = g
         cls.test_labels = {0: 2, 5: 3, 7: 2}

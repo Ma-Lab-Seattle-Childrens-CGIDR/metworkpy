@@ -290,7 +290,9 @@ class TestImat(unittest.TestCase):
         # Check that r_C_H is inactive
         self.assertTrue(bin_sol_inactive["r_C_H"])
 
-    @skipIf(importlib.util.find_spec("cplex") is None, "cplex is not installed")
+    @skipIf(
+        importlib.util.find_spec("cplex") is None, "cplex is not installed"
+    )
     def test_imat_cplex(self):
         test_model = self.model.copy()
         test_model.solver = "cplex"
@@ -305,7 +307,9 @@ class TestImat(unittest.TestCase):
         test_model.solver = "gurobi"
         self.imat_helper(test_model)
 
-    @skipIf(importlib.util.find_spec("swiglpk") is None, "glpk is not installed")
+    @skipIf(
+        importlib.util.find_spec("swiglpk") is None, "glpk is not installed"
+    )
     def test_imat_glpk(self):
         test_model = self.model.copy()
         test_model.solver = "glpk"

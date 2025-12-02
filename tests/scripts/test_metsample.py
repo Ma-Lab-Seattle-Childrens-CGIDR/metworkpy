@@ -72,7 +72,9 @@ class TestMetsampleRun(unittest.TestCase):
             self.assertTrue(os.path.exists(args.output_file))
             format_str = metsample._parse_format(args.output_format)
             if format_str == "csv":
-                sample_results = pd.read_csv(args.output_file, index_col=None, header=0)
+                sample_results = pd.read_csv(
+                    args.output_file, index_col=None, header=0
+                )
             elif format_str == "parquet":
                 sample_results = pd.read_parquet(args.output_file)
             elif format_str == "feather":
@@ -99,7 +101,9 @@ class TestMetsampleRun(unittest.TestCase):
 
     def format_tester(self, format):
         res = self.run_cli(
-            output_file=BASE_PATH / "tmp_metsample" / f"metsample_res.{format}",
+            output_file=BASE_PATH
+            / "tmp_metsample"
+            / f"metsample_res.{format}",
             output_format=format,
         )
         self.assertEqual(len(res), 10)
@@ -158,7 +162,9 @@ class TestHelperFunctions(unittest.TestCase):
 
     def test_parse_format(self):
         self.assertEqual(metsample._parse_format("csv"), "csv")
-        self.assertEqual(metsample._parse_format("comma seperated values"), "csv")
+        self.assertEqual(
+            metsample._parse_format("comma seperated values"), "csv"
+        )
         self.assertEqual(metsample._parse_format("parquet"), "parquet")
         self.assertEqual(metsample._parse_format("Parquet"), "parquet")
         self.assertEqual(metsample._parse_format("feather"), "feather")

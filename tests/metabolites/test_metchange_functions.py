@@ -105,9 +105,12 @@ class TestMetchange(unittest.TestCase):
         test_model = self.model.copy()
         weights = pd.Series()
         with self.assertRaisesRegex(
-            ValueError, "Reaction weights is empty, must have at least one weight."
+            ValueError,
+            "Reaction weights is empty, must have at least one weight.",
         ):
-            _ = metchange(model=test_model, reaction_weights=weights, metabolites=None)
+            _ = metchange(
+                model=test_model, reaction_weights=weights, metabolites=None
+            )
         # Test that it doesn't change the model
         self.assertTrue(model_eq(test_model, self.model))
 

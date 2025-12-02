@@ -64,7 +64,8 @@ class TestAdjMatUdUw(unittest.TestCase):
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
-            self.adj_mat.shape, (num_rxns + num_metabolites, num_rxns + num_metabolites)
+            self.adj_mat.shape,
+            (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
     def test_data(self):
@@ -79,7 +80,9 @@ class TestAdjMatUdUw(unittest.TestCase):
 
     def test_known(self):
         self.assertTrue(
-            np.isclose(self.tiny_adj_mat.toarray(), self.tiny_known.toarray()).all()
+            np.isclose(
+                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
+            ).all()
         )
 
 
@@ -111,7 +114,8 @@ class TestAdjMatDUw(unittest.TestCase):
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
-            self.adj_mat.shape, (num_rxns + num_metabolites, num_rxns + num_metabolites)
+            self.adj_mat.shape,
+            (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
     def test_data(self):
@@ -126,7 +130,9 @@ class TestAdjMatDUw(unittest.TestCase):
 
     def test_known(self):
         self.assertTrue(
-            np.isclose(self.tiny_adj_mat.toarray(), self.tiny_known.toarray()).all()
+            np.isclose(
+                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
+            ).all()
         )
 
 
@@ -142,7 +148,9 @@ class TestAdjMatDWFlux(unittest.TestCase):
         rxn_max = csc_array(fva["maximum"].values.reshape(-1, 1))
         rxn_min = csc_array(fva["minimum"].values.reshape(-1, 1))
 
-        cls.adj_mat = _adj_mat_d_w_flux(cls.test_model, rxn_bounds=(rxn_min, rxn_max))
+        cls.adj_mat = _adj_mat_d_w_flux(
+            cls.test_model, rxn_bounds=(rxn_min, rxn_max)
+        )
 
         fva = flux_variability_analysis(model=cls.tiny_model)
         rxn_max = csc_array(fva["maximum"].values.reshape(-1, 1))
@@ -169,7 +177,8 @@ class TestAdjMatDWFlux(unittest.TestCase):
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
-            self.adj_mat.shape, (num_rxns + num_metabolites, num_rxns + num_metabolites)
+            self.adj_mat.shape,
+            (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
     def test_data(self):
@@ -184,7 +193,9 @@ class TestAdjMatDWFlux(unittest.TestCase):
 
     def test_known(self):
         self.assertTrue(
-            np.isclose(self.tiny_adj_mat.toarray(), self.tiny_known.toarray()).all()
+            np.isclose(
+                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
+            ).all()
         )
 
 
@@ -216,7 +227,8 @@ class TestAdjMatDWStoichiometry(unittest.TestCase):
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
-            self.adj_mat.shape, (num_rxns + num_metabolites, num_rxns + num_metabolites)
+            self.adj_mat.shape,
+            (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
     def test_data(self):
@@ -231,7 +243,9 @@ class TestAdjMatDWStoichiometry(unittest.TestCase):
 
     def test_known(self):
         self.assertTrue(
-            np.isclose(self.tiny_adj_mat.toarray(), self.tiny_known.toarray()).all()
+            np.isclose(
+                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
+            ).all()
         )
 
 
@@ -247,7 +261,9 @@ class TestAdjMatUdWFlux(unittest.TestCase):
         rxn_max = csc_array(fva["maximum"].values.reshape(-1, 1))
         rxn_min = csc_array(fva["minimum"].values.reshape(-1, 1))
 
-        cls.adj_mat = _adj_mat_ud_w_flux(cls.test_model, rxn_bounds=(rxn_min, rxn_max))
+        cls.adj_mat = _adj_mat_ud_w_flux(
+            cls.test_model, rxn_bounds=(rxn_min, rxn_max)
+        )
 
         fva = flux_variability_analysis(model=cls.tiny_model)
         rxn_max = csc_array(fva["maximum"].values.reshape(-1, 1))
@@ -274,7 +290,8 @@ class TestAdjMatUdWFlux(unittest.TestCase):
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
-            self.adj_mat.shape, (num_rxns + num_metabolites, num_rxns + num_metabolites)
+            self.adj_mat.shape,
+            (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
     def test_data(self):
@@ -289,7 +306,9 @@ class TestAdjMatUdWFlux(unittest.TestCase):
 
     def test_known(self):
         self.assertTrue(
-            np.isclose(self.tiny_adj_mat.toarray(), self.tiny_known.toarray()).all()
+            np.isclose(
+                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
+            ).all()
         )
 
 
@@ -320,7 +339,8 @@ class TestAdjMatUdWStoichiometry(unittest.TestCase):
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
-            self.adj_mat.shape, (num_rxns + num_metabolites, num_rxns + num_metabolites)
+            self.adj_mat.shape,
+            (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
     def test_data(self):
@@ -335,7 +355,9 @@ class TestAdjMatUdWStoichiometry(unittest.TestCase):
 
     def test_known(self):
         self.assertTrue(
-            np.isclose(self.tiny_adj_mat.toarray(), self.tiny_known.toarray()).all()
+            np.isclose(
+                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
+            ).all()
         )
 
 
@@ -359,17 +381,27 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
 
     def test_undirected_unweighted(self):
         adj_mat, _, _ = create_adjacency_matrix(
-            model=self.test_model, directed=False, weighted=False, out_format="csr"
+            model=self.test_model,
+            directed=False,
+            weighted=False,
+            out_format="csr",
         )
         adj_mat_known = _adj_mat_ud_uw(model=self.test_model)
-        self.assertTrue(np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all())
+        self.assertTrue(
+            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
+        )
 
     def test_directed_unweighted(self):
         adj_mat, _, _ = create_adjacency_matrix(
-            model=self.test_model, directed=True, weighted=False, out_format="csr"
+            model=self.test_model,
+            directed=True,
+            weighted=False,
+            out_format="csr",
         )
         adj_mat_known = _adj_mat_d_uw(model=self.test_model)
-        self.assertTrue(np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all())
+        self.assertTrue(
+            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
+        )
 
     def test_directed_weighted_flux(self):
         adj_mat, _, _ = create_adjacency_matrix(
@@ -382,7 +414,9 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
         adj_mat_known = _adj_mat_d_w_flux(
             model=self.test_model, rxn_bounds=self.test_model_rxn_bounds
         )
-        self.assertTrue(np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all())
+        self.assertTrue(
+            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
+        )
 
     def test_directed_weighted_stoichiometry(self):
         adj_mat, _, _ = create_adjacency_matrix(
@@ -393,7 +427,9 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
             out_format="csr",
         )
         adj_mat_known = _adj_mat_d_w_stoichiometry(model=self.test_model)
-        self.assertTrue(np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all())
+        self.assertTrue(
+            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
+        )
 
     def test_undirected_weighted_flux(self):
         adj_mat, _, _ = create_adjacency_matrix(
@@ -406,7 +442,9 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
         adj_mat_known = _adj_mat_ud_w_flux(
             model=self.test_model, rxn_bounds=self.test_model_rxn_bounds
         )
-        self.assertTrue(np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all())
+        self.assertTrue(
+            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
+        )
 
     def test_undirected_weighted_stoichiometry(self):
         adj_mat, _, _ = create_adjacency_matrix(
@@ -417,7 +455,9 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
             out_format="csr",
         )
         adj_mat_known = _adj_mat_ud_w_stoichiometry(model=self.test_model)
-        self.assertTrue(np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all())
+        self.assertTrue(
+            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
+        )
 
     def test_out_format(self):
         for out_form in ["dok", "lil", "csc", "csr"]:
@@ -429,7 +469,10 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
             )
             self.assertEqual(out_form, adj_mat.format)
         adj_mat, _, _ = create_adjacency_matrix(
-            model=self.test_model, directed=False, weighted=False, out_format="frame"
+            model=self.test_model,
+            directed=False,
+            weighted=False,
+            out_format="frame",
         )
         self.assertIsInstance(adj_mat, pd.DataFrame)
 
@@ -451,7 +494,9 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
             out_format="csr",
             loopless=False,
         )
-        self.assertTrue(np.isclose(adj_mat.toarray(), adj_mat_loopless.toarray()).all())
+        self.assertTrue(
+            np.isclose(adj_mat.toarray(), adj_mat_loopless.toarray()).all()
+        )
 
 
 class TestCreateNetwork(unittest.TestCase):
@@ -531,13 +576,19 @@ class TestCreateNetwork(unittest.TestCase):
 
     def test_directed_weighted_flux(self):
         test_network = create_metabolic_network(
-            model=self.test_model, weighted=True, directed=True, weight_by="flux"
+            model=self.test_model,
+            weighted=True,
+            directed=True,
+            weight_by="flux",
         )
         self.assertIsInstance(test_network, nx.DiGraph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 50)
         tiny_network = create_metabolic_network(
-            model=self.tiny_model, weighted=True, directed=True, weight_by="flux"
+            model=self.tiny_model,
+            weighted=True,
+            directed=True,
+            weight_by="flux",
         )
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 50)
         with self.assertRaises(KeyError):
@@ -545,13 +596,19 @@ class TestCreateNetwork(unittest.TestCase):
 
     def test_undirected_weighted_flux(self):
         test_network = create_metabolic_network(
-            model=self.test_model, weighted=True, directed=False, weight_by="flux"
+            model=self.test_model,
+            weighted=True,
+            directed=False,
+            weight_by="flux",
         )
         self.assertIsInstance(test_network, nx.Graph)
         for start, stop, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 50)
         tiny_network = create_metabolic_network(
-            model=self.tiny_model, weighted=True, directed=False, weight_by="flux"
+            model=self.tiny_model,
+            weighted=True,
+            directed=False,
+            weight_by="flux",
         )
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 50)
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 50)
@@ -566,7 +623,9 @@ class TestMutualInformationNetwork(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         Configuration().solver = "glpk"
-        cls.data_path = pathlib.Path(__file__).parent.parent.absolute() / "data"
+        cls.data_path = (
+            pathlib.Path(__file__).parent.parent.absolute() / "data"
+        )
         cls.test_model = read_model(cls.data_path / "test_model.xml")
 
     def test_create_mutual_information_network(self):

@@ -40,7 +40,10 @@ def setup(cls):
     gene_weights[high_expr_genes] = 1
     # Now, convert these to reaction weights
     cls.rxn_weights = gene_to_rxn_weights(
-        cls.model, gene_weights=gene_weights, fn_dict=IMAT_FUNC_DICT, fill_val=0.0
+        cls.model,
+        gene_weights=gene_weights,
+        fn_dict=IMAT_FUNC_DICT,
+        fill_val=0.0,
     )
 
 
@@ -110,7 +113,9 @@ class TestImatIterBinaryVariables(unittest.TestCase):
                 rh_y_pos_diff = not np.isclose(rh_y_pos, rh_y_pos_test).all()
                 rh_y_neg_diff = not np.isclose(rh_y_neg, rh_y_neg_test).all()
                 rl_y_pos_diff = not np.isclose(rl_y_pos, rl_y_pos_test).all()
-                self.assertTrue(any([rh_y_pos_diff, rh_y_neg_diff, rl_y_pos_diff]))
+                self.assertTrue(
+                    any([rh_y_pos_diff, rh_y_neg_diff, rl_y_pos_diff])
+                )
             # Add the newest different solution to the lists
             rh_y_pos_list.append(rh_y_pos)
             rh_y_neg_list.append(rh_y_neg)
@@ -133,7 +138,9 @@ class TestImatIterBinaryVariables(unittest.TestCase):
         best_solution = None
         for rh_y_pos, rh_y_neg, rl_y_pos in test_iter:
             if best_solution is None:
-                best_solution = rh_y_pos.sum() + rh_y_neg.sum() + rl_y_pos.sum()
+                best_solution = (
+                    rh_y_pos.sum() + rh_y_neg.sum() + rl_y_pos.sum()
+                )
                 continue
             self.assertGreater(
                 rh_y_pos.sum() + rh_y_neg.sum() + rl_y_pos.sum(),
@@ -186,18 +193,31 @@ class TestImatIterReactionActivity(unittest.TestCase):
         for rxn_activities in test_iter:
             if optimal_objective is None:
                 optimal_objective = (
-                    (rxn_activities == imat_iter.ReactionActivity.ActiveForward).sum()
-                    + (rxn_activities == imat_iter.ReactionActivity.ActiveReverse).sum()
-                    + (rxn_activities == imat_iter.ReactionActivity.Inactive).sum()
+                    (
+                        rxn_activities
+                        == imat_iter.ReactionActivity.ActiveForward
+                    ).sum()
+                    + (
+                        rxn_activities
+                        == imat_iter.ReactionActivity.ActiveReverse
+                    ).sum()
+                    + (
+                        rxn_activities == imat_iter.ReactionActivity.Inactive
+                    ).sum()
                 )
                 continue
             current_objective = (
-                (rxn_activities == imat_iter.ReactionActivity.ActiveForward).sum()
-                + (rxn_activities == imat_iter.ReactionActivity.ActiveReverse).sum()
+                (
+                    rxn_activities == imat_iter.ReactionActivity.ActiveForward
+                ).sum()
+                + (
+                    rxn_activities == imat_iter.ReactionActivity.ActiveReverse
+                ).sum()
                 + (rxn_activities == imat_iter.ReactionActivity.Inactive).sum()
             )
             self.assertGreaterEqual(
-                current_objective, (1 - self.objective_tolerance) * optimal_objective
+                current_objective,
+                (1 - self.objective_tolerance) * optimal_objective,
             )
             counter += 1
         self.assertGreater(counter, 5)
@@ -339,7 +359,9 @@ class TestImatIterMain(unittest.TestCase):
         for act_series in test_iter:
             self.assertIsInstance(act_series, pd.Series)
             self.assertEqual(act_series.dtype, "object")
-            self.assertIsInstance(act_series.iloc[0], imat_iter.ReactionActivity)
+            self.assertIsInstance(
+                act_series.iloc[0], imat_iter.ReactionActivity
+            )
             counter += 1
         self.assertGreater(counter, 5)
 

@@ -87,11 +87,15 @@ class TestRun(unittest.TestCase):
             metchange.run()
             # Test that the expected file is created
             self.assertTrue(
-                os.path.exists(argparse.ArgumentParser.parse_args().output_file)
+                os.path.exists(
+                    argparse.ArgumentParser.parse_args().output_file
+                )
             )
             # Read the results in
             metchange_results = pd.read_csv(
-                argparse.ArgumentParser.parse_args().output_file, index_col=0, header=0
+                argparse.ArgumentParser.parse_args().output_file,
+                index_col=0,
+                header=0,
             )
         return metchange_results
 
@@ -104,28 +108,36 @@ class TestRun(unittest.TestCase):
             metchange.run()
             # Test that the expected file is created
             self.assertTrue(
-                os.path.exists(argparse.ArgumentParser.parse_args().output_file)
+                os.path.exists(
+                    argparse.ArgumentParser.parse_args().output_file
+                )
             )
             # Read the results in
             metchange_results_cli = pd.read_csv(
-                argparse.ArgumentParser.parse_args().output_file, index_col=0, header=0
+                argparse.ArgumentParser.parse_args().output_file,
+                index_col=0,
+                header=0,
             )
             METCHANGE_FUNC_DICT = {"AND": max, "OR": min}
-            wt_samples = _script_utils._parse_samples(namespace_dict["wildtype"])
+            wt_samples = _script_utils._parse_samples(
+                namespace_dict["wildtype"]
+            )
             wt_rxn_weights = []
             for s in wt_samples:
-                wt_gene_weights = metworkpy.utils.expr_to_metchange_gene_weights(
-                    expression=self.gene_expression.iloc[s],
-                    quantile_cutoff=namespace_dict["quantile_cutoff"],
-                    subset=(
-                        None
-                        if not namespace_dict["subset"]
-                        else self.test_model.genes.list_attr("id")
-                    ),
-                    aggregator=_script_utils._parse_aggregation_method(
-                        namespace_dict["aggregation_method"]
-                    ),
-                    sample_axis=0,
+                wt_gene_weights = (
+                    metworkpy.utils.expr_to_metchange_gene_weights(
+                        expression=self.gene_expression.iloc[s],
+                        quantile_cutoff=namespace_dict["quantile_cutoff"],
+                        subset=(
+                            None
+                            if not namespace_dict["subset"]
+                            else self.test_model.genes.list_attr("id")
+                        ),
+                        aggregator=_script_utils._parse_aggregation_method(
+                            namespace_dict["aggregation_method"]
+                        ),
+                        sample_axis=0,
+                    )
                 )
                 wt_rxn_weights.append(
                     metworkpy.gpr.gene_to_rxn_weights(
@@ -138,7 +150,9 @@ class TestRun(unittest.TestCase):
                 group_pattern = re.compile(r"\(([\d,:]+)\)")
                 sample_groups = [
                     _script_utils._parse_samples(m)
-                    for m in group_pattern.findall(namespace_dict["sample_groups"])
+                    for m in group_pattern.findall(
+                        namespace_dict["sample_groups"]
+                    )
                 ]
             else:
                 sample_groups = [
@@ -201,7 +215,9 @@ class TestRun(unittest.TestCase):
                         model=self.test_model,
                         reaction_weights=weights,
                         metabolites=None,
-                        objective_tolerance=namespace_dict["objective_tolerance"],
+                        objective_tolerance=namespace_dict[
+                            "objective_tolerance"
+                        ],
                     )
                     - wt_mean
                 ) / wt_std
@@ -239,11 +255,15 @@ class TestRun(unittest.TestCase):
         for i in info_list:
             self.assertTrue(i in metchange_res.columns)
 
-    @skipIf(importlib.util.find_spec("gurobipy") is None, "gurobi is not installed")
+    @skipIf(
+        importlib.util.find_spec("gurobipy") is None, "gurobi is not installed"
+    )
     def test_gurobi_solver(self):
         self.match_cli(solver="gurobi")
 
-    @skipIf(importlib.util.find_spec("cplex") is None, "cplex is not installed")
+    @skipIf(
+        importlib.util.find_spec("cplex") is None, "cplex is not installed"
+    )
     def test_cplex_solver(self):
         self.match_cli(solver="cplex")
 

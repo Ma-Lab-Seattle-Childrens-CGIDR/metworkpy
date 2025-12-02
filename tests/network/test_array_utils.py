@@ -304,7 +304,10 @@ class TestBroadcastMultArrVec(unittest.TestCase):
 
     def test_broadcast_mult(self):
         self.assertFalse(
-            (_broadcast_mult_arr_vec(self.test_arr, self.test_vec) != self.test_res)
+            (
+                _broadcast_mult_arr_vec(self.test_arr, self.test_vec)
+                != self.test_res
+            )
             .toarray()
             .any()
         )

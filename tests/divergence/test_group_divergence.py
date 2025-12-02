@@ -17,11 +17,21 @@ class TestGroupDivergence(unittest.TestCase):
         df1 = pd.DataFrame(
             np.hstack(
                 (
-                    generator.normal(loc=0, scale=3, size=1_000).reshape(-1, 1),
-                    generator.normal(loc=10, scale=3, size=1_000).reshape(-1, 1),
-                    generator.normal(loc=0, scale=15, size=1_000).reshape(-1, 1),
-                    generator.normal(loc=10, scale=15, size=1_000).reshape(-1, 1),
-                    generator.normal(loc=0, scale=3, size=1_000).reshape(-1, 1),
+                    generator.normal(loc=0, scale=3, size=1_000).reshape(
+                        -1, 1
+                    ),
+                    generator.normal(loc=10, scale=3, size=1_000).reshape(
+                        -1, 1
+                    ),
+                    generator.normal(loc=0, scale=15, size=1_000).reshape(
+                        -1, 1
+                    ),
+                    generator.normal(loc=10, scale=15, size=1_000).reshape(
+                        -1, 1
+                    ),
+                    generator.normal(loc=0, scale=3, size=1_000).reshape(
+                        -1, 1
+                    ),
                 )
             ),
             columns=[0, 1, 2, 3, 4],
@@ -29,11 +39,21 @@ class TestGroupDivergence(unittest.TestCase):
         df2 = pd.DataFrame(
             np.hstack(
                 (
-                    generator.normal(loc=10, scale=3, size=1_000).reshape(-1, 1),
-                    generator.normal(loc=10, scale=15, size=1_000).reshape(-1, 1),
-                    generator.normal(loc=0, scale=3, size=1_000).reshape(-1, 1),
-                    generator.normal(loc=0, scale=15, size=1_000).reshape(-1, 1),
-                    generator.normal(loc=10, scale=15, size=1_000).reshape(-1, 1),
+                    generator.normal(loc=10, scale=3, size=1_000).reshape(
+                        -1, 1
+                    ),
+                    generator.normal(loc=10, scale=15, size=1_000).reshape(
+                        -1, 1
+                    ),
+                    generator.normal(loc=0, scale=3, size=1_000).reshape(
+                        -1, 1
+                    ),
+                    generator.normal(loc=0, scale=15, size=1_000).reshape(
+                        -1, 1
+                    ),
+                    generator.normal(loc=10, scale=15, size=1_000).reshape(
+                        -1, 1
+                    ),
                 )
             ),
             columns=[0, 1, 2, 3, 4],
@@ -59,21 +79,33 @@ class TestGroupDivergence(unittest.TestCase):
             processes=1,
         )
         self.assertIsInstance(divergence_results, pd.Series)
-        self.assertCountEqual(list(divergence_results.index), divergence_groups.keys())
-        self.assertAlmostEqual(
-            divergence_results["A"], kl_divergence(self.df1[0], self.df2[0]), delta=1e-7
+        self.assertCountEqual(
+            list(divergence_results.index), divergence_groups.keys()
         )
         self.assertAlmostEqual(
-            divergence_results["B"], kl_divergence(self.df1[1], self.df2[1]), delta=1e-7
+            divergence_results["A"],
+            kl_divergence(self.df1[0], self.df2[0]),
+            delta=1e-7,
         )
         self.assertAlmostEqual(
-            divergence_results["C"], kl_divergence(self.df1[2], self.df2[2]), delta=1e-7
+            divergence_results["B"],
+            kl_divergence(self.df1[1], self.df2[1]),
+            delta=1e-7,
         )
         self.assertAlmostEqual(
-            divergence_results["D"], kl_divergence(self.df1[3], self.df2[3]), delta=1e-7
+            divergence_results["C"],
+            kl_divergence(self.df1[2], self.df2[2]),
+            delta=1e-7,
         )
         self.assertAlmostEqual(
-            divergence_results["E"], kl_divergence(self.df1[4], self.df2[4]), delta=1e-7
+            divergence_results["D"],
+            kl_divergence(self.df1[3], self.df2[3]),
+            delta=1e-7,
+        )
+        self.assertAlmostEqual(
+            divergence_results["E"],
+            kl_divergence(self.df1[4], self.df2[4]),
+            delta=1e-7,
         )
         self.assertAlmostEqual(
             divergence_results["F"],

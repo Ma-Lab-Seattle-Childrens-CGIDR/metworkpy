@@ -89,8 +89,12 @@ class TestCraneHelperFunctions(unittest.TestCase):
         test_a = np.arange(20).reshape(4, 5)
         test_b = rng.uniform(0, 1, size=4 * 5).reshape(4, 5)
         self.assertGreater(_crane_differential_entropy(test_a, test_b), 0.0)
-        self.assertAlmostEqual(_crane_differential_entropy(test_a, test_a), 0.0)
-        self.assertAlmostEqual(_crane_differential_entropy(test_b, test_b), 0.0)
+        self.assertAlmostEqual(
+            _crane_differential_entropy(test_a, test_a), 0.0
+        )
+        self.assertAlmostEqual(
+            _crane_differential_entropy(test_b, test_b), 0.0
+        )
 
 
 class TestCraneGeneSetEntropy(unittest.TestCase):
@@ -219,25 +223,29 @@ class TestCraneClassification(unittest.TestCase):
         cls.num_samples_g1 = 20
         cls.num_samples_g2 = 15
         # Generate test data with good ability to classify
-        (test_expression_data1, _, _, _, _) = _datagen._generate_rank_entropy_data(
-            n_ordered_samples=cls.num_samples_g1,
-            n_unordered_samples=0,
-            n_genes_ordered=cls.num_genes,
-            n_genes_unordered=0,
-            dist=norm(loc=100, scale=25),
-            shuffle_genes=True,
-            shuffle_samples=True,
-            seed=314,
+        (test_expression_data1, _, _, _, _) = (
+            _datagen._generate_rank_entropy_data(
+                n_ordered_samples=cls.num_samples_g1,
+                n_unordered_samples=0,
+                n_genes_ordered=cls.num_genes,
+                n_genes_unordered=0,
+                dist=norm(loc=100, scale=25),
+                shuffle_genes=True,
+                shuffle_samples=True,
+                seed=314,
+            )
         )
-        (test_expression_data2, _, _, _, _) = _datagen._generate_rank_entropy_data(
-            n_ordered_samples=cls.num_samples_g2,
-            n_unordered_samples=0,
-            n_genes_ordered=cls.num_genes,
-            n_genes_unordered=0,
-            dist=norm(loc=100, scale=25),
-            shuffle_genes=True,
-            shuffle_samples=True,
-            seed=1618,
+        (test_expression_data2, _, _, _, _) = (
+            _datagen._generate_rank_entropy_data(
+                n_ordered_samples=cls.num_samples_g2,
+                n_unordered_samples=0,
+                n_genes_ordered=cls.num_genes,
+                n_genes_unordered=0,
+                dist=norm(loc=100, scale=25),
+                shuffle_genes=True,
+                shuffle_samples=True,
+                seed=1618,
+            )
         )
         cls.good_class_data_X = np.vstack(
             [test_expression_data1, test_expression_data2]
@@ -245,27 +253,33 @@ class TestCraneClassification(unittest.TestCase):
         cls.good_class_data_y = np.array([0] * 20 + [1] * 15)
 
         # Generate test data with a bad ability to classify
-        (test_expression_data1, _, _, _, _) = _datagen._generate_rank_entropy_data(
-            n_ordered_samples=0,
-            n_unordered_samples=cls.num_samples_g1,
-            n_genes_ordered=0,
-            n_genes_unordered=cls.num_genes,
-            dist=norm(loc=100, scale=25),
-            shuffle_genes=True,
-            shuffle_samples=True,
-            seed=3512,
+        (test_expression_data1, _, _, _, _) = (
+            _datagen._generate_rank_entropy_data(
+                n_ordered_samples=0,
+                n_unordered_samples=cls.num_samples_g1,
+                n_genes_ordered=0,
+                n_genes_unordered=cls.num_genes,
+                dist=norm(loc=100, scale=25),
+                shuffle_genes=True,
+                shuffle_samples=True,
+                seed=3512,
+            )
         )
-        (test_expression_data2, _, _, _, _) = _datagen._generate_rank_entropy_data(
-            n_ordered_samples=0,
-            n_unordered_samples=cls.num_samples_g2,
-            n_genes_ordered=0,
-            n_genes_unordered=cls.num_genes,
-            dist=norm(loc=100, scale=25),
-            shuffle_genes=True,
-            shuffle_samples=True,
-            seed=168,
+        (test_expression_data2, _, _, _, _) = (
+            _datagen._generate_rank_entropy_data(
+                n_ordered_samples=0,
+                n_unordered_samples=cls.num_samples_g2,
+                n_genes_ordered=0,
+                n_genes_unordered=cls.num_genes,
+                dist=norm(loc=100, scale=25),
+                shuffle_genes=True,
+                shuffle_samples=True,
+                seed=168,
+            )
         )
-        cls.bad_class_data_X = np.vstack([test_expression_data1, test_expression_data2])
+        cls.bad_class_data_X = np.vstack(
+            [test_expression_data1, test_expression_data2]
+        )
         cls.bad_class_data_y = np.array(
             [0] * cls.num_samples_g1 + [1] * cls.num_samples_g2
         )
@@ -288,7 +302,10 @@ class TestCraneClassification(unittest.TestCase):
             expression_data=self.good_class_data_X,
             sample_group1=np.array(range(self.num_samples_g1)),
             sample_group2=np.array(
-                range(self.num_samples_g1, self.num_samples_g1 + self.num_samples_g2)
+                range(
+                    self.num_samples_g1,
+                    self.num_samples_g1 + self.num_samples_g2,
+                )
             ),
             gene_network=np.array(range(self.num_genes)),
             kernel_density_estimate=True,
@@ -309,7 +326,10 @@ class TestCraneClassification(unittest.TestCase):
             expression_data=self.bad_class_data_X,
             sample_group1=np.array(range(self.num_samples_g1)),
             sample_group2=np.array(
-                range(self.num_samples_g1, self.num_samples_g1 + self.num_samples_g2)
+                range(
+                    self.num_samples_g1,
+                    self.num_samples_g1 + self.num_samples_g2,
+                )
             ),
             gene_network=np.array(range(self.num_genes)),
             kernel_density_estimate=True,
@@ -330,7 +350,10 @@ class TestCraneClassification(unittest.TestCase):
             expression_data=self.good_class_data_X,
             sample_group1=np.array(range(self.num_samples_g1)),
             sample_group2=np.array(
-                range(self.num_samples_g1, self.num_samples_g1 + self.num_samples_g2)
+                range(
+                    self.num_samples_g1,
+                    self.num_samples_g1 + self.num_samples_g2,
+                )
             ),
             gene_network=np.array(range(self.num_genes)),
             kernel_density_estimate=True,
@@ -345,7 +368,10 @@ class TestCraneClassification(unittest.TestCase):
             expression_data=self.good_class_data_X,
             sample_group1=np.array(range(self.num_samples_g1)),
             sample_group2=np.array(
-                range(self.num_samples_g1, self.num_samples_g1 + self.num_samples_g2)
+                range(
+                    self.num_samples_g1,
+                    self.num_samples_g1 + self.num_samples_g2,
+                )
             ),
             gene_network=np.array(range(self.num_genes)),
             kernel_density_estimate=True,
@@ -368,7 +394,9 @@ class TestCraneClassification(unittest.TestCase):
             size=int(0.8 * (self.num_samples_g1 + self.num_samples_g2)),
             replace=False,
         )
-        test_rows = np.ones(self.num_samples_g1 + self.num_samples_g2, dtype=bool)
+        test_rows = np.ones(
+            self.num_samples_g1 + self.num_samples_g2, dtype=bool
+        )
         test_rows[train_rows] = False
 
         X_train = self.good_class_data_X[train_rows, :]
@@ -393,7 +421,9 @@ class TestCraneClassification(unittest.TestCase):
             size=int(0.8 * (self.num_samples_g1 + self.num_samples_g2)),
             replace=False,
         )
-        test_rows = np.ones(self.num_samples_g1 + self.num_samples_g2, dtype=bool)
+        test_rows = np.ones(
+            self.num_samples_g1 + self.num_samples_g2, dtype=bool
+        )
         test_rows[train_rows] = False
 
         X_train = self.bad_class_data_X[train_rows, :]

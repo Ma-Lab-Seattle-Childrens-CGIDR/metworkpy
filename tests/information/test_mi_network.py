@@ -7,7 +7,9 @@ import numpy as np
 import scipy
 
 # Local Imports
-from metworkpy.information.mutual_information_network import mi_network_adjacency_matrix
+from metworkpy.information.mutual_information_network import (
+    mi_network_adjacency_matrix,
+)
 import metworkpy.information.mutual_information_functions as mi
 
 
@@ -59,12 +61,24 @@ class TestMiNetwork(unittest.TestCase):
             self.assertAlmostEqual(mi_network[i, j], mi_network[j, i])
 
         # Check that known values match
-        self.assertTrue(np.isclose(mi_network[0, 1], self.norm_2d_0_mi, atol=0.08))
-        self.assertTrue(np.isclose(mi_network[1, 0], self.norm_2d_0_mi, atol=0.08))
-        self.assertTrue(np.isclose(mi_network[2, 3], self.norm_2d_0_3_mi, atol=0.05))
-        self.assertTrue(np.isclose(mi_network[3, 2], self.norm_2d_0_3_mi, atol=0.05))
-        self.assertTrue(np.isclose(mi_network[4, 5], self.norm_2d_0_6_mi, atol=0.05))
-        self.assertTrue(np.isclose(mi_network[5, 4], self.norm_2d_0_6_mi, atol=0.05))
+        self.assertTrue(
+            np.isclose(mi_network[0, 1], self.norm_2d_0_mi, atol=0.08)
+        )
+        self.assertTrue(
+            np.isclose(mi_network[1, 0], self.norm_2d_0_mi, atol=0.08)
+        )
+        self.assertTrue(
+            np.isclose(mi_network[2, 3], self.norm_2d_0_3_mi, atol=0.05)
+        )
+        self.assertTrue(
+            np.isclose(mi_network[3, 2], self.norm_2d_0_3_mi, atol=0.05)
+        )
+        self.assertTrue(
+            np.isclose(mi_network[4, 5], self.norm_2d_0_6_mi, atol=0.05)
+        )
+        self.assertTrue(
+            np.isclose(mi_network[5, 4], self.norm_2d_0_6_mi, atol=0.05)
+        )
 
         # Calculate the MI using the methods from mutual_information_functions
         self.assertTrue(
@@ -111,7 +125,9 @@ class TestMiNetwork(unittest.TestCase):
         mi_network_parallel = mi_network_adjacency_matrix(
             self.samples, n_neighbors=3, processes=2
         )
-        self.assertTrue((np.isclose(mi_network_parallel, mi_network_serial)).all())
+        self.assertTrue(
+            (np.isclose(mi_network_parallel, mi_network_serial)).all()
+        )
 
 
 if __name__ == "__main__":

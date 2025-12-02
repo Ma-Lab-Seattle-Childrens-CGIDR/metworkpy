@@ -14,7 +14,9 @@ from metworkpy.divergence._data_validation import (
 
 class TestDataValidation(unittest.TestCase):
     def test_validate_discrete(self):
-        disc_arr = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4]).reshape(-1, 4)
+        disc_arr = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4]).reshape(
+            -1, 4
+        )
         with self.assertRaises(ValueError):
             _validate_discrete(disc_arr)
         _ = _validate_sample(disc_arr.reshape(-1, 1))
@@ -46,7 +48,8 @@ class TestDataValidation(unittest.TestCase):
         arr1_5 = np.ones(shape=(10, 5))
         arr2_6 = np.ones(shape=(10, 4))
         with self.assertRaisesRegex(
-            ValueError, r"Both p and q distributions must have the same dimension.+"
+            ValueError,
+            r"Both p and q distributions must have the same dimension.+",
         ):
             _ = _validate_samples(arr1_5, arr2_6)
         # Test incorrect number of dimensions

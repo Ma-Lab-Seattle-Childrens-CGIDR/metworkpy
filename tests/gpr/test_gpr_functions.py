@@ -25,7 +25,9 @@ class TestStrToList(unittest.TestCase):
         self.assertEqual(_str_to_deque(""), deque())
 
     def test_parenthesis_parse(self):
-        self.assertEqual(_str_to_deque("(Rv0031)"), deque(["(", "Rv0031", ")"]))
+        self.assertEqual(
+            _str_to_deque("(Rv0031)"), deque(["(", "Rv0031", ")"])
+        )
         self.assertEqual(_str_to_deque("(Rv0031"), deque(["(", "Rv0031"]))
         self.assertEqual(_str_to_deque("Rv0031)"), deque(["Rv0031", ")"]))
         self.assertEqual(
@@ -34,22 +36,27 @@ class TestStrToList(unittest.TestCase):
 
     def test_operator_replacements(self):
         self.assertEqual(
-            _str_to_deque("Rv0031 and Rv0098"), deque(["Rv0031", "AND", "Rv0098"])
+            _str_to_deque("Rv0031 and Rv0098"),
+            deque(["Rv0031", "AND", "Rv0098"]),
         )
         self.assertEqual(
-            _str_to_deque("Rv0031 anD Rv0098"), deque(["Rv0031", "AND", "Rv0098"])
+            _str_to_deque("Rv0031 anD Rv0098"),
+            deque(["Rv0031", "AND", "Rv0098"]),
         )
         self.assertEqual(
-            _str_to_deque("Rv0031 And Rv0098"), deque(["Rv0031", "AND", "Rv0098"])
+            _str_to_deque("Rv0031 And Rv0098"),
+            deque(["Rv0031", "AND", "Rv0098"]),
         )
         self.assertEqual(
-            _str_to_deque("Rv0031 or Rv0098"), deque(["Rv0031", "OR", "Rv0098"])
+            _str_to_deque("Rv0031 or Rv0098"),
+            deque(["Rv0031", "OR", "Rv0098"]),
         )
         self.assertEqual(
             _str_to_deque("Rv0031 | Rv0098"), deque(["Rv0031", "OR", "Rv0098"])
         )
         self.assertEqual(
-            _str_to_deque("Rv0031 || Rv0098"), deque(["Rv0031", "OR", "Rv0098"])
+            _str_to_deque("Rv0031 || Rv0098"),
+            deque(["Rv0031", "OR", "Rv0098"]),
         )
         self.assertEqual(
             _str_to_deque("Rv0031|Rv0098"), deque(["Rv0031", "OR", "Rv0098"])
@@ -58,10 +65,12 @@ class TestStrToList(unittest.TestCase):
             _str_to_deque("Rv0031||Rv0098"), deque(["Rv0031", "OR", "Rv0098"])
         )
         self.assertEqual(
-            _str_to_deque("Rv0031 & Rv0098"), deque(["Rv0031", "AND", "Rv0098"])
+            _str_to_deque("Rv0031 & Rv0098"),
+            deque(["Rv0031", "AND", "Rv0098"]),
         )
         self.assertEqual(
-            _str_to_deque("Rv0031 && Rv0098"), deque(["Rv0031", "AND", "Rv0098"])
+            _str_to_deque("Rv0031 && Rv0098"),
+            deque(["Rv0031", "AND", "Rv0098"]),
         )
         self.assertEqual(
             _str_to_deque("Rv0031&Rv0098"), deque(["Rv0031", "AND", "Rv0098"])
@@ -96,7 +105,9 @@ class TestToPostfix(unittest.TestCase):
 
     def test_parenthesis(self):
         self.assertEqual(
-            _to_postfix(deque(["(", "Rv0031", "AND", "Rv0098", ")", "OR", "Rv1234"])),
+            _to_postfix(
+                deque(["(", "Rv0031", "AND", "Rv0098", ")", "OR", "Rv1234"])
+            ),
             deque(["Rv0031", "Rv0098", "AND", "Rv1234", "OR"]),
         )
 
@@ -181,7 +192,9 @@ class TestGeneToRxnWeights(unittest.TestCase):
         )
 
     def test_simple_model(self):
-        rxn_weights = gene_to_rxn_weights(self.test_model, self.test_model_weights)
+        rxn_weights = gene_to_rxn_weights(
+            self.test_model, self.test_model_weights
+        )
         self.assertTrue(rxn_weights.__eq__(self.test_model_rxn_weights).all())
 
     def test_larger_model(self):

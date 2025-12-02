@@ -28,7 +28,9 @@ class TestMetdivergenceMain(unittest.TestCase):
         "wildtype_distribution_file": BASE_PATH
         / "tmp_metdivergence"
         / "wildtype_distribution.csv",
-        "output_file": BASE_PATH / "tmp_metdivergence" / "metdivergence_results.csv",
+        "output_file": BASE_PATH
+        / "tmp_metdivergence"
+        / "metdivergence_results.csv",
         "input_format": "csv",
         "neighbors": 5,
         "divergence_type": "js",
@@ -94,10 +96,14 @@ class TestMetdivergenceMain(unittest.TestCase):
         # Write the sampling results with the appropriate format to the tmp directory
         if namespace_dict["input_format"] == "csv":
             wt_sample.to_csv(
-                self.tmp_path / "wildtype_distribution.csv", index=False, header=True
+                self.tmp_path / "wildtype_distribution.csv",
+                index=False,
+                header=True,
             )
             treatment_sample.to_csv(
-                self.tmp_path / "treatment_distribution.csv", index=False, header=True
+                self.tmp_path / "treatment_distribution.csv",
+                index=False,
+                header=True,
             )
         elif namespace_dict["input_format"] == "parquet":
             wt_sample.to_parquet(
@@ -107,14 +113,21 @@ class TestMetdivergenceMain(unittest.TestCase):
                 self.tmp_path / "treatment_distribution.parquet", index=False
             )
         elif namespace_dict["input_format"] == "feather":
-            wt_sample.to_feather(self.tmp_path / "wildtype_distribution.feather")
+            wt_sample.to_feather(
+                self.tmp_path / "wildtype_distribution.feather"
+            )
             treatment_sample.to_feather(
                 self.tmp_path / "treatment_distribution.feather"
             )
         elif namespace_dict["input_format"] == "json":
             wt_sample.to_json(self.tmp_path / "wildtype_distribution.json")
-            treatment_sample.to_json(self.tmp_path / "treatment_distribution.json")
-        elif metdivergence._parse_format(namespace_dict["input_format"]) == "excel":
+            treatment_sample.to_json(
+                self.tmp_path / "treatment_distribution.json"
+            )
+        elif (
+            metdivergence._parse_format(namespace_dict["input_format"])
+            == "excel"
+        ):
             wt_sample.to_excel(
                 self.tmp_path / "wildtype_distribution.xlsx",
                 sheet_name="Flux Samples",
@@ -132,7 +145,9 @@ class TestMetdivergenceMain(unittest.TestCase):
             return_value=argparse.Namespace(**namespace_dict),
         ):
             metdivergence.main_run()
-        return pd.read_csv(namespace_dict["output_file"], index_col=0, header=0)
+        return pd.read_csv(
+            namespace_dict["output_file"], index_col=0, header=0
+        )
 
     def test_default(self):
         res = self.run_cli()

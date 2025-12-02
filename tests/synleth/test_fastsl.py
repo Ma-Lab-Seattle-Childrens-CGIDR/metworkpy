@@ -27,7 +27,9 @@ IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 class TestFindSyntheticLethalGenes(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.test_model = metworkpy.read_model(BASE_PATH / "data" / "test_model.json")
+        cls.test_model = metworkpy.read_model(
+            BASE_PATH / "data" / "test_model.json"
+        )
         cls.textbook_model = metworkpy.read_model(
             BASE_PATH / "data" / "textbook_model.json"
         )
@@ -50,7 +52,8 @@ class TestFindSyntheticLethalGenes(unittest.TestCase):
             {s.__iter__().__next__() for s in single_gene_ko}, expected_ko
         )
         self.assertSetEqual(
-            {s.__iter__().__next__() for s in single_gene_ko_parallel}, expected_ko
+            {s.__iter__().__next__() for s in single_gene_ko_parallel},
+            expected_ko,
         )
 
     def test_double_ko(self):
@@ -77,7 +80,8 @@ class TestFindSyntheticLethalGenes(unittest.TestCase):
                     obj_value
                 ):  # Inconsistent linear programs are also considered essential
                     self.assertLessEqual(
-                        m.slim_optimize(), ESSENTIAL_PROPORTION * max_objective_value
+                        m.slim_optimize(),
+                        ESSENTIAL_PROPORTION * max_objective_value,
                     )
 
     def test_genes_of_interest(self):
@@ -110,7 +114,8 @@ class TestFindSyntheticLethalGenes(unittest.TestCase):
                     obj_value
                 ):  # Inconsistent linear programs are also considered essential
                     self.assertLessEqual(
-                        m.slim_optimize(), ESSENTIAL_PROPORTION * max_objective_value
+                        m.slim_optimize(),
+                        ESSENTIAL_PROPORTION * max_objective_value,
                     )
             self.assertTrue(set_of_genes in double_ko)
             self.assertGreaterEqual(len(set_of_genes & genes_of_interest), 1)
@@ -119,7 +124,9 @@ class TestFindSyntheticLethalGenes(unittest.TestCase):
 class TestHelperFunctions(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.test_model = metworkpy.read_model(BASE_PATH / "data" / "test_model.json")
+        cls.test_model = metworkpy.read_model(
+            BASE_PATH / "data" / "test_model.json"
+        )
         cls.textbook_model = metworkpy.read_model(
             BASE_PATH / "data" / "textbook_model.json"
         )
@@ -133,7 +140,9 @@ class TestHelperFunctions(unittest.TestCase):
 
     def test_get_potentially_active_genes(self):
         actual = _get_potentially_active_genes(
-            model=self.test_model, pfba_fraction_of_optimum=0.95, active_cutoff=0.01
+            model=self.test_model,
+            pfba_fraction_of_optimum=0.95,
+            active_cutoff=0.01,
         )
         expected = {
             "g_A_imp",
@@ -148,18 +157,30 @@ class TestHelperFunctions(unittest.TestCase):
         self.assertSetEqual(actual, expected)
 
     def test_is_essential(self):
-        expected_essential = cobra.flux_analysis.variability.find_essential_genes(
-            model=self.textbook_model
+        expected_essential = (
+            cobra.flux_analysis.variability.find_essential_genes(
+                model=self.textbook_model
+            )
         )
         for gene in expected_essential:
             self.assertTrue(
                 _is_essential(
-                    model=self.textbook_model, gene=gene.id, essential_cutoff=0.01
+                    model=self.textbook_model,
+                    gene=gene.id,
+                    essential_cutoff=0.01,
                 )
             )
 
     def test_filter_supersets(self):
-        to_filter = [{0}, {0, 1, 2}, {3}, {3, 4}, {5, 6}, {10, 11, 12}, {11, 14, 15}]
+        to_filter = [
+            {0},
+            {0, 1, 2},
+            {3},
+            {3, 4},
+            {5, 6},
+            {10, 11, 12},
+            {11, 14, 15},
+        ]
         expected = [{0}, {3}, {5, 6}, {10, 11, 12}, {11, 14, 15}]
         self.assertCountEqual(_filter_supersets(to_filter), expected)
 

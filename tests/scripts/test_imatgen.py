@@ -56,7 +56,9 @@ def model_bounds_equality(self, model_a, model_b):
 class TestRunSingle(unittest.TestCase):
     default_dict = {
         "model_file": BASE_PATH / "data" / "test_model.json",
-        "gene_expression_file": BASE_PATH / "data" / "test_model_gene_expression.csv",
+        "gene_expression_file": BASE_PATH
+        / "data"
+        / "test_model_gene_expression.csv",
         "output_file": BASE_PATH / "tmp_imatgen" / "test_result_model.json",
         "method": "subset",
         "epsilon": 1.0,
@@ -105,7 +107,9 @@ class TestRunSingle(unittest.TestCase):
             imatgen.main_run()
             # Test that it created the expected file
             self.assertTrue(
-                os.path.exists(argparse.ArgumentParser.parse_args().output_file)
+                os.path.exists(
+                    argparse.ArgumentParser.parse_args().output_file
+                )
             )
             # Test that the output model is the same that would be created by running the IMAT algorithm by hand
             out_model = metworkpy.read_model(
@@ -113,7 +117,9 @@ class TestRunSingle(unittest.TestCase):
             )
             gene_weights = metworkpy.utils.expr_to_imat_gene_weights(
                 expression=self.gene_expression,
-                quantile=_script_utils._parse_quantile(namespace_dict["quantile"]),
+                quantile=_script_utils._parse_quantile(
+                    namespace_dict["quantile"]
+                ),
                 aggregator=_script_utils._parse_aggregation_method(
                     namespace_dict["aggregation_method"]
                 ),
@@ -137,19 +143,27 @@ class TestRunSingle(unittest.TestCase):
             )
             for rxn in out_model.reactions:
                 expected_rxn = expected_model.reactions.get_by_id(rxn.id)
-                self.assertTrue(np.isclose(rxn.lower_bound, expected_rxn.lower_bound))
-                self.assertTrue(np.isclose(rxn.lower_bound, expected_rxn.lower_bound))
+                self.assertTrue(
+                    np.isclose(rxn.lower_bound, expected_rxn.lower_bound)
+                )
+                self.assertTrue(
+                    np.isclose(rxn.lower_bound, expected_rxn.lower_bound)
+                )
             # Make sure the model is not identical to before running IMAT
             self.assertFalse(metworkpy.model_eq(out_model, self.test_model))
 
     def test_default_run(self):
         self.cli_tester()
 
-    @skipIf(importlib.util.find_spec("gurobipy") is None, "gurobi is not installed")
+    @skipIf(
+        importlib.util.find_spec("gurobipy") is None, "gurobi is not installed"
+    )
     def test_gurobi_solver(self):
         self.cli_tester(solver="gurobi")
 
-    @skipIf(importlib.util.find_spec("cplex") is None, "cplex is not installed")
+    @skipIf(
+        importlib.util.find_spec("cplex") is None, "cplex is not installed"
+    )
     def test_cplex_solver(self):
         self.cli_tester(solver="cplex")
 
@@ -173,17 +187,20 @@ class TestRunSingle(unittest.TestCase):
 
     def test_model_format_sbml(self):
         self.cli_tester(
-            model_file=BASE_PATH / "data" / "test_model.xml", model_format="sbml"
+            model_file=BASE_PATH / "data" / "test_model.xml",
+            model_format="sbml",
         )
 
     def test_model_format_yaml(self):
         self.cli_tester(
-            model_file=BASE_PATH / "data" / "test_model.yaml", model_format="yaml"
+            model_file=BASE_PATH / "data" / "test_model.yaml",
+            model_format="yaml",
         )
 
     def test_model_format_mat(self):
         self.cli_tester(
-            model_file=BASE_PATH / "data" / "test_model.mat", model_format="mat"
+            model_file=BASE_PATH / "data" / "test_model.mat",
+            model_format="mat",
         )
 
 
@@ -253,7 +270,9 @@ class TestRunMulti(unittest.TestCase):
             else:
                 prefix = ""
             if args.output_format:
-                extension = _script_utils._parse_format_to_extension(args.output_format)
+                extension = _script_utils._parse_format_to_extension(
+                    args.output_format
+                )
             else:
                 extension = "json"
             if args.sample_groups:
@@ -269,7 +288,9 @@ class TestRunMulti(unittest.TestCase):
                     for idx, _ in enumerate(self.gene_expression.index)
                     if idx not in wildtype
                 ]
-                sample_names = [f"s{i}" for i in range(1, len(sample_groups) + 1)]
+                sample_names = [
+                    f"s{i}" for i in range(1, len(sample_groups) + 1)
+                ]
             for sample in sample_names:
                 filename = f"{prefix}{sample}.{extension}"
                 self.assertTrue(os.path.exists(self.tmp_path / filename))
@@ -282,7 +303,9 @@ class TestRunMulti(unittest.TestCase):
                 args.aggregation_method
             )
             rxn_weights = {}
-            wt_expr = self.gene_expression.iloc[wildtype, :].apply(aggregator, axis=0)
+            wt_expr = self.gene_expression.iloc[wildtype, :].apply(
+                aggregator, axis=0
+            )
             for group, name in zip(sample_groups, sample_names):
                 if not args.fold_change:
                     g_weights = metworkpy.utils.expr_to_imat_gene_weights(
@@ -335,11 +358,15 @@ class TestRunMulti(unittest.TestCase):
     def test_default_run(self):
         self.run_cli()
 
-    @skipIf(importlib.util.find_spec("gurobipy") is None, "gurobi is not installed")
+    @skipIf(
+        importlib.util.find_spec("gurobipy") is None, "gurobi is not installed"
+    )
     def test_gurobi(self):
         self.run_cli(solver="gurobi")
 
-    @skipIf(importlib.util.find_spec("cplex") is None, "cplex is not installed")
+    @skipIf(
+        importlib.util.find_spec("cplex") is None, "cplex is not installed"
+    )
     def test_cplex(self):
         self.run_cli(solver="cplex")
 
@@ -371,7 +398,9 @@ class TestRunMulti(unittest.TestCase):
         self.run_cli(sample_groups="(0,1,2)(3,4,5)")
 
     def test_sample_names(self):
-        self.run_cli(sample_groups="(0,1,2)(3,4,5)", sample_group_names="oe,ko")
+        self.run_cli(
+            sample_groups="(0,1,2)(3,4,5)", sample_group_names="oe,ko"
+        )
 
     def test_foldchange(self):
         self.run_cli(fold_change=1.0, sample_groups="(0,1,2)(3,4,5)")

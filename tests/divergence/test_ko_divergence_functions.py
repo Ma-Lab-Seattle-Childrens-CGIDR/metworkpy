@@ -18,7 +18,9 @@ from metworkpy.utils.models import read_model
 class TestHelperFunctions(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data_path = pathlib.Path(__file__).parent.parent.absolute() / "data"
+        cls.data_path = (
+            pathlib.Path(__file__).parent.parent.absolute() / "data"
+        )
 
     def test_convert_target_networks(self):
         data_path = pathlib.Path(__file__).parent.parent.absolute() / "data"
@@ -28,7 +30,8 @@ class TestHelperFunctions(unittest.TestCase):
         converted_list = _convert_target_network(test_model, target_list)
         self.assertListEqual(converted_list, expected_list)
         with self.assertWarnsRegex(
-            UserWarning, "Couldn't find fake_gene in model genes or reactions, skipping"
+            UserWarning,
+            "Couldn't find fake_gene in model genes or reactions, skipping",
         ):
             _ = _convert_target_network(test_model, ["fake_gene"])
 
@@ -48,7 +51,9 @@ class TestHelperFunctions(unittest.TestCase):
 class TestKoDivergence(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data_path = pathlib.Path(__file__).parent.parent.absolute() / "data"
+        cls.data_path = (
+            pathlib.Path(__file__).parent.parent.absolute() / "data"
+        )
         cls.test_model = read_model(cls.data_path / "test_model.json")
         cls.textbook_model = read_model(cls.data_path / "textbook_model.json")
 
@@ -70,7 +75,9 @@ class TestKoDivergence(unittest.TestCase):
             processes=1,
         )
         # Check that the output dataframe has the expected form
-        self.assertCountEqual(list(div_ko_res.index), ["g_A_imp", "g_B_imp", "g_C_H"])
+        self.assertCountEqual(
+            list(div_ko_res.index), ["g_A_imp", "g_B_imp", "g_C_H"]
+        )
         self.assertCountEqual(
             list(div_ko_res.columns), ["export", "H_system", "upper_route"]
         )
@@ -80,15 +87,18 @@ class TestKoDivergence(unittest.TestCase):
 
         # The export system should be more perturbed than the H_system for both the g_A_imp and g_B_imp KOs
         self.assertGreater(
-            div_ko_res.loc["g_A_imp", "export"], div_ko_res.loc["g_A_imp", "H_system"]
+            div_ko_res.loc["g_A_imp", "export"],
+            div_ko_res.loc["g_A_imp", "H_system"],
         )
         self.assertGreater(
-            div_ko_res.loc["g_B_imp", "export"], div_ko_res.loc["g_B_imp", "H_system"]
+            div_ko_res.loc["g_B_imp", "export"],
+            div_ko_res.loc["g_B_imp", "H_system"],
         )
 
         # For the g_C_H knockout, the export should be more perturbed than the upper_route
         self.assertGreater(
-            div_ko_res.loc["g_C_H", "export"], div_ko_res.loc["g_C_H", "upper_route"]
+            div_ko_res.loc["g_C_H", "export"],
+            div_ko_res.loc["g_C_H", "upper_route"],
         )
 
     def test_divergence_ko_kl(self):
@@ -109,7 +119,9 @@ class TestKoDivergence(unittest.TestCase):
             processes=1,
         )
         # Check that the output dataframe has the expected form
-        self.assertCountEqual(list(div_ko_res.index), ["g_A_imp", "g_B_imp", "g_C_H"])
+        self.assertCountEqual(
+            list(div_ko_res.index), ["g_A_imp", "g_B_imp", "g_C_H"]
+        )
         self.assertCountEqual(
             list(div_ko_res.columns), ["export", "H_system", "upper_route"]
         )
@@ -119,15 +131,18 @@ class TestKoDivergence(unittest.TestCase):
 
         # The export system should be more perturbed than the H_system for both the g_A_imp and g_B_imp KOs
         self.assertGreater(
-            div_ko_res.loc["g_A_imp", "export"], div_ko_res.loc["g_A_imp", "H_system"]
+            div_ko_res.loc["g_A_imp", "export"],
+            div_ko_res.loc["g_A_imp", "H_system"],
         )
         self.assertGreater(
-            div_ko_res.loc["g_B_imp", "export"], div_ko_res.loc["g_B_imp", "H_system"]
+            div_ko_res.loc["g_B_imp", "export"],
+            div_ko_res.loc["g_B_imp", "H_system"],
         )
 
         # For the g_C_H knockout, the export should be more perturbed than the upper_route
         self.assertGreater(
-            div_ko_res.loc["g_C_H", "export"], div_ko_res.loc["g_C_H", "upper_route"]
+            div_ko_res.loc["g_C_H", "export"],
+            div_ko_res.loc["g_C_H", "upper_route"],
         )
 
     def test_larger_metabolic_model(self):

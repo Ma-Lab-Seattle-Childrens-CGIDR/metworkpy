@@ -34,14 +34,20 @@ class TestInferHelperFunctions(unittest.TestCase):
 
         test_vec = np.arange(10)
         test_array = np.vstack((test_vec, test_vec[::-1]))
-        self.assertAlmostEqual(_rank_array_entropy(test_array), -0.5 * np.log(0.5) * 2)
+        self.assertAlmostEqual(
+            _rank_array_entropy(test_array), -0.5 * np.log(0.5) * 2
+        )
 
     def test_infer_differential_entropy(self):
         test_a = np.arange(20).reshape(4, 5)
         test_b = np.random.rand(4, 5)
         self.assertGreater(_infer_differential_entropy(test_a, test_b), 0.0)
-        self.assertAlmostEqual(_infer_differential_entropy(test_a, test_a), 0.0)
-        self.assertAlmostEqual(_infer_differential_entropy(test_b, test_b), 0.0)
+        self.assertAlmostEqual(
+            _infer_differential_entropy(test_a, test_a), 0.0
+        )
+        self.assertAlmostEqual(
+            _infer_differential_entropy(test_b, test_b), 0.0
+        )
 
 
 class TestInferGeneSetEntropy(unittest.TestCase):

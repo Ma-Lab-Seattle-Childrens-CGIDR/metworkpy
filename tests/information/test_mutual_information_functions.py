@@ -59,18 +59,23 @@ class TestMainMI(unittest.TestCase):
         y_col = np.array([1, 0, 0, 0, 1]).reshape(-1, 1)
         H_x = H_y = -(3 / 5) * np.log(3 / 5) - (2 / 5) * np.log(2 / 5)
         H_xy = (
-            -1 / 5 * np.log(1 / 5) - (2 / 5) * np.log(2 / 5) - (2 / 5) * np.log(2 / 5)
+            -1 / 5 * np.log(1 / 5)
+            - (2 / 5) * np.log(2 / 5)
+            - (2 / 5) * np.log(2 / 5)
         )
         I_xy = H_x + H_y - H_xy
 
         # Test with column vectors
         self.assertAlmostEqual(
-            mi.mutual_information(x=x_col, y=y_col, discrete_x=True, discrete_y=True),
+            mi.mutual_information(
+                x=x_col, y=y_col, discrete_x=True, discrete_y=True
+            ),
             I_xy,
         )
         # Test with row vectors
         self.assertAlmostEqual(
-            mi.mutual_information(x=x, y=y, discrete_x=True, discrete_y=True), I_xy
+            mi.mutual_information(x=x, y=y, discrete_x=True, discrete_y=True),
+            I_xy,
         )
 
         # Test equality with dispatched method
@@ -112,12 +117,18 @@ class TestMainMI(unittest.TestCase):
             y[y_dist2_index] = generator.uniform(0, 2, size=np.sum(~x))
 
             mi_theory = -0.5 * (
-                (1 - p) * np.log(0.5 * (1 - p)) + p * np.log(0.5 * p) + np.log(0.5)
+                (1 - p) * np.log(0.5 * (1 - p))
+                + p * np.log(0.5 * p)
+                + np.log(0.5)
             ) - np.log(2)
 
             for n_neighbors in [3, 5, 7]:
                 mi_computed = mi.mutual_information(
-                    x=x, y=y, discrete_x=True, discrete_y=False, n_neighbors=n_neighbors
+                    x=x,
+                    y=y,
+                    discrete_x=True,
+                    discrete_y=False,
+                    n_neighbors=n_neighbors,
                 )
                 self.assertTrue(np.isclose(mi_computed, mi_theory, rtol=1e-1))
 
@@ -345,7 +356,9 @@ class TestContCont(unittest.TestCase):
             y=self.norm_2d_2d_0_3_0_6_sample_1000[:, [2, 3]],
             n_neighbors=3,
         )
-        self.assertTrue(np.isclose(mi_2d_2d_0_3_0_6_cheb, mi_2d_2d_0_3_0_6_gen))
+        self.assertTrue(
+            np.isclose(mi_2d_2d_0_3_0_6_cheb, mi_2d_2d_0_3_0_6_gen)
+        )
 
     def test_dispatch(self):
         # Test scalar dispatch (always to cheb_only
@@ -380,7 +393,9 @@ class TestContCont(unittest.TestCase):
             metric_y=np.inf,
         )
 
-        self.assertTrue(np.isclose(mi_2d_2d_0_3_0_6_disp, mi_2d_2d_0_3_0_6_gen))
+        self.assertTrue(
+            np.isclose(mi_2d_2d_0_3_0_6_disp, mi_2d_2d_0_3_0_6_gen)
+        )
 
         # Test 2D dispatch to cheb_only
         mi_2d_2d_0_3_0_6_cheb = mi._mi_cont_cont_cheb_only(
@@ -395,7 +410,9 @@ class TestContCont(unittest.TestCase):
             metric_x=np.inf,
             metric_y=np.inf,
         )
-        self.assertTrue(np.isclose(mi_2d_2d_0_3_0_6_disp, mi_2d_2d_0_3_0_6_cheb))
+        self.assertTrue(
+            np.isclose(mi_2d_2d_0_3_0_6_disp, mi_2d_2d_0_3_0_6_cheb)
+        )
 
 
 class TestDiscCont(unittest.TestCase):
@@ -432,7 +449,9 @@ class TestDiscCont(unittest.TestCase):
             y[y_dist2_index] = generator.uniform(0, 2, size=np.sum(~x))
 
             mi_theory = -0.5 * (
-                (1 - p) * np.log(0.5 * (1 - p)) + p * np.log(0.5 * p) + np.log(0.5)
+                (1 - p) * np.log(0.5 * (1 - p))
+                + p * np.log(0.5 * p)
+                + np.log(0.5)
             ) - np.log(2)
 
             for n_neighbors in [3, 5, 7]:
@@ -451,7 +470,9 @@ class TestDiscDisc(unittest.TestCase):
         y = np.array([1, 0, 0, 0, 1]).reshape(-1, 1)
         H_x = H_y = -(3 / 5) * np.log(3 / 5) - (2 / 5) * np.log(2 / 5)
         H_xy = (
-            -1 / 5 * np.log(1 / 5) - (2 / 5) * np.log(2 / 5) - (2 / 5) * np.log(2 / 5)
+            -1 / 5 * np.log(1 / 5)
+            - (2 / 5) * np.log(2 / 5)
+            - (2 / 5) * np.log(2 / 5)
         )
         I_xy = H_x + H_y - H_xy
 
@@ -465,9 +486,15 @@ class TestHelperFunctions(unittest.TestCase):
         with self.assertRaises(ValueError):
             metworkpy.utils._arguments._parse_metric(0.5)
         self.assertEqual(5.0, metworkpy.utils._arguments._parse_metric(5.0))
-        self.assertEqual(2.0, metworkpy.utils._arguments._parse_metric("Euclidean"))
-        self.assertEqual(1.0, metworkpy.utils._arguments._parse_metric("Manhattan"))
-        self.assertEqual(np.inf, metworkpy.utils._arguments._parse_metric("Chebyshev"))
+        self.assertEqual(
+            2.0, metworkpy.utils._arguments._parse_metric("Euclidean")
+        )
+        self.assertEqual(
+            1.0, metworkpy.utils._arguments._parse_metric("Manhattan")
+        )
+        self.assertEqual(
+            np.inf, metworkpy.utils._arguments._parse_metric("Chebyshev")
+        )
         self.assertEqual(10.0, metworkpy.utils._arguments._parse_metric(10))
 
     def test_validate_sample(self):
@@ -497,7 +524,10 @@ class TestHelperFunctions(unittest.TestCase):
         with self.assertRaises(ValueError):
             _ = mi._check_discrete(sample=x, is_discrete=True)
         self.assertTrue(
-            (mi._check_discrete(sample=y, is_discrete=True) == y.reshape(-1, 1)).all()
+            (
+                mi._check_discrete(sample=y, is_discrete=True)
+                == y.reshape(-1, 1)
+            ).all()
         )
 
     def test_jitter_single(self):

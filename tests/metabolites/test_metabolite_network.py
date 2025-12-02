@@ -242,7 +242,9 @@ class TestHelperFunctions(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         Configuration().solver = "glpk"  # Use GLPK solver for testing
-        cls.data_path = pathlib.Path(__file__).parent.parent.absolute() / "data"
+        cls.data_path = (
+            pathlib.Path(__file__).parent.parent.absolute() / "data"
+        )
         cls.model = read_model(cls.data_path / "textbook_model.xml")
 
     def test_add_absorbing_reaction(self):
@@ -260,7 +262,9 @@ class TestHelperFunctions(unittest.TestCase):
                         # If the metabolite is required to generate ATP,
                         # absorbing it will cause an infeasible problem, in this test just skip these
                         continue
-                    self.assertAlmostEqual(m.slim_optimize(), 0.0, delta=m.tolerance)
+                    self.assertAlmostEqual(
+                        m.slim_optimize(), 0.0, delta=m.tolerance
+                    )
             # Test that the remove worked as expected
             self.assertAlmostEqual(
                 test_model.slim_optimize(), max_generation, delta=m.tolerance
@@ -280,7 +284,9 @@ class TestHelperFunctions(unittest.TestCase):
                     # If the metabolite is required to generate ATP,
                     # absorbing it will cause an infeasible problem, in this test just skip these
                     continue
-                self.assertAlmostEqual(m.slim_optimize(), 0.0, delta=m.tolerance)
+                self.assertAlmostEqual(
+                    m.slim_optimize(), 0.0, delta=m.tolerance
+                )
             # Test that the remove worked as expected
             self.assertAlmostEqual(
                 test_model.slim_optimize(), max_generation, delta=m.tolerance

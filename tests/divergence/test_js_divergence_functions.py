@@ -20,12 +20,24 @@ class TestMainKL(unittest.TestCase):
     def setUpClass(cls):
         generator = np.random.default_rng(314)
         # Setup for the continuous cases
-        cls.norm_0_3 = generator.normal(loc=0, scale=3, size=500).reshape(-1, 1)
-        cls.norm_2_3 = generator.normal(loc=2, scale=3, size=500).reshape(-1, 1)
-        cls.norm_5_3 = generator.normal(loc=5, scale=3, size=500).reshape(-1, 1)
-        cls.norm_2_10 = generator.normal(loc=2, scale=10, size=500).reshape(-1, 1)
-        cls.norm_2_15 = generator.normal(loc=2, scale=15, size=500).reshape(-1, 1)
-        cls.norm_2_10_rep = generator.normal(loc=2, scale=10, size=500).reshape(-1, 1)
+        cls.norm_0_3 = generator.normal(loc=0, scale=3, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_3 = generator.normal(loc=2, scale=3, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_5_3 = generator.normal(loc=5, scale=3, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_10 = generator.normal(loc=2, scale=10, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_15 = generator.normal(loc=2, scale=15, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_10_rep = generator.normal(
+            loc=2, scale=10, size=500
+        ).reshape(-1, 1)
 
         # Setup for the discrete cases
         cls.uniform_choice = generator.choice([0, 1, 2, 3, 4, 5], size=500)
@@ -64,7 +76,9 @@ class TestMainKL(unittest.TestCase):
         # Continuous
         self.assertTrue(
             np.isclose(
-                0.0, js_divergence(self.norm_2_10, self.norm_2_10_rep), atol=1e-1
+                0.0,
+                js_divergence(self.norm_2_10, self.norm_2_10_rep),
+                atol=1e-1,
             )
         )
         self.assertTrue(
@@ -111,7 +125,9 @@ class TestMainKL(unittest.TestCase):
         self.assertTrue(
             np.isclose(
                 js_divergence(self.p_sample, self.q_sample, discrete=True),
-                js_divergence(list(self.p_sample), list(self.q_sample), discrete=True),
+                js_divergence(
+                    list(self.p_sample), list(self.q_sample), discrete=True
+                ),
             )
         )
 
@@ -138,12 +154,24 @@ class TestContinuousJS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         generator = np.random.default_rng(314)
-        cls.norm_0_3 = generator.normal(loc=0, scale=3, size=500).reshape(-1, 1)
-        cls.norm_2_3 = generator.normal(loc=2, scale=3, size=500).reshape(-1, 1)
-        cls.norm_5_3 = generator.normal(loc=5, scale=3, size=500).reshape(-1, 1)
-        cls.norm_2_10 = generator.normal(loc=2, scale=10, size=500).reshape(-1, 1)
-        cls.norm_2_15 = generator.normal(loc=2, scale=15, size=500).reshape(-1, 1)
-        cls.norm_2_10_rep = generator.normal(loc=2, scale=10, size=500).reshape(-1, 1)
+        cls.norm_0_3 = generator.normal(loc=0, scale=3, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_3 = generator.normal(loc=2, scale=3, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_5_3 = generator.normal(loc=5, scale=3, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_10 = generator.normal(loc=2, scale=10, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_15 = generator.normal(loc=2, scale=15, size=500).reshape(
+            -1, 1
+        )
+        cls.norm_2_10_rep = generator.normal(
+            loc=2, scale=10, size=500
+        ).reshape(-1, 1)
 
         # Multidimensional case
         norm_2d_2d_0_3_0_6 = scipy.stats.multivariate_normal(
@@ -170,7 +198,9 @@ class TestContinuousJS(unittest.TestCase):
     def test_identical_distributions(self):
         # JS should be close to 0 for identical distributions
         self.assertTrue(
-            np.isclose(0.0, _js_cont(self.norm_2_10, self.norm_2_10_rep), atol=1e-1)
+            np.isclose(
+                0.0, _js_cont(self.norm_2_10, self.norm_2_10_rep), atol=1e-1
+            )
         )
 
     def test_greater_sd(self):
@@ -217,7 +247,9 @@ class TestDiscreteJS(unittest.TestCase):
         # JS estimate for identical distributions should be close to 0
         self.assertTrue(
             np.isclose(
-                _js_disc(self.uniform_choice, self.uniform_choice_rep), 0.0, atol=5e-2
+                _js_disc(self.uniform_choice, self.uniform_choice_rep),
+                0.0,
+                atol=5e-2,
             )
         )
 
@@ -265,10 +297,16 @@ class TestDivergenceArrayJS(unittest.TestCase):
             np.all(
                 np.isclose(
                     js_divergence_array(
-                        self.norm_0_3, self.norm_2_10, n_neighbors=3, processes=1
+                        self.norm_0_3,
+                        self.norm_2_10,
+                        n_neighbors=3,
+                        processes=1,
                     ),
                     js_divergence_array(
-                        self.norm_2_10, self.norm_0_3, n_neighbors=3, processes=1
+                        self.norm_2_10,
+                        self.norm_0_3,
+                        n_neighbors=3,
+                        processes=1,
                     ),
                 )
             )
@@ -279,7 +317,10 @@ class TestDivergenceArrayJS(unittest.TestCase):
             np.all(
                 np.isclose(
                     js_divergence_array(
-                        self.norm_2_10, self.norm_2_10_rep, n_neighbors=5, processes=1
+                        self.norm_2_10,
+                        self.norm_2_10_rep,
+                        n_neighbors=5,
+                        processes=1,
                     ),
                     0.0,
                     atol=1e-1,
@@ -306,9 +347,15 @@ class TestDivergenceArrayJS(unittest.TestCase):
         self.assertTrue(np.all(np.less(small_mean, large_mean)))
 
     def test_parallel(self):
-        for p, q in zip([self.norm_0_3, self.norm_0_3], [self.norm_2_3, self.norm_5_3]):
-            serial_js_div = js_divergence_array(p, q, n_neighbors=3, processes=1)
-            parallel_js_div = js_divergence_array(p, q, n_neighbors=3, processes=2)
+        for p, q in zip(
+            [self.norm_0_3, self.norm_0_3], [self.norm_2_3, self.norm_5_3]
+        ):
+            serial_js_div = js_divergence_array(
+                p, q, n_neighbors=3, processes=1
+            )
+            parallel_js_div = js_divergence_array(
+                p, q, n_neighbors=3, processes=2
+            )
             self.assertTrue(np.all(np.isclose(parallel_js_div, serial_js_div)))
 
 

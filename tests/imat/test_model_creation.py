@@ -106,9 +106,13 @@ class TestModelCreation(unittest.TestCase):
             in imat_model.solver.variables
         )
         # Check that the imat constraint was added
-        self.assertTrue("imat_objective_constraint" in imat_model.solver.constraints)
+        self.assertTrue(
+            "imat_objective_constraint" in imat_model.solver.constraints
+        )
         # Check that the objective is the same as before
-        self.assertTrue(_check_objective_eq(test_model.objective, imat_model.objective))
+        self.assertTrue(
+            _check_objective_eq(test_model.objective, imat_model.objective)
+        )
         # Check that the test_model hasn't been modified
         self.assertTrue(model_eq(test_model, self.model))
         # Check that optimization respected imat constraint
@@ -378,7 +382,9 @@ class TestHelperFunctions(unittest.TestCase):
             },
             index=["A", "B", "C", "D", "E", "F"],
         )
-        actual_results = test_df.apply(_milp_eval, axis=1).replace({np.nan: -2})
+        actual_results = test_df.apply(_milp_eval, axis=1).replace(
+            {np.nan: -2}
+        )
         expected_results = pd.Series(
             [-2, -1, -2, 0, 1, -1], index=["A", "B", "C", "D", "E", "F"]
         )
