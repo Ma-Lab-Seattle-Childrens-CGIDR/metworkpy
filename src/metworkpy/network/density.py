@@ -225,9 +225,8 @@ def gene_target_density(
         metabolic_network = metabolic_network.to_undirected()
     if not isinstance(metabolic_network, nx.Graph):
         raise ValueError(
-            f"Metabolic network must be a networkx Graph but received a {
-                type(metabolic_network)
-            }"
+            f"Metabolic network must be a networkx Graph but received a "
+            f"{type(metabolic_network)}"
         )
     if isinstance(gene_labels, list):
         gene_labels = pd.Series(1, index=pd.Index(gene_labels))
