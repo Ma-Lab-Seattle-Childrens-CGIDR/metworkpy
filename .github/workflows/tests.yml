@@ -45,7 +45,7 @@ jobs:
         run: uv pip install pytest ruff
       - name: Lint with ruff
         run: |
-          ruff check --output-format=github ./metworkpy
+          ruff check --output-format=github src
       - name: Test with Pytest
         run: |
-          pytest .
+          pytest tests
