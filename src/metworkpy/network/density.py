@@ -3,13 +3,15 @@
 # region Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Hashable, Union, cast
+from typing import Hashable, Union, Literal, cast
+from warnings import warn
 
 # External Imports
 import cobra  # type:ignore     # Cobra doesn't have py.typed marker
 import networkx as nx
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 
 # Local Imports
@@ -215,7 +217,6 @@ def gene_target_density(
 
     Returns
     -------
-        pass
     target_density : pd.Series
         Pandas series with index corresponding to reactions in the network,
         and values corresponding to the density of gene targets in the
@@ -255,21 +256,9 @@ def _node_gene_density(
     """
     Find the gene label density for a single node
     """
-    # Find the genes in the neighborhood
-    gene_neighborhood = set()
-    # Add the genes for the source node to the gene_neighborhood
-    gene_neighborhood.update(
-        [g.id for g in model.reactions.get_by_id(node).genes]
-    )  # type:ignore
-    # Iterate through the neighboring reactions and find associated genes
-    for _, successors in nx.bfs_successors(
-        network, source=node, depth_limit=radius
-    ):
-        # For each rxn in the neighborhood, add its associated genes
-        for n in successors:
-            gene_neighborhood.update(
-                [g.id for g in model.reactions.get_by_id(n).genes]
-            )  # type:ignore
+    gene_neighborhood = _get_gene_neighborhood(
+        node=node, network=network, model=model, radius=radius
+    )
     if len(gene_neighborhood) == 0:
         return (
             0.0  # If there are no genes in the neigborhood, the density is 0
@@ -283,3 +272,164 @@ def _node_gene_density(
 
 
 # endregion Gene Target Density
+
+# region Gene Target Enrichment
+
+
+def gene_target_enrichment(
+    metabolic_network: Union[nx.Graph, nx.DiGraph],
+    metabolic_model: cobra.Model,
+    gene_targets: Union[set[str], list[str]],
+    metric: Literal["odds-ratio", "p-value"] = "p-value",
+    alternative: Literal["two-sided", "less", "greater"] = "greater",
+    radius: int = 3,
+) -> pd.Series:
+    """
+    Determine the enrichment of gene targets in the neighborhood of a reaction
+    within a metabolic network
+
+    Parameters
+    ----------
+    metabolic_network : nx.Graph or nx.DiGraph
+        Metabolic network in the form of a reaction network, can be
+        directed or undirected, but directed graphs will be converted
+        to undirected.
+    metabolic_model : cobra.Model
+        Metabolic model from which the metabolic network was constructed
+    gene_targets : list or set of str
+        Targeted genes associated with reactions in the
+        metabolic network. Result will be the enrichment in these targeted
+        genes in a neighborhood of each reaction in the network
+    metric : "odds-ratio" or "p-value", default="p-value"
+        The enrichment metric to return in the Series, either the odds-ratio
+        or the p-value (default) of the Fisher's exact test used to
+        evaluate enrichment
+    alternative : "two-sided", "less", or "greater"
+        The alternative hypothesis for the Fisher's exact test used to
+        evaluate the enrichment
+    radius : int, default=3
+        The radius to use for defining a neighborhood around the reaction for
+        finding enrichment, specifies how far out from a given node labels are
+        counted towards enrichment. A radius of 0 only counts the genes
+        associated with the single node.
+
+    Returns
+    -------
+    target_enrichment : pd.Series
+        Pandas series with index corresponding to reactions in the network,
+        and values corresponding to either the odds-ratio or the enrichment
+        p-value (depending on the value of metric)
+    """
+    if isinstance(metabolic_network, nx.DiGraph):
+        metabolic_network = metabolic_network.to_undirected()
+    if not isinstance(metabolic_network, nx.Graph):
+        raise ValueError(
+            f"Metabolic network must be a networkx Graph but received a "
+            f"{type(metabolic_network)}"
+        )
+    if isinstance(gene_targets, list):
+        gene_targets = set(gene_targets)
+    if not isinstance(gene_targets, set):
+        raise ValueError(
+            f"Gene labels must be a list or a set but received a "
+            f"{type(gene_targets)}"
+        )
+    if len(gene_targets) < 1:
+        warn("No labeled genes, p-values all 1.0, odds-ratio all 0.0")
+        if metric == "p-value":
+            return pd.Series(1.0, index=pd.Index(metabolic_network.nodes))
+        elif metric == "odds-ratio":
+            return pd.Series(0.0, index=pd.Index(metabolic_network.nodes))
+    total_gene_set = set(metabolic_model.genes.list_attr("id"))
+    enrichment_dict = {}
+    for node in metabolic_network:
+        odds, pval = _node_gene_enrichment(
+            node=node,
+            network=metabolic_network,
+            model=metabolic_model,
+            labels=gene_targets,
+            total_gene_set=total_gene_set,
+            radius=radius,
+            alternative=alternative,
+        )
+        enrichment_dict[node] = pval if metric == "p-value" else odds
+    return pd.Series(enrichment_dict)
+
+
+def _node_gene_enrichment(
+    node: str,
+    network: nx.Graph,
+    model: cobra.Model,
+    labels: set[str],
+    total_gene_set: set[str],
+    radius: int,
+    alternative: Literal["two-sided", "less", "greater"],
+) -> tuple[float, float]:
+    """
+    Calculate the enrichment in labels in a neighborhood around `node`
+
+    Parameters
+    ----------
+    node : str
+        Node to evaluate the neighborhood enrichment for
+    network : nx.Graph
+        The network to use for finding gene neighborhood
+    model: cobra.Model
+        The cobra Model to use for finding genes associated with
+        the reactions in the network
+    labels : set of str
+        The set of genes considered "labeled"
+    total_gene_set : set of str
+        The set of genes within the model
+    radius : int
+        The radius to use for defining a neighborhood around
+    """
+    gene_neighborhood = _get_gene_neighborhood(
+        node=node, network=network, model=model, radius=radius
+    )
+    if len(gene_neighborhood) == 0:
+        return (0.0, 1.0)
+    # Create contingency table
+    #                      | in labels | not in labels |
+    #  in neighborhood     |           |               |
+    #  not in neighborhood |           |               |
+    contingency_table = np.array(
+        [
+            [len(gene_neighborhood & labels), len(gene_neighborhood - labels)],
+            [
+                len((total_gene_set - gene_neighborhood) & labels),
+                len((total_gene_set - gene_neighborhood) - labels),
+            ],
+        ]
+    )
+    fisher_res = stats.fisher_exact(contingency_table, alternative)
+    return (fisher_res.statistic, fisher_res.pvalue)
+
+
+# endregion Gene Target Enrichment
+
+# region Helper Functions
+
+
+def _get_gene_neighborhood(
+    node: str, network: nx.Graph, model: cobra.Model, radius: int
+) -> set[str]:
+    """
+    Find the genes in a neighborhood around a node
+    """
+    gene_neighborhood = set()
+    gene_neighborhood.update(
+        [g.id for g in model.reactions.get_by_id(node).genes]
+    )
+    for _, successors in nx.bfs_successors(
+        network, source=node, depth_limit=radius
+    ):
+        # For each rxn, get the genes
+        for n in successors:
+            gene_neighborhood.update(
+                [g.id for g in model.reactions.get_by_id(n).genes]
+            )
+    return gene_neighborhood
+
+
+# endregion Helper Functions

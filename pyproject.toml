@@ -15,15 +15,17 @@ dependencies = [
   "joblib>=1.4.2",
 ]
 name = "metworkpy"
-version = "0.2.6"
+version = "0.2.7"
 description = "Tools for creating and working with network models of metabolism."
 readme = "README.md"
 keywords = ["FBA", "metabolism", "IMAT", "metchange"]
 
 [project.urls]
-homepage = "https://metworkpy.readthedocs.io/en/latest/"
-repository = "https://github.com/Braden-Griebel/metworkpy"
-documentation = "https://metworkpy.readthedocs.io/en/latest/"
+Homepage = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy"
+Repository = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy"
+Documentation = "https://metworkpy.readthedocs.io/en/latest/"
+Issues = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/issues"
+Changelog = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 cplex = ["cplex>=22.1.1.1"]

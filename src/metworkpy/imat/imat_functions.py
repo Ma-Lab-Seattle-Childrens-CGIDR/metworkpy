@@ -54,7 +54,7 @@ def imat(
         A cobra Solution object with the objective value and fluxes.
     """
     assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
-    assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
+    assert threshold >= 0.0, f"Threshold must be positive, but was {threshold}"
     assert epsilon > threshold, (
         f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
     )
@@ -112,7 +112,7 @@ def flux_to_binary(
     considered on/off, the output of this function will need to be compared with reaction weights.
     """
     assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
-    assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
+    assert threshold >= 0.0, f"Threshold must be positive, but was {threshold}"
     assert epsilon > threshold, (
         f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
     )
@@ -164,7 +164,7 @@ def compute_imat_objective(
         The iMAT objective value.
     """
     assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
-    assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
+    assert threshold >= 0.0, f"Threshold must be positive, but was {threshold}"
     assert epsilon > threshold, (
         f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
     )
@@ -213,7 +213,7 @@ def add_imat_constraints_(
         The updated model.
     """
     assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
-    assert threshold > 0.0, f"Threshold must be positive, but was {threshold}"
+    assert threshold >= 0.0, f"Threshold must be positive, but was {threshold}"
     assert epsilon > threshold, (
         f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
     )

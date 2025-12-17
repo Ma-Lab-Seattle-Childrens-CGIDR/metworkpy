@@ -49,6 +49,15 @@ def _divergence_array(
             f"p and q must have the same number of columns, but p has {p.shape[1]} columns "
             f"and q has {q.shape[1]} columns"
         )
+    if (
+        p_array.shape[0] == 0
+        or q_array.shape[0] == 0
+        or p_array.shape[1] == 0
+        or q_array.shape[1] == 0
+    ):
+        raise ValueError(
+            "All input array dimensions must be non-zero, but at least 1 dimension of the input arrays has a size of 0."
+        )
     metric = _parse_metric(metric=metric)
     ncols = p_array.shape[1]
     (
