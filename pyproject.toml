@@ -21,7 +21,7 @@ readme = "README.md"
 keywords = ["FBA", "metabolism", "IMAT", "metchange"]
 
 [project.urls]
-Homepage = "https://metworkpy.readthedocs.io/en/latest/"
+Homepage = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy"
 Repository = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy"
 Documentation = "https://metworkpy.readthedocs.io/en/latest/"
 Issues = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/issues"
