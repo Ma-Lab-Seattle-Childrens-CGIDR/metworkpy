@@ -101,7 +101,8 @@ class TestMetsampleRun(unittest.TestCase):
 
     def format_tester(self, format):
         res = self.run_cli(
-            output_file=pathlib.Path(self.tmp_dir) / f"metsample_res.{format}",
+            output_file=pathlib.Path(self.tmp_dir.name)
+            / f"metsample_res.{format}",
             output_format=format,
         )
         self.assertEqual(len(res), 10)
@@ -138,7 +139,8 @@ class TestMetsampleRun(unittest.TestCase):
         res = self.run_cli(
             batches=2,
             output_format="parquet",
-            output_file=pathlib.Path(self.tmp_dir) / "metsample_res.parquet",
+            output_file=pathlib.Path(self.tmp_dir.name)
+            / "metsample_res.parquet",
         )
         self.assertEqual(len(res), 10)
         self.assertEqual(len(res.columns), len(self.test_model.reactions))

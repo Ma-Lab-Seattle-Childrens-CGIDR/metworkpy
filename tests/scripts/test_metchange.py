@@ -67,6 +67,8 @@ class TestRun(unittest.TestCase):
         )
         # Get the original model
         cls.model = metworkpy.read_model(cls.data_path / "test_model.json")
+        # Add path to default dict
+        cls.default_dict["output_file"] = cls.tmp_path / "metchange_res.csv"
 
     def setUp(self):
         self.test_model = self.model.copy()
