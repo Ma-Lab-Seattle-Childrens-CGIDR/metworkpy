@@ -64,9 +64,8 @@ def calculate_divergence_grouped(
         divergence_function = js_divergence
     else:
         raise ValueError(
-            f"Invalid divergence type, must be either kl or js, but received {
-                divergence_type
-            }"
+            f"Invalid divergence type, must be either kl or js, "
+            f"but received {divergence_type}"
         )
     divergence_groups_new = {}
     for name, group in divergence_groups.items():
