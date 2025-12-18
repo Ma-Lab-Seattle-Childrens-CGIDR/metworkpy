@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "main"
-      - "v[0-9]+.[0-9]+.[0-9]+"
     tags-ignore: ["**"]
   pull_request:
     branches:
@@ -32,6 +31,8 @@ jobs:
           - ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
       - name: Install tox

@@ -34,11 +34,11 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Install uv
+      - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
-      - name: Install Tox
+      - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv --with tox-gh
-      - name: Install python
+      - name: Install Python
         if: matrix.env != '3.13'
         run: uv python install --python-preference only-managed ${{ matrix.env }}
       - name: Setup test suite
@@ -48,7 +48,7 @@ jobs:
       - name: Run test suite
         run: tox run --skip-pkg-install
         env:
-          TOX_GH_MAJOR_MINOR: ${ matrix.env }}
+          TOX_GH_MAJOR_MINOR: ${{ matrix.env }}
   build_dist:
     needs: test
     name: Build source distribution
