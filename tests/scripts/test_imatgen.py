@@ -4,11 +4,12 @@ import argparse
 import importlib.util
 import os
 import pathlib
+import tempfile
 import unittest
 from unittest import mock, skipIf
 
 # External Imports
-import cobra
+import cobra  # type: ignore
 import numpy as np
 import pandas as pd
 
@@ -24,23 +25,18 @@ BASE_PATH = pathlib.Path(__file__).parent.parent
 def setup(cls, gene_expression_file):
     # Configure cobra to default to glpk
     cobra.core.configuration.Configuration().solver = "glpk"
-    # Get path references, and make a temporary folder
+    # Get path references
     cls.data_path = BASE_PATH / "data"
-    cls.tmp_path = BASE_PATH / "tmp_imatgen"
-    os.mkdir(cls.tmp_path)
+    # Make a temporary directory
+    cls.tmp_dir = tempfile.TemporaryDirectory()
+    cls.tmp_path = pathlib.Path(cls.tmp_dir.name) / "tmp_imatgen"
+    cls.tmp_path.mkdir(exist_ok=True)
     # Get the gene expression data
     cls.gene_expression = pd.read_csv(
         cls.data_path / gene_expression_file, index_col=0, header=0
     )
     # Get the unchanged model
     cls.model = metworkpy.read_model(cls.data_path / "test_model.json")
-
-
-def teardown_dir(self):
-    # Cleanup the tmp directory after each test (to not potentially pollute)
-    for filename in os.listdir(self.tmp_path):
-        p = self.tmp_path / filename
-        os.remove(p)
 
 
 def model_bounds_equality(self, model_a, model_b):
@@ -59,7 +55,7 @@ class TestRunSingle(unittest.TestCase):
         "gene_expression_file": BASE_PATH
         / "data"
         / "test_model_gene_expression.csv",
-        "output_file": BASE_PATH / "tmp_imatgen" / "test_result_model.json",
+        "output_file": None,
         "method": "subset",
         "epsilon": 1.0,
         "threshold": 0.001,
@@ -87,16 +83,16 @@ class TestRunSingle(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls, "test_model_gene_expression.csv")
+        cls.default_dict["output_file"] = (
+            cls.tmp_path / "test_result_model.json"
+        )
 
     def setUp(self):
         self.test_model = self.model.copy()
 
-    def tearDown(self):
-        teardown_dir(self)
-
     @classmethod
     def tearDownClass(cls):
-        os.rmdir(cls.tmp_path)
+        cls.tmp_dir.cleanup()
 
     def cli_tester(self, **kwargs):
         namespace_dict = self.default_dict | kwargs
@@ -111,7 +107,8 @@ class TestRunSingle(unittest.TestCase):
                     argparse.ArgumentParser.parse_args().output_file
                 )
             )
-            # Test that the output model is the same that would be created by running the IMAT algorithm by hand
+            # Test that the output model is the same that would be created by
+            # running the IMAT algorithm by hand
             out_model = metworkpy.read_model(
                 argparse.ArgumentParser.parse_args().output_file
             )
@@ -214,7 +211,7 @@ class TestRunMulti(unittest.TestCase):
         "gene_expression_file": BASE_PATH
         / "data"
         / "test_model_gene_expression_imatgen_multi.csv",
-        "output_dir": BASE_PATH / "tmp_imatgen",
+        "output_dir": None,
         "method": "subset",
         "epsilon": 1.0,
         "threshold": 0.001,
@@ -241,16 +238,15 @@ class TestRunMulti(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls, "test_model_gene_expression_imatgen_multi.csv")
+        # Setup paths in the default dict using the temporary directory
+        cls.default_dict["output_dir"] = cls.tmp_path
 
     def setUp(self):
         self.test_model = self.model.copy()
 
-    def tearDown(self):
-        teardown_dir(self)
-
     @classmethod
     def tearDownClass(cls):
-        os.rmdir(cls.tmp_path)
+        cls.tmp_dir.cleanup()
 
     def run_cli(self, **kwargs):
         namespace_dict = self.default_dict | kwargs

@@ -3,7 +3,7 @@ import pathlib
 import unittest
 
 # External Imports
-from cobra.core.configuration import Configuration
+from cobra.core.configuration import Configuration  # type: ignore
 import numpy as np
 import pandas as pd
 

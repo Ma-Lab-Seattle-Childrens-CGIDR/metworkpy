@@ -8,6 +8,7 @@ import itertools
 import os
 import pathlib
 import re
+import tempfile
 import unittest
 from unittest import mock, skipIf
 
@@ -32,7 +33,7 @@ class TestRun(unittest.TestCase):
         / "test_model_gene_expression_metchange.csv",
         "wildtype": "0:5",
         "sample_groups": "",
-        "output_file": BASE_PATH / "tmp_metchange" / "metchange_res.csv",
+        "output_file": None,
         "model_format": None,
         "metabolites_list": None,
         "metabolites_file": None,
@@ -52,10 +53,12 @@ class TestRun(unittest.TestCase):
     def setUpClass(cls):
         # Configure cobra to default to GLPK
         cobra.core.configuration.Configuration().solver = "glpk"
-        # Get path references, make temporary folder
+        # Get path references
         cls.data_path = BASE_PATH / "data"
-        cls.tmp_path = BASE_PATH / "tmp_metchange"
-        os.mkdir(cls.tmp_path)
+        # Create a temporary directory
+        cls.tmp_dir = tempfile.TemporaryDirectory()
+        cls.tmp_path = pathlib.Path(cls.tmp_dir.name) / "tmp_metchange"
+        cls.tmp_path.mkdir(exist_ok=True)
         # Get the gene expression data
         cls.gene_expression = pd.read_csv(
             cls.data_path / "test_model_gene_expression_metchange.csv",
@@ -68,15 +71,9 @@ class TestRun(unittest.TestCase):
     def setUp(self):
         self.test_model = self.model.copy()
 
-    def tearDown(self):
-        # Cleanup the tmp directory
-        for filename in os.listdir(self.tmp_path):
-            p = self.tmp_path / filename
-            os.remove(p)
-
     @classmethod
     def tearDownClass(cls):
-        os.rmdir(cls.tmp_path)
+        cls.tmp_dir.cleanup()
 
     def run_cli(self, **kwargs) -> pd.DataFrame:
         namespace_dict = self.default_dict | kwargs
@@ -88,12 +85,12 @@ class TestRun(unittest.TestCase):
             # Test that the expected file is created
             self.assertTrue(
                 os.path.exists(
-                    argparse.ArgumentParser.parse_args().output_file
+                    argparse.ArgumentParser.parse_args().output_file  # type: ignore
                 )
             )
             # Read the results in
             metchange_results = pd.read_csv(
-                argparse.ArgumentParser.parse_args().output_file,
+                argparse.ArgumentParser.parse_args().output_file,  # type: ignore
                 index_col=0,
                 header=0,
             )

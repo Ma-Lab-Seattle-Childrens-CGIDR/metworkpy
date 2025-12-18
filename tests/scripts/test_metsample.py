@@ -5,11 +5,12 @@ import argparse
 import importlib.util
 import os
 import pathlib
+import tempfile
 import unittest
 from unittest import mock, skipIf
 
 # External Imports
-import cobra
+import cobra  # type: ignore
 import pandas as pd
 
 # Local Imports
@@ -24,7 +25,7 @@ class TestMetsampleRun(unittest.TestCase):
     default_dict = {
         "model_file": BASE_PATH / "data" / "test_model.json",
         "num_samples": 10,
-        "output_file": BASE_PATH / "tmp_metsample" / "sample_res.csv",
+        "output_file": "",  # This will be set in the setup method
         "output_format": "csv",
         "method": "optgp",
         "model_format": "json",
@@ -42,23 +43,22 @@ class TestMetsampleRun(unittest.TestCase):
         cobra.core.Configuration.solver = "glpk"
         # Get path references, make temporary folder
         cls.data_path = BASE_PATH / "data"
-        cls.tmp_path = BASE_PATH / "tmp_metsample"
-        os.mkdir(cls.tmp_path)
         # Get the model
         cls.model = metworkpy.read_model(cls.data_path / "test_model.json")
-
-    def setUp(self):
-        self.test_model = self.model.copy()
-
-    def tearDown(self):
-        # Cleanup the tmp directory
-        for filename in os.listdir(self.tmp_path):
-            p = self.tmp_path / filename
-            os.remove(p)
+        # Get a temporary directory
+        cls.tmp_dir = tempfile.TemporaryDirectory()
+        # Set the path in the default dict
+        cls.default_dict["output_file"] = (
+            pathlib.Path(cls.tmp_dir.name) / "sample_res.csv"
+        )
 
     @classmethod
     def tearDownClass(cls):
-        os.rmdir(cls.tmp_path)
+        # Cleanup the tmp_dir
+        cls.tmp_dir.cleanup()
+
+    def setUp(self):
+        self.test_model = self.model.copy()
 
     def run_cli(self, **kwargs) -> pd.DataFrame:
         namespace_dict = self.default_dict | kwargs
@@ -68,7 +68,7 @@ class TestMetsampleRun(unittest.TestCase):
         ):
             metsample.main_run()
             # Test expected file created
-            args = argparse.ArgumentParser.parse_args()
+            args = argparse.ArgumentParser.parse_args()  # type:ignore # Mocked
             self.assertTrue(os.path.exists(args.output_file))
             format_str = metsample._parse_format(args.output_format)
             if format_str == "csv":
@@ -101,9 +101,7 @@ class TestMetsampleRun(unittest.TestCase):
 
     def format_tester(self, format):
         res = self.run_cli(
-            output_file=BASE_PATH
-            / "tmp_metsample"
-            / f"metsample_res.{format}",
+            output_file=pathlib.Path(self.tmp_dir) / f"metsample_res.{format}",
             output_format=format,
         )
         self.assertEqual(len(res), 10)
@@ -140,7 +138,7 @@ class TestMetsampleRun(unittest.TestCase):
         res = self.run_cli(
             batches=2,
             output_format="parquet",
-            output_file=BASE_PATH / "tmp_metsample" / "metsample_res.parquet",
+            output_file=pathlib.Path(self.tmp_dir) / "metsample_res.parquet",
         )
         self.assertEqual(len(res), 10)
         self.assertEqual(len(res.columns), len(self.test_model.reactions))
