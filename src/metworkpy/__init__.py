@@ -18,6 +18,7 @@ __all__ = [
     "mi_network_adjacency_matrix",
     "kl_divergence",
     "js_divergence",
+    "get_example_model",
     "create_metabolic_network",
     "create_mutual_information_network",
     "create_adjacency_matrix",
@@ -76,6 +77,8 @@ from metworkpy.information import (
 )
 
 from metworkpy.divergence import kl_divergence, js_divergence
+
+from metworkpy.examples import get_example_model
 
 from metworkpy.network import (
     create_metabolic_network,
