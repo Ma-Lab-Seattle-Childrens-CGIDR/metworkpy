@@ -1650,7 +1650,7 @@ dev = [
     { name = "pandas-stubs", specifier = ">=2.2.2.240807" },
     { name = "pre-commit", specifier = ">=3.7.1,<4.0.0" },
     { name = "python-lsp-server", extras = ["all"], specifier = ">=1.12.2" },
-    { name = "ruff", specifier = ">=0.2.2,<1.0.0" },
+    { name = "ruff", specifier = ">=0.11.0,<1.0.0" },
     { name = "types-networkx", specifier = ">=3.4.2.20250509" },
 ]
 docs = [
