@@ -1,4 +1,6 @@
-"""Functions for computing the Mutual Information Network for a Metabolic Model"""
+"""
+Functions for computing the Mutual Information Network for a Metabolic Model
+"""
 
 # Standard Library Imports
 from __future__ import annotations
@@ -7,11 +9,11 @@ import itertools
 from typing import Tuple, TypeVar
 
 # External Imports
-import joblib
+import joblib  # type: ignore
 import numpy as np
 import pandas as pd
-import scipy
-import tqdm
+import scipy  # type: ignore
+import tqdm  # type: ignore
 from numpy.typing import ArrayLike
 from .mutual_information_functions import mutual_information
 
@@ -25,8 +27,9 @@ T = TypeVar("T", np.ndarray, pd.DataFrame, ArrayLike)
 def mi_network_adjacency_matrix(
     samples: T, processes: int = -1, progress_bar: bool = False, **kwargs
 ) -> T:
-    """Create a Mutual Information Network Adjacency matrix from flux samples. Uses kth nearest neighbor method
-    for estimating mutual information.
+    """
+    Create a Mutual Information Network Adjacency matrix from flux samples.
+    Uses kth nearest neighbor method for estimating mutual information.
 
     Parameters
     ----------
