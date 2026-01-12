@@ -3,13 +3,13 @@
 from __future__ import annotations
 import argparse
 import importlib.util
-import os
 import pathlib
+import tempfile
 import unittest
 from unittest import mock, skipIf
 
 # External Imports
-import cobra
+import cobra  # type:ignore
 import pandas as pd
 
 # Local Imports
@@ -45,11 +45,24 @@ class TestMetdivergenceMain(unittest.TestCase):
     def setUpClass(cls):
         # Configure cobra to use GLPK
         cobra.core.Configuration.solver = "glpk"
-        # Get path references, make temporary folder
+        # Get path references
         cls.data_path = BASE_PATH / "data"
-        cls.tmp_path = BASE_PATH / "tmp_metdivergence"
-        os.mkdir(cls.tmp_path)
+        # Get the mode from the data directory
         cls.model = metworkpy.read_model(cls.data_path / "test_model.json")
+        # Create a temporary directory
+        cls.tmp_dir = tempfile.TemporaryDirectory()
+        cls.tmp_path = pathlib.Path(cls.tmp_dir.name) / "tmp_metdivergence"
+        cls.tmp_path.mkdir(exist_ok=True)
+        # Setup paths in the default dict using the temporary directory
+        cls.default_dict["treatment_distribution_file"] = (
+            cls.tmp_path / "treatment_distribution.csv"
+        )
+        cls.default_dict["wildtype_distribution_file"] = (
+            cls.tmp_path / "wildtype_distribution.csv"
+        )
+        cls.default_dict["output_file"] = (
+            cls.tmp_path / "metdivergence_results.csv"
+        )
 
     def setUp(self):
         self.test_model = self.model.copy()
@@ -59,15 +72,9 @@ class TestMetdivergenceMain(unittest.TestCase):
             header=0,
         )
 
-    def tearDown(self):
-        # Cleanup the tmp directory
-        for filename in os.listdir(self.tmp_path):
-            p = self.tmp_path / filename
-            os.remove(p)
-
     @classmethod
     def tearDownClass(cls):
-        os.rmdir(cls.tmp_path)
+        cls.tmp_dir.cleanup()
 
     def run_cli(self, **kwargs):
         namespace_dict = self.default_dict | kwargs
@@ -93,7 +100,7 @@ class TestMetdivergenceMain(unittest.TestCase):
         # Sample the IMAT model and the WT
         wt_sample = cobra.sampling.sample(model=wt_model, n=20)
         treatment_sample = cobra.sampling.sample(model=treatment_model, n=20)
-        # Write the sampling results with the appropriate format to the tmp directory
+        # Write the sampling results format to the tmp directory
         if namespace_dict["input_format"] == "csv":
             wt_sample.to_csv(
                 self.tmp_path / "wildtype_distribution.csv",

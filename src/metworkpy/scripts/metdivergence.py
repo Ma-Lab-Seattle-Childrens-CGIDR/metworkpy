@@ -10,7 +10,7 @@ import warnings
 
 # External imports
 import pandas as pd
-from tqdm import tqdm
+from tqdm import tqdm  # type: ignore
 
 # Local Imports
 import metworkpy
@@ -40,8 +40,10 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         "--treatment-distribution",
         dest="treatment_distribution_file",
         required=True,
-        help="Path to file containing flux sample results. Should have columns representing "
-        "reactions, and rows representing samples. Should NOT include an index column.",
+        help="Path to file containing flux sample results. Should have columns"
+        " representing "
+        "reactions, and rows representing samples. Should NOT include an "
+        "index column.",
         type=str,
     )
     parser.add_argument(
@@ -49,8 +51,10 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         "--wildtype-distribution",
         dest="wildtype_distribution_file",
         required=True,
-        help="Path to file containing flux sample results for wildtype. Should have columns "
-        "representing reactions, and rows representing samples. Should NOT include an index "
+        help="Path to file containing flux sample results for wildtype. "
+        "Should have columns "
+        "representing reactions, and rows representing samples. Should NOT "
+        "include an index "
         "column.",
         type=str,
     )
@@ -61,7 +65,8 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         required=False,
         default="divergence_results.csv",
         type=str,
-        help="Path to desired output file. Will be formatted as a csv. Defaults to a file in the "
+        help="Path to desired output file. Will be formatted as a csv. "
+        "Defaults to a file in the "
         "current working directory named divergence_results.csv",
     )
     parser.add_argument(
@@ -70,7 +75,8 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         dest="input_format",
         required=False,
         default="csv",
-        help="Format of the input flux distribution file. Can be csv, parquet, feather, json or excel. "
+        help="Format of the input flux distribution file. Can be csv, parquet,"
+        " feather, json or excel. "
         "If excel, the sheet-name argument must also be provided.",
         type=str,
     )
@@ -80,7 +86,8 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         dest="neighbors",
         required=False,
         default=5,
-        help="Number of neighbors to use for computing divergence. Should be an integer greater than "
+        help="Number of neighbors to use for computing divergence. Should be "
+        "an integer greater than "
         "1, default is 5.",
         type=int,
     )
@@ -90,7 +97,8 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         dest="divergence_type",
         required=False,
         default="js",
-        help="Type of divergence to compute, either KL/Kullback-Leibler or JS/Jensen-Shannon",
+        help="Type of divergence to compute, either KL/Kullback-Leibler or "
+        "JS/Jensen-Shannon",
         type=str,
     )
     parser.add_argument(
@@ -98,8 +106,9 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         dest="metric",
         required=False,
         default="euclidean",
-        help="Metric to use for computing distance during the divergence calculations, "
-        "can be Euclidean, Manhattan, or Chebyshev. Defaults to euclidean",
+        help="Metric to use for computing distance during the divergence "
+        "calculations, can be Euclidean, Manhattan, or Chebyshev. Defaults "
+        "to euclidean",
         type=str,
     )
     parser.add_argument(
@@ -108,11 +117,15 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         dest="model_file",
         required=False,
         default=None,
-        help="Path to cobra model used to add additional information to the results, "
+        help="Path to cobra model used to add additional information to the "
+        "results, "
         "including reaction name, "
-        "gene association, subsystem, etc. If not provided, no additional information will be "
-        "added to the divergence results. If this additional information is desired, the input "
-        "distributions column names must reflect the reaction ids in the models.",
+        "gene association, subsystem, etc. If not provided, no additional "
+        "information will be "
+        "added to the divergence results. If this additional information is "
+        "desired, the input "
+        "distributions column names must reflect the reaction ids in the "
+        "models.",
         type=str,
     )
     parser.add_argument(
@@ -160,8 +173,9 @@ def main_run(arg_list: list[str] | None = None):
         len(rxn_list) != len(treatment_dist.columns)
     ):
         warnings.warn(
-            "Some reactions are only present in one of the input distributions, "
-            "using the intersection of the sets of reactions."
+            "Some reactions are only present in one of the input "
+            "distributions, using the intersection of the sets of "
+            "reactions."
         )
     div_res = pd.DataFrame(
         0.0, index=rxn_list, columns=[f"{div_type}_divergence"]
@@ -174,7 +188,8 @@ def main_run(arg_list: list[str] | None = None):
         div_func = metworkpy.divergence.kl_divergence
     else:
         print(
-            f"Couldn't parse Divergence type, must be kl, Kullback-Leibler, js, or Jensen-Shannon, but "
+            f"Couldn't parse Divergence type, must be kl, Kullback-Leibler, "
+            f"js, or Jensen-Shannon, but "
             f"received {div_type}",
             file=sys.stderr,
         )
@@ -239,7 +254,8 @@ def _read_distributions(
     elif input_format == "excel":
         if not importlib.util.find_spec("openpyxl"):
             print(
-                "Input format is excel, but openpyxl is not installed so can't read the excel file. Exiting",
+                "Input format is excel, but openpyxl is not installed so "
+                "can't read the excel file. Exiting",
                 file=sys.stderr,
             )
             sys.exit()
@@ -260,7 +276,8 @@ def _read_distributions(
         wildtype_dist = pd.read_json(args.wildtype_distribution_file)
     else:
         raise ValueError(
-            f"Couldn't parse input file type, should be csv, parquet, feather, excel, or json, "
+            f"Couldn't parse input file type, should be csv, parquet, feather,"
+            f" excel, or json, "
             f"but received {args.input_format}."
         )
     return wildtype_dist, treatment_dist

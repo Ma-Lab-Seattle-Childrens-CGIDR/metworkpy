@@ -1,19 +1,18 @@
-name: Build and Publish
+name: Check
 
 on:
   push:
     branches:
       - "main"
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+    tags-ignore: ["**"]
   pull_request:
     branches:
       - "main"
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "dev"
 
-env:
-  UV_SYSTEM_PYTHON: 1
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -49,32 +48,3 @@ jobs:
         run: tox run --skip-pkg-install
         env:
           TOX_GH_MAJOR_MINOR: ${{ matrix.env }}
-  build_dist:
-    needs: test
-    name: Build source distribution
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-      - name: Build dist
-        run: uv build
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-dist
-          path: dist/*
-  upload_pypi:
-    needs: [build_dist]
-    runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: ci-*
-          path: dist
-          merge-multiple: true
-      - name: Publish distribution 📦 to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1

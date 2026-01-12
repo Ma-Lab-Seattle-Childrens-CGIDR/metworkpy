@@ -1,17 +1,17 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import NamedTuple, Iterable, Optional
+from typing import NamedTuple, Iterable, Optional, cast
 
 # External Imports
-import cobra
+import cobra  # type: ignore
+from cobra.flux_analysis import flux_variability_analysis  # type: ignore
 import numpy as np
 import pandas as pd
-from cobra.flux_analysis import flux_variability_analysis
 import networkx as nx
 from numpy.typing import ArrayLike
-from scipy import sparse
-from scipy.sparse import sparray, csr_array, csc_array
+from scipy import sparse  # type: ignore
+from scipy.sparse import sparray, csr_array, csc_array  # type: ignore
 
 # Local Imports
 from metworkpy.network._array_utils import (
@@ -81,7 +81,8 @@ def create_mutual_information_network(
     """
     if model is None and flux_samples is None:
         raise ValueError(
-            "Requires either a metabolic model, or flux samples but received neither"
+            "Requires either a metabolic model, or flux samples but received "
+            "neither"
         )
     if flux_samples is None:
         flux_samples = cobra.sampling.sample(
@@ -102,9 +103,12 @@ def create_mutual_information_network(
                 ]
     else:
         raise ValueError(
-            f"Invalid type for flux samples, requires pandas DataFrame or numpy ndarray, but"
+            f"Invalid type for flux samples, requires pandas DataFrame or "
+            f"numpy ndarray, but "
             f"received {type(flux_samples)}"
         )
+    if processes is None:
+        processes = -1
     adj_mat = mi_network_adjacency_matrix(
         samples=sample_array,
         n_neighbors=n_neighbors,
@@ -192,8 +196,8 @@ def create_metabolic_network(
 
     Notes
     -----
-    When creating a weighted network, the options are to weight the edges based on
-    flux, or stoichiometry. If stoichiometry is chosen the edge weight will
+    When creating a weighted network, the options are to weight the edges based
+    on flux, or stoichiometry. If stoichiometry is chosen the edge weight will
     correspond to the stoichiometric coefficient of the metabolite, in a given
     reaction.
 
@@ -214,6 +218,7 @@ def create_metabolic_network(
         fva_proportion=fva_proportion,
         out_format="frame",
     )
+    adjacency_frame = cast(pd.DataFrame, adjacency_frame)
 
     if reciprocal_weights:
         adjacency_frame.data = np.reciprocal(adjacency_frame.data)
@@ -225,7 +230,8 @@ def create_metabolic_network(
         )
     else:
         out_network = nx.from_pandas_adjacency(
-            adjacency_frame, create_using=nx.Graph
+            adjacency_frame,
+            create_using=nx.Graph,  # type: ignore
         )
 
     # Add node information if needed
@@ -275,8 +281,9 @@ def create_adjacency_matrix(
     fva_proportion: float = 1.0,
     out_format: str = "Frame",
 ) -> tuple[ArrayLike | sparray, list[str], dict[str, str]]:
-    """Create an adjacency matrix representing the metabolic network of a provided
-        cobra Model
+    """
+    Create an adjacency matrix representing the metabolic network of a provided
+    cobra Model
 
     Parameters
     ----------
@@ -318,8 +325,8 @@ def create_adjacency_matrix(
 
     Notes
     -----
-    When creating a weighted network, the options are to weight the edges based on
-    flux, or stoichiometry. If stoichiometry is chosen the edge weight will
+    When creating a weighted network, the options are to weight the edges based
+    on flux, or stoichiometry. If stoichiometry is chosen the edge weight will
     correspond to the stoichiometric coefficient of the metabolite, in a given
     reaction.
 
@@ -422,7 +429,7 @@ def create_adjacency_matrix(
         "metabolites": model.metabolites.list_attr("id"),
     }
     if out_format == "frame":
-        adj_frame = pd.DataFrame.sparse.from_spmatrix(
+        adj_frame = pd.DataFrame.sparse.from_spmatrix(  # type: ignore
             data=adj_mat, index=index, columns=index
         )
         return adj_frame, index, index_dict
@@ -451,16 +458,15 @@ def _adj_mat_ud_uw(model: cobra.Model, threshold: float = 1e-4) -> csr_array:
 
     Notes
     -----
-    The index of the adjacency matrix is the metabolites followed by the reactions
-    for both the rows and columns.
+    The index of the adjacency matrix is the metabolites followed by the
+    reactions for both the rows and columns.
     """
     const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(
         model
     )
 
     # Get the bounds, and split them
-
-    bounds = const_mat.variable_bounds.tocsr()[:, 1]
+    bounds = const_mat.variable_bounds.tocsr()[:, 1]  # type: ignore
 
     bounds.data[bounds.data <= threshold] = 0.0
     bounds.eliminate_zeros()
@@ -513,15 +519,15 @@ def _adj_mat_d_uw(model: cobra.Model, threshold: float = 1e-4) -> csr_array:
 
     Notes
     -----
-    The index of the adjacency matrix is the metabolites followed by the reactions
-    for both the rows and columns.
+    The index of the adjacency matrix is the metabolites followed by the
+    reactions for both the rows and columns.
     """
     const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(
         model
     )
 
     # Get the bounds, and split them
-    bounds = const_mat.variable_bounds.tocsc()[:, 1]
+    bounds = const_mat.variable_bounds.tocsc()[:, 1]  # type: ignore
 
     bounds.data[bounds.data <= threshold] = 0.0
     bounds.eliminate_zeros()
@@ -587,8 +593,8 @@ def _adj_mat_ud_w_flux(
 
     Notes
     -----
-    The index of the adjacency matrix is the metabolites followed by the reactions
-    for both the rows and columns.
+    The index of the adjacency matrix is the metabolites followed by the
+    reactions for both the rows and columns.
 
     The reaction bounds must have the same order as the reactions in the cobra
     model.
@@ -643,7 +649,8 @@ def _adj_mat_ud_w_flux(
 def _adj_mat_ud_w_stoichiometry(
     model: cobra.Model, threshold: float = 1e-4
 ) -> csr_array:
-    """Create an undirected adjacency matrix from a given model, with edge weights
+    """
+    Create an undirected adjacency matrix from a given model, with edge weights
     corresponding to stoichiometry
 
     Parameters
@@ -660,8 +667,8 @@ def _adj_mat_ud_w_stoichiometry(
 
     Notes
     -----
-    The index of the adjacency matrix is the metabolites followed by the reactions
-    for both the rows and columns.
+    The index of the adjacency matrix is the metabolites followed by the
+    reactions for both the rows and columns.
     """
     const_mat, for_prod, for_sub, rev_prod, rev_sub = _split_model_arrays(
         model
@@ -669,7 +676,7 @@ def _adj_mat_ud_w_stoichiometry(
 
     # Get the bounds, and split them
 
-    bounds = const_mat.variable_bounds.tocsr()[:, 1]
+    bounds = const_mat.variable_bounds.tocsr()[:, 1]  # type: ignore
 
     bounds.data[bounds.data <= threshold] = 0.0
     bounds.eliminate_zeros()

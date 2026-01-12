@@ -136,9 +136,16 @@ def ko_divergence(
         for network, rxn_list in tqdm.tqdm(
             target_networks.items(), disable=not progress_bar, leave=False
         ):
+            # NOTE: The Kullback-Leibler divergence is not symmetrical so the ordering here
+            # can matter. The KL divergence treats p as the true distribution, and q as an
+            # approximation, with the value of the divergence being the excess suprise
+            # caused by the caused by using q rather than the true distribution. In the case
+            # of the KO divergence then, we treat the perturbed sample as the true, and
+            # measure the excess suprise caused by continuing to try and approximate this
+            # by the unperturbed distribution.
             res_series[network] = divergence_function(
-                p=unperturbed_sample[rxn_list],
-                q=perturbed_sample[rxn_list],
+                p=perturbed_sample[rxn_list],
+                q=unperturbed_sample[rxn_list],
                 n_neighbors=n_neighbors,
                 discrete=False,
                 jitter=jitter,

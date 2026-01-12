@@ -69,8 +69,9 @@ def kl_divergence(
     Notes
     -----
 
-    - This function is not symmetrical, and q is treated as representing the reference condition. If you want a
-      symmetric metric try the Jenson-Shannon divergence.
+    - This function is not symmetrical, p is treated as a 'true' distribution, and q as an
+      approximating distribution. If you want a symmetric metric try the Jenson-Shannon
+      divergence.
 
     See Also
     --------
