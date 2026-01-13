@@ -3,15 +3,15 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Union, cast
 import warnings
 
 # External Imports
-import cobra
-from cobra.manipulation import knock_out_model_genes
+import cobra  # type: ignore
+from cobra.manipulation import knock_out_model_genes  # type: ignore
 import numpy as np
 import pandas as pd
-import tqdm
+import tqdm  # type: ignore
 
 # Local Imports
 from metworkpy.divergence.js_divergence_functions import js_divergence
@@ -38,6 +38,7 @@ def ko_divergence(
     jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
     progress_bar: bool = False,
+    use_unperturbed_as_true: bool = True,
     **kwargs,
 ) -> pd.DataFrame:
     """Determine the impacts of gene knock-outs on different target reaction or gene networks
@@ -80,6 +81,12 @@ def ko_divergence(
         be a float representing the Minkowski p-norm.
     progress_bar : bool
         Whether a progress bar is desired
+    use_unperturbed_as_true : bool, default=True
+        Which distribution to use as the "True" distribution (the P distribution)
+        when estimating divergence between the perturbed (that is the model with a gene knock-out)
+        and the unperturbed (model prior to the gene knock-out) flux samples.
+        Doesn't impact Jensen-Shannon as that is symetric, but will modify the
+        Kullback-Leibler divergence.
     **kwargs
         Arguments passed to the sample method of COBRApy, see `COBRApy
         Documentation <https://cobrapy.readthedocs.io/en/latest/autoapi/
@@ -137,15 +144,21 @@ def ko_divergence(
             target_networks.items(), disable=not progress_bar, leave=False
         ):
             # NOTE: The Kullback-Leibler divergence is not symmetrical so the ordering here
-            # can matter. The KL divergence treats p as the true distribution, and q as an
-            # approximation, with the value of the divergence being the excess suprise
-            # caused by the caused by using q rather than the true distribution. In the case
-            # of the KO divergence then, we treat the perturbed sample as the true, and
-            # measure the excess suprise caused by continuing to try and approximate this
-            # by the unperturbed distribution.
+            # can matter. Which distribution is assigned to P vs Q can be controlled with
+            # the use_unperturbed_as_true flag, which defaults to True. If that flag is true,
+            # the unperturbed_sample is used as the P distribution, and the perturbed sample is
+            # used as the Q distrbution. Otherwise these are reversed.
             res_series[network] = divergence_function(
-                p=perturbed_sample[rxn_list],
-                q=unperturbed_sample[rxn_list],
+                p=(
+                    unperturbed_sample[rxn_list]
+                    if use_unperturbed_as_true
+                    else perturbed_sample[rxn_list]
+                ),
+                q=(
+                    unperturbed_sample[rxn_list]
+                    if not use_unperturbed_as_true
+                    else perturbed_sample[rxn_list]
+                ),
                 n_neighbors=n_neighbors,
                 discrete=False,
                 jitter=jitter,
@@ -172,7 +185,7 @@ def _convert_target_network(
             res_list.append(val)
         else:
             try:
-                gene = model.genes.get_by_id(val)
+                gene: cobra.Gene = cast(cobra.Gene, model.genes.get_by_id(val))
                 res_list += [r.id for r in gene.reactions]
             except KeyError:
                 warnings.warn(

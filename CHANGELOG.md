@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.2.9
+
+- Reverting breaking change in previous version, adding flag to modify behaviour
+  of the KO divergence function instead.
+
 ## Version 0.2.8
 
 - Changed Handling of Perturbed vs Unperturbed samples in KO-divergence
