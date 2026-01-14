@@ -39,6 +39,7 @@ def ko_divergence(
     distance_metric: Union[float, str] = "euclidean",
     progress_bar: bool = False,
     use_unperturbed_as_true: bool = True,
+    seed: Optional[int | np.random.Generator] = None,
     **kwargs,
 ) -> pd.DataFrame:
     """Determine the impacts of gene knock-outs on different target reaction or gene networks
@@ -87,6 +88,10 @@ def ko_divergence(
         and the unperturbed (model prior to the gene knock-out) flux samples.
         Doesn't impact Jensen-Shannon as that is symetric, but will modify the
         Kullback-Leibler divergence.
+    seed : None or int or np.Generator, optional
+        Seed used for sampling in order to create reproducible results,
+        can be a numpy generator (in which cae it is used directly),
+        or an integer (in which case it is used to seed a numpy generator).
     **kwargs
         Arguments passed to the sample method of COBRApy, see `COBRApy
         Documentation <https://cobrapy.readthedocs.io/en/latest/autoapi/
@@ -100,6 +105,15 @@ def ko_divergence(
         particular target network between the unperturbed model and the
         model following the gene knock-out.
     """
+    # Setup Random seeding for the sampling
+    if isinstance(seed, int) or seed is None:
+        rng = np.random.default_rng(seed)
+    elif isinstance(seed, np.random.Generator):
+        rng = seed
+    else:
+        raise ValueError(
+            f"Seed must be int, numpy Generator, or None but received {type(seed)}"
+        )
     divergence_metric = _parse_divergence_method(divergence_metric)
     if divergence_metric == "js":
         divergence_function = js_divergence
@@ -110,7 +124,12 @@ def ko_divergence(
             f"Invalid specification for divergence metric, must be js or kl, but received {divergence_metric}"
         )
     ko_res_list = []
-    unperturbed_sample = cobra.sampling.sample(model, sample_count, **kwargs)
+    unperturbed_sample = cobra.sampling.sample(
+        model=model,
+        n=sample_count,
+        seed=rng.integers(low=0, high=np.iinfo(np.intp).max),
+        **kwargs,
+    )
     # If needed, convert the gene network into a dict
     if isinstance(target_networks, list):
         target_networks = {"target_network": target_networks}
@@ -128,7 +147,10 @@ def ko_divergence(
             try:
                 _ = knock_out_model_genes(ko_model, gene_list=[gene_to_ko])
                 perturbed_sample = cobra.sampling.sample(
-                    ko_model, sample_count, **kwargs
+                    model=ko_model,
+                    n=sample_count,
+                    seed=rng.integers(low=0, high=np.iinfo(np.intp).max),
+                    **kwargs,
                 )
             except ValueError:
                 # This can happen if the gene knock out causes all reactions to be 0. (or very close)
