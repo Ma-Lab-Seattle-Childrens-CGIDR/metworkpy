@@ -39,7 +39,7 @@ def ko_divergence(
     distance_metric: Union[float, str] = "euclidean",
     progress_bar: bool = False,
     use_unperturbed_as_true: bool = True,
-    seed: Optional[int | np.random.Generator] = None,
+    sampler_seed: Optional[int | np.random.Generator] = None,
     **kwargs,
 ) -> pd.DataFrame:
     """Determine the impacts of gene knock-outs on different target reaction or gene networks
@@ -88,7 +88,7 @@ def ko_divergence(
         and the unperturbed (model prior to the gene knock-out) flux samples.
         Doesn't impact Jensen-Shannon as that is symetric, but will modify the
         Kullback-Leibler divergence.
-    seed : None or int or np.Generator, optional
+    sampler_seed : None or int or np.Generator, optional
         Seed used for sampling in order to create reproducible results,
         can be a numpy generator (in which cae it is used directly),
         or an integer (in which case it is used to seed a numpy generator).
@@ -106,13 +106,13 @@ def ko_divergence(
         model following the gene knock-out.
     """
     # Setup Random seeding for the sampling
-    if isinstance(seed, int) or seed is None:
-        rng = np.random.default_rng(seed)
-    elif isinstance(seed, np.random.Generator):
-        rng = seed
+    if isinstance(sampler_seed, int) or sampler_seed is None:
+        rng = np.random.default_rng(sampler_seed)
+    elif isinstance(sampler_seed, np.random.Generator):
+        rng = sampler_seed
     else:
         raise ValueError(
-            f"Seed must be int, numpy Generator, or None but received {type(seed)}"
+            f"Seed must be int, numpy Generator, or None but received {type(sampler_seed)}"
         )
     divergence_metric = _parse_divergence_method(divergence_metric)
     if divergence_metric == "js":
