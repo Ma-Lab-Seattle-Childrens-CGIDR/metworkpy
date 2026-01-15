@@ -1,6 +1,5 @@
 """
-Functions for computing the Mutual Information Network for a Metabolic Model
-"""
+Functions for computing the Mutual Information Network for a Metabolic Model"""
 
 # Standard Library Imports
 from __future__ import annotations
@@ -33,7 +32,7 @@ def mi_network_adjacency_matrix(
 
     Parameters
     ----------
-    samples : ArrayLike
+    samples : ArrayLike or DataFrame or NDArray
         ArrayLike containing the samples, columns
         should represent different reactions while rows should represent
         different samples
@@ -46,7 +45,7 @@ def mi_network_adjacency_matrix(
 
     Returns
     -------
-    mutual_information_ : ArrayLike
+    mutual_information_ : ArrayLike or DataFrame or NDArray
         The mutual information adjacency matrix, will share a type with the ArrayLike passed in, and
         be a square symmetrical array, with the value at the ith row, jth column representing the mutual
         information between the ith and jth columns of the input samples dataset
@@ -58,17 +57,12 @@ def mi_network_adjacency_matrix(
          Method for estimating mutual information between samples from two continuous distributions.
     """
     # Wraps mi_pariwise, here for backward compatibility
-    mi_adj_mat = mi_pairwise(
+    return mi_pairwise(
         dataset=samples,
         processes=processes,
         progress_bar=progress_bar,
         **kwargs,
     )
-    if isinstance(mi_adj_mat, pd.DataFrame):
-        mi_adj_mat = mi_adj_mat.to_numpy()
-    else:
-        mi_adj_mat = np.array(mi_adj_mat)
-    return mi_adj_mat
 
 
 # endregion Main Function
@@ -83,7 +77,7 @@ def mi_pairwise(
 
     Parameters
     ----------
-    dataset : ArrayLike
+    dataset : ArrayLike or DataFrame or NDArray
         The dataset to calculate pairwise mutual information values for,
         should be a 2-dimensional array or dataframe
     processes : int, default=-1
@@ -92,6 +86,13 @@ def mi_pairwise(
         Whether a progress bar is desired
     kwargs
         Keyword arguments passed into the mutual_information function
+
+    Returns
+    -------
+    DataFrame or NDArray
+        The mutual information between every pair of columns in dataset. If dataset
+        is a numpy NDArray or an Arraylike, will return a numpy NDArray. If dataset
+        is a pandas DataFrame, will return a pandas DataFrame.
 
     Notes
     -----
@@ -115,7 +116,7 @@ def mi_pairwise(
             mi_result.loc[idx1, idx2] = mi
             mi_result.loc[idx2, idx1] = mi
     else:
-        dataset = np.array(dataset)
+        dataset = np.array(dataset)  # Coerce arraylike into array
         mi_result = np.zeros((dataset.shape[1], dataset.shape[1]))
         num_combinations = scipy.special.comb(dataset.shape[1], 2)
         for idx1, idx2, mi in tqdm.tqdm(
