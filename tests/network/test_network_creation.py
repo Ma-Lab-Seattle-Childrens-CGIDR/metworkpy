@@ -647,7 +647,7 @@ class TestMutualInformationNetwork(unittest.TestCase):
         rxn_ids = self.test_model.reactions.list_attr("id")
         for i, j in itertools.combinations(range(mi_adj_mat.shape[1]), 2):
             self.assertAlmostEqual(
-                mi_adj_mat[i, j],
+                mi_adj_mat.iloc[i, j],
                 test_network.get_edge_data(rxn_ids[i], rxn_ids[j])["weight"],
             )
 
