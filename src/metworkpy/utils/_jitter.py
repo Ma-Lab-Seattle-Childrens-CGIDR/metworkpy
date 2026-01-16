@@ -1,11 +1,10 @@
 """Functions to add noise to arrays to avoid ties"""
 
 # Standard Library Imports
-from typing import Union
+from typing import Union, Optional
 
 # External Imports
 import numpy as np
-
 
 # Local Imports
 
@@ -36,7 +35,7 @@ def _jitter(
     x: np.ndarray,
     y: np.ndarray,
     jitter: Union[float, tuple[float, float]],
-    jitter_seed: int,
+    jitter_seed: Optional[int],
     discrete_x: bool,
     discrete_y: bool,
 ) -> tuple[np.ndarray, np.ndarray]:
