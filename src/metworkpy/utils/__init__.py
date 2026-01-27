@@ -17,6 +17,10 @@ from .translate import (
     reaction_to_gene_dict,
     reaction_to_gene_list,
 )
+from .connected_components import (
+    find_connected_components,
+    find_representative_nodes,
+)
 
 __all__ = [
     "read_model",
@@ -37,4 +41,6 @@ __all__ = [
     "reaction_to_gene_list",
     "reaction_to_gene_dict",
     "expr_to_metchange_gene_weights",
+    "find_connected_components",
+    "find_representative_nodes",
 ]
