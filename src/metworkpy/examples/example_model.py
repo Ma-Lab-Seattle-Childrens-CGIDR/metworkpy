@@ -5,7 +5,7 @@ Submodule for reading in an example model (mostly for use in documentation)
 from __future__ import annotations
 
 # Standard Library Imports
-import importlib
+from importlib import resources
 
 # External Imports
 import cobra  # type: ignore
@@ -24,6 +24,9 @@ def get_example_model() -> cobra.Model:
     cobra.Model
         The model object
     """
-    with importlib.resources.path(examples, "example_model.json") as f:
+    with resources.as_file(
+        resources.files(examples) / "example_model.json"
+    ) as f:
+        # with importlib.resources.path(examples, "example_model.json") as f:
         model = read_model(f, "json")
     return model
