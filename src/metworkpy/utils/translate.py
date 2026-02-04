@@ -126,8 +126,10 @@ def gene_to_reaction_dict(model: cobra.Model, gene_list: list[str]):
     """
     gene_rxn_dict = defaultdict(list)
     for gene in gene_list:
-        for rxn in model.genes.get_by_id(gene).reactions:
-            gene_rxn_dict[gene] += [rxn.id]
+        gene_rxn_dict[gene] = [
+            g.id
+            for g in model.genes.get_by_id(gene).reactions  # type:ignore
+        ]
     return gene_rxn_dict
 
 

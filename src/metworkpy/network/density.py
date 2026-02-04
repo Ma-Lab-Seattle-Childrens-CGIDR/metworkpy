@@ -3,11 +3,12 @@
 # region Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Hashable, Union, Literal, cast
+from typing import Hashable, Union, Literal, Iterator, Tuple, Optional
 from warnings import warn
 
 # External Imports
 import cobra  # type:ignore     # Cobra doesn't have py.typed marker
+from joblib import Parallel, delayed
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -25,6 +26,7 @@ def label_density(
     network: nx.Graph | nx.DiGraph,
     labels: list[Hashable] | dict[Hashable, float | int] | pd.Series,
     radius: int = 3,
+    processes: Optional[int] = None,
 ) -> pd.Series:
     """
     Find the label density for different nodes in the graph. See note for
@@ -47,6 +49,8 @@ def label_density(
         given node labels are counted towards density. A radius of 0
         only counts the single node, and so will just return the
         `labels` values back unchanged. Default value of 3.
+    processes : int, optional
+        Number of processes to use for finding the density
 
     Returns
     -------
@@ -72,15 +76,15 @@ def label_density(
         labels = pd.Series(1, index=list)  # type: ignore
     elif isinstance(labels, dict):
         labels = pd.Series(labels)
-    density_dict = dict()
-    for node in network:
-        density_dict[node] = _node_density(
-            network=network,
-            labels=labels,  # type: ignore
-            node=node,
-            radius=radius,
+    results_series = pd.Series(np.nan, index=pd.Index(network.nodes))
+    for node, density in Parallel(n_jobs=processes, return_as="generator")(
+        delayed(_node_density_worker)(node, neighborhood, labels)
+        for node, neighborhood in graph_neighborhood_iter(
+            network=network, radius=radius
         )
-    return pd.Series(density_dict)
+    ):
+        results_series[node] = density
+    return results_series
 
 
 def find_dense_clusters(
@@ -161,36 +165,13 @@ def find_dense_clusters(
 # endregion Main Functions
 
 
-# region Node Density
-def _node_density(
-    network: nx.Graph, labels: pd.Series, node: Hashable, radius: int
-) -> float:
-    node_count = 1
-    if node in labels.index:
-        label_sum = float(labels[node])  # type: ignore
-    else:
-        label_sum = 0.0
-    # Iterate through connected nodes
-    # bfs_successors used as it allows for depth limit, and
-    for predecessors, successors in nx.bfs_successors(
-        network, source=node, depth_limit=radius
-    ):
-        for n in successors:
-            node_count += 1
-            if n in labels.index:
-                label_sum += labels[n]
-    return label_sum / node_count
-
-
-# endregion Node Density
-
-
 # region Gene Target Density
 def gene_target_density(
     metabolic_network: Union[nx.Graph, nx.DiGraph],
     metabolic_model: cobra.Model,
     gene_labels: Union[pd.Series, list, dict],
     radius: int = 3,
+    processes: Optional[int] = None,
 ) -> pd.Series:
     """
     Determine the density of gene targets in the neighborhood of a reaction
@@ -214,6 +195,8 @@ def gene_target_density(
         The radius to use for finding density, specifies how far out from
         a given node labels are counted towards density. A radius of 0 only
         counts the genes associated with the single node.
+    processes : int, optional
+        Number of processes to use
 
     Returns
     -------
@@ -233,42 +216,17 @@ def gene_target_density(
         gene_labels = pd.Series(1, index=pd.Index(gene_labels))
     elif isinstance(gene_labels, dict):
         gene_labels = pd.Series(gene_labels)
-    density_dict = {}
-    for node in metabolic_network:
-        density_dict[node] = _node_gene_density(
-            node=node,
-            network=metabolic_network,
-            model=metabolic_model,
-            labels=gene_labels,
-            radius=radius,
+    density_series = pd.Series(np.nan, index=pd.Index(metabolic_network.nodes))
+    for node, density in Parallel(n_jobs=processes, return_as="generator")(
+        delayed(_gene_density_worker)(
+            node, gene_neighborhood=neighborhood, gene_targets=gene_labels
         )
-
-    return pd.Series(density_dict)
-
-
-def _node_gene_density(
-    node: str,
-    network: nx.Graph,
-    model: cobra.Model,
-    labels: pd.Series,
-    radius: int,
-) -> float:
-    """
-    Find the gene label density for a single node
-    """
-    gene_neighborhood = _get_gene_neighborhood(
-        node=node, network=network, model=model, radius=radius
-    )
-    if len(gene_neighborhood) == 0:
-        return (
-            0.0  # If there are no genes in the neigborhood, the density is 0
+        for node, neighborhood in graph_neighborhood_iter_genes(
+            network=metabolic_network, model=metabolic_model, radius=radius
         )
-    gene_count = len(gene_neighborhood)
-    label_weight_sum = 0.0
-    for g in gene_neighborhood:
-        if g in labels.index:
-            label_weight_sum += cast(float, labels[g])
-    return label_weight_sum / gene_count
+    ):
+        density_series[node] = density
+    return density_series
 
 
 # endregion Gene Target Density
@@ -283,6 +241,7 @@ def gene_target_enrichment(
     metric: Literal["odds-ratio", "p-value"] = "p-value",
     alternative: Literal["two-sided", "less", "greater"] = "greater",
     radius: int = 3,
+    processes: Optional[int] = None,
 ) -> pd.Series:
     """
     Determine the enrichment of gene targets in the neighborhood of a reaction
@@ -312,6 +271,8 @@ def gene_target_enrichment(
         finding enrichment, specifies how far out from a given node labels are
         counted towards enrichment. A radius of 0 only counts the genes
         associated with the single node.
+    processes : int, optional
+        Number of processes to use
 
     Returns
     -------
@@ -340,96 +301,164 @@ def gene_target_enrichment(
             return pd.Series(1.0, index=pd.Index(metabolic_network.nodes))
         elif metric == "odds-ratio":
             return pd.Series(0.0, index=pd.Index(metabolic_network.nodes))
-    total_gene_set = set(metabolic_model.genes.list_attr("id"))
-    enrichment_dict = {}
-    for node in metabolic_network:
-        odds, pval = _node_gene_enrichment(
-            node=node,
-            network=metabolic_network,
-            model=metabolic_model,
-            labels=gene_targets,
-            total_gene_set=total_gene_set,
-            radius=radius,
+    total_genes = len(metabolic_model.genes.list_attr("id"))
+    enrichment_series = pd.Series(
+        np.nan, index=pd.Index(metabolic_network.nodes)
+    )
+    for node, odds, pval in Parallel(n_jobs=processes, return_as="generator")(
+        delayed(_gene_enrichment_worker)(
+            node,
+            gene_neighborhood=neighborhood,
+            gene_targets=gene_targets,
+            total_genes=total_genes,
             alternative=alternative,
         )
-        enrichment_dict[node] = pval if metric == "p-value" else odds
-    return pd.Series(enrichment_dict)
+        for node, neighborhood in graph_neighborhood_iter_genes(
+            network=metabolic_network, model=metabolic_model, radius=radius
+        )
+    ):
+        enrichment_series[node] = pval if metric == "p-value" else odds
+    return enrichment_series
 
 
-def _node_gene_enrichment(
-    node: str,
-    network: nx.Graph,
-    model: cobra.Model,
-    labels: set[str],
-    total_gene_set: set[str],
-    radius: int,
-    alternative: Literal["two-sided", "less", "greater"],
-) -> tuple[float, float]:
+# endregion Gene Target Enrichment
+
+# region neighborhood iterators
+
+
+def graph_neighborhood_iter(
+    network: nx.Graph, radius: int
+) -> Iterator[tuple[Hashable, set[Hashable]]]:
     """
-    Calculate the enrichment in labels in a neighborhood around `node`
+    Iterator over neighborhoods in a graph
 
     Parameters
     ----------
-    node : str
-        Node to evaluate the neighborhood enrichment for
     network : nx.Graph
-        The network to use for finding gene neighborhood
-    model: cobra.Model
-        The cobra Model to use for finding genes associated with
-        the reactions in the network
-    labels : set of str
-        The set of genes considered "labeled"
-    total_gene_set : set of str
-        The set of genes within the model
+        The network whose neighborhoods will be iterated over
     radius : int
-        The radius to use for defining a neighborhood around
+        The radius determining the size of the neighborhood
+
+    Yields
+    ------
+    tuple of Hashable and set of Hashable
+        Tuple of node and neighborhood
     """
-    gene_neighborhood = _get_gene_neighborhood(
-        node=node, network=network, model=model, radius=radius
-    )
+    for node in network.nodes:
+        neighborhood = {node}
+        for _, successors in nx.bfs_successors(
+            network, source=node, depth_limit=radius
+        ):
+            neighborhood.update(successors)
+        yield node, neighborhood
+
+
+def graph_neighborhood_iter_genes(
+    network: nx.Graph, model: cobra.Model, radius: int
+):
+    """
+    Iterator over gene neighborhoods in a graph
+
+    Parameters
+    ----------
+    network : nx.Graph
+        The network whose neighborhoods will be iterated over
+    model : cobra.Model
+        The cobra model associated with the metabolic network
+    radius : int
+        The radius determining the size of the neighborhood
+
+    Yields
+    ------
+    tuple of Hashable and set of str
+        Tuple of node and gene ids in neighborhood
+    """
+    model_rxns: set[str] = set(model.reactions.list_attr("id"))
+    for node, neighborhood in graph_neighborhood_iter(
+        network=network, radius=radius
+    ):
+        gene_neighborhood = set()
+        for n in neighborhood:
+            if (
+                n in model_rxns
+            ):  # Check in case the network includes metabolites
+                gene_neighborhood.update(
+                    [g.id for g in model.reactions.get_by_id(n).genes]  # type: ignore
+                )
+        yield node, gene_neighborhood
+
+
+# endregion neighborhood iterator
+# region worker functions
+def _node_density_worker(
+    node: Hashable, neighborhood: set[Hashable], labels: pd.Series
+) -> Tuple[Hashable, float]:
+    """
+    Calculate the density of labels in a neighborhood
+    """
+    return node, labels[
+        [idx for idx in neighborhood if idx in labels.index]
+    ].sum() / len(neighborhood)
+
+
+def _gene_density_worker(
+    node: str,
+    gene_neighborhood: set[str],
+    gene_targets: pd.Series,
+) -> Tuple[str, float]:
+    """
+    Calculate the density of gene labels in a neighborhood
+    """
     if len(gene_neighborhood) == 0:
-        return (0.0, 1.0)
+        return node, 0.0
+    return node, gene_targets[
+        [idx for idx in gene_neighborhood if idx in gene_targets.index]
+    ].sum() / len(gene_neighborhood)
+
+
+def _gene_enrichment_worker(
+    node: str,
+    gene_neighborhood: set[str],
+    gene_targets: set[str],
+    total_genes: int,
+    alternative: str = "greater",
+) -> Tuple[str, float, float]:
+    """
+    Calculate the enrichment of gene labels in a neighborhood
+
+    Returns
+    -------
+    node, odds-ratio, p-value : tuple of str, float, float
+    """
+    if len(gene_neighborhood) == 0:
+        return node, 0.0, 1.0
     # Create contingency table
     #                      | in labels | not in labels |
     #  in neighborhood     |           |               |
     #  not in neighborhood |           |               |
     contingency_table = np.array(
         [
-            [len(gene_neighborhood & labels), len(gene_neighborhood - labels)],
             [
-                len((total_gene_set - gene_neighborhood) & labels),
-                len((total_gene_set - gene_neighborhood) - labels),
+                len(
+                    gene_targets & gene_neighborhood
+                ),  # In labels and Neighborhood
+                len(
+                    gene_neighborhood - gene_targets
+                ),  # In neighborhood but not labels
+            ],
+            [
+                len(
+                    gene_targets - gene_neighborhood
+                ),  # In targets but not neighborhood
+                total_genes
+                - len(gene_targets | gene_neighborhood),  # in neither
             ],
         ]
     )
-    fisher_res = stats.fisher_exact(contingency_table, alternative)
-    return (fisher_res.statistic, fisher_res.pvalue)
-
-
-# endregion Gene Target Enrichment
-
-# region Helper Functions
-
-
-def _get_gene_neighborhood(
-    node: str, network: nx.Graph, model: cobra.Model, radius: int
-) -> set[str]:
-    """
-    Find the genes in a neighborhood around a node
-    """
-    gene_neighborhood = set()
-    gene_neighborhood.update(
-        [g.id for g in model.reactions.get_by_id(node).genes]
+    fisher_res = stats.fisher_exact(
+        table=contingency_table, alternative=alternative
     )
-    for _, successors in nx.bfs_successors(
-        network, source=node, depth_limit=radius
-    ):
-        # For each rxn, get the genes
-        for n in successors:
-            gene_neighborhood.update(
-                [g.id for g in model.reactions.get_by_id(n).genes]
-            )
-    return gene_neighborhood
+    return node, fisher_res.statistic, fisher_res.pvalue
 
 
-# endregion Helper Functions
+# endregion worker functions

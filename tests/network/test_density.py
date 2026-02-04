@@ -15,7 +15,6 @@ from metworkpy.network import create_metabolic_network, bipartite_project
 from metworkpy.network.density import (
     label_density,
     find_dense_clusters,
-    _node_density,
     gene_target_density,
     gene_target_enrichment,
 )
@@ -41,27 +40,9 @@ class TestLabelDensity(unittest.TestCase):
         cls.test_graph = g
         cls.test_labels = {0: 2, 5: 3, 7: 2}
 
-    def test_node_density(self):
-        node_density_calc1 = _node_density(
-            self.test_graph,
-            labels=pd.Series(self.test_labels),
-            node=4,
-            radius=2,
-        )
-        node_density_expected1 = 0.75
-        self.assertTrue(np.isclose(node_density_calc1, node_density_expected1))
-        node_density_calc2 = _node_density(
-            self.test_graph,
-            labels=pd.Series(self.test_labels),
-            node=6,
-            radius=1,
-        )
-        node_density_expected2 = 0.0
-        self.assertTrue(np.isclose(node_density_calc2, node_density_expected2))
-
     def test_label_density(self):
         label_density_calc = label_density(
-            self.test_graph, labels=self.test_labels, radius=1
+            self.test_graph, labels=self.test_labels, radius=1, processes=1
         )
         label_density_exp = pd.Series(
             {
@@ -76,9 +57,7 @@ class TestLabelDensity(unittest.TestCase):
                 8: (2 / 2),
             }
         ).sort_index()
-        self.assertTrue(
-            np.isclose(label_density_exp, label_density_calc).all()
-        )
+        np.testing.assert_allclose(label_density_calc, label_density_exp)
 
 
 class TestFindDenseClusters(unittest.TestCase):
@@ -146,6 +125,7 @@ class TestGeneTargetDensity(unittest.TestCase):
             metabolic_model=test_model,
             gene_labels=gene_targets,
             radius=0,
+            processes=1,
         )
         # Since there is only one targeted gene, with a radius of 0,
         # every reaction but r_A_B_D_E should have a density of 0
@@ -167,6 +147,7 @@ class TestGeneTargetDensity(unittest.TestCase):
             metabolic_model=test_model,
             gene_labels=gene_targets,
             radius=1,
+            processes=1,
         )
         # Since there is only one targeted gene, with a radius of 0,
         # every reaction but r_A_B_D_E should have a density of 0
@@ -213,6 +194,7 @@ class TestGeneTargetEnrichment(unittest.TestCase):
             metric="p-value",
             alternative="greater",
             radius=0,
+            processes=1,
         )
         # Since there is only one targeted gene, with a radius of 0,
         # every reaction but r_A_B_D_E should have an enrichment of ~1
@@ -237,6 +219,7 @@ class TestGeneTargetEnrichment(unittest.TestCase):
             metric="p-value",
             alternative="greater",
             radius=1,
+            processes=1,
         )
         R_A_imp_cont = np.array([[1, 1], [0, 8]])
         R_A_imp_pval = stats.fisher_exact(
@@ -282,6 +265,7 @@ class TestGeneTargetEnrichment(unittest.TestCase):
             metric="odds-ratio",
             alternative="greater",
             radius=1,
+            processes=1,
         )
         self.assertAlmostEqual(
             test_enrichment["R_A_e_ex"],
