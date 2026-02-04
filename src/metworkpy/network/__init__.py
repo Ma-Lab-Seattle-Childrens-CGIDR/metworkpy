@@ -9,7 +9,7 @@ from .density import (
     gene_target_density,
     gene_target_enrichment,
     graph_neighborhood_iter,
-    graph_neighborhood_iter_genes,
+    graph_gene_neighborhood_iter,
 )
 from .projection import bipartite_project
 
@@ -20,7 +20,7 @@ __all__ = [
     "gene_target_density",
     "gene_target_enrichment",
     "graph_neighborhood_iter",
-    "graph_neighborhood_iter_genes",
+    "graph_gene_neighborhood_iter",
     "find_dense_clusters",
     "bipartite_project",
     "create_mutual_information_network",

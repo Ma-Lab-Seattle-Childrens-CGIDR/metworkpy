@@ -20,8 +20,6 @@ from metworkpy.utils import reaction_to_gene_df, reaction_to_gene_list
 
 
 # region Main Functions
-
-
 def find_metabolite_synthesis_network_reactions(
     model: cobra.Model,
     method: Literal["pfba", "essential"] = "pfba",

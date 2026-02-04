@@ -29,8 +29,8 @@ from metworkpy.utils._arguments import _parse_str_args_dict
 # there might be ways to adjust the sampling distribution but I'm not really sure...
 def ko_divergence(
     model: cobra.Model,
-    genes_to_ko: Iterable[str],
     target_networks: list[str] | dict[str, list[str]],
+    genes_to_ko: Optional[Iterable[str]] = None,
     divergence_metric: str = "Jensen-Shannon",
     n_neighbors: int = 5,
     sample_count: int = 1000,
@@ -48,8 +48,6 @@ def ko_divergence(
     ----------
     model : cobra.Model
         Base cobra model to test effects of gene knockouts on
-    genes_to_ko : Iterable[str]
-        List of genes to investigate impact of their knock-out
     target_networks : list[str] | dict[str, list[str]]
         Target networks to investigate the impact of the gene knock-outs
         on. Can be a list or a dict of lists. If a dict, the keys will
@@ -60,6 +58,9 @@ def ko_divergence(
         passed the name of the target network in the returned dataframe
         will be target_network, if a dict is passed the keys are used as
         the column names.
+    genes_to_ko : Iterable[str], optional
+        List of genes to investigate impact of their knock-out,
+        defaults to all genes in the model
     divergence_metric : str
         Which metric to use for divergence, can be Jensen-Shannon, or
         Kullback-Leibler
@@ -105,6 +106,8 @@ def ko_divergence(
         particular target network between the unperturbed model and the
         model following the gene knock-out.
     """
+    if genes_to_ko is None:
+        genes_to_ko = model.genes.list_attr("id")
     # Setup Random seeding for the sampling
     if isinstance(sampler_seed, int) or sampler_seed is None:
         rng = np.random.default_rng(sampler_seed)

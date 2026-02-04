@@ -1,6 +1,5 @@
 """Module for finding the density of labels on a graph."""
 
-# region Imports
 # Standard Library Imports
 from __future__ import annotations
 from typing import Hashable, Union, Literal, Iterator, Tuple, Optional
@@ -17,7 +16,6 @@ from scipy import stats
 
 # Local Imports
 
-# endregion Imports
 
 # region Main Functions
 
@@ -87,85 +85,6 @@ def label_density(
     return results_series
 
 
-def find_dense_clusters(
-    network: nx.Graph | nx.DiGraph,
-    labels: list[Hashable] | dict[Hashable, float | int] | pd.Series,
-    radius: int = 3,
-    quantile_cutoff: float = 0.20,
-) -> pd.DataFrame:
-    """Find the clusters within a network with high label density
-
-    Parameters
-    ----------
-    network : nx.Graph | nx.DiGraph
-        Network to find clusters from
-    labels : list | dict | pd.Series
-        Labels to find density of. Can be a list of nodes in the network
-        where are labeled nodes will be treated equally, or a dict or
-        Series keyed by nodes in the network which can specify a label
-        weight (such as multiple labels for a single node). If a dict or
-        Series, values should be ints or floats.
-    radius : int
-        Radius to use for finding density. Specifies how far out from a
-        given node labels are counted towards density. A radius of 0
-        only counts the single node, and so will just return the
-        `labels` values back unchanged. Default value of 3.
-    quantile_cutoff : float
-        Quantile cutoff for defining high density, the nodes within the
-        top 100*`quantile`% of label density are considered high
-        density. Must be between 0 and 1.
-
-    Returns
-    -------
-    pd.DataFrame
-        A dataframe indexed by reaction, with columns for density and
-        cluster. The clusters are assigned integers starting from 0 to
-        differentiate them. The clusters are not ordered.
-
-    Notes
-    -----
-    This method finds the label density of the graph, then defines high density
-    nodes as those in the top `quantile` (so if quantile = 0.15, the top 15%
-    of nodes in terms of density will be defined as high density).
-    Following this, the low density nodes are removed (doesn't impact `network`
-    which is copied), and the connected components of the graph that remains.
-    These components are the high density components which are returned.
-    """
-    if isinstance(network, nx.DiGraph):
-        network = network.to_undirected()
-    if not isinstance(network, nx.Graph):
-        raise ValueError(
-            f"Network must be a networkx network, but received {type(network)}"
-        )
-    density = label_density(network=network, labels=labels, radius=radius)
-    # Find which nodes are below the quantile density cutoff
-    cutoff = np.quantile(density, 1 - quantile_cutoff)
-    low_density = density[density < cutoff].index
-    # Copy the network, and remove all low density nodes
-    high_density_network = network.copy()
-    high_density_network.remove_nodes_from(low_density)
-    # Create a dataframe for the results
-    res_df = pd.DataFrame(
-        None,
-        index=density[density >= cutoff].index,
-        columns=["density", "cluster"],
-        dtype="float",
-    )
-    # Find the connected components, and assign each to a cluster
-    current_cluster = 0
-    for comp in nx.connected_components(high_density_network):
-        nodes = list(comp)
-        res_df.loc[nodes, "density"] = density[nodes]
-        res_df.loc[nodes, "cluster"] = current_cluster
-        current_cluster += 1
-    res_df["cluster"] = res_df["cluster"].astype("int")
-    return res_df
-
-
-# endregion Main Functions
-
-
-# region Gene Target Density
 def gene_target_density(
     metabolic_network: Union[nx.Graph, nx.DiGraph],
     metabolic_model: cobra.Model,
@@ -221,17 +140,12 @@ def gene_target_density(
         delayed(_gene_density_worker)(
             node, gene_neighborhood=neighborhood, gene_targets=gene_labels
         )
-        for node, neighborhood in graph_neighborhood_iter_genes(
+        for node, neighborhood in graph_gene_neighborhood_iter(
             network=metabolic_network, model=metabolic_model, radius=radius
         )
     ):
         density_series[node] = density
     return density_series
-
-
-# endregion Gene Target Density
-
-# region Gene Target Enrichment
 
 
 def gene_target_enrichment(
@@ -313,7 +227,7 @@ def gene_target_enrichment(
             total_genes=total_genes,
             alternative=alternative,
         )
-        for node, neighborhood in graph_neighborhood_iter_genes(
+        for node, neighborhood in graph_gene_neighborhood_iter(
             network=metabolic_network, model=metabolic_model, radius=radius
         )
     ):
@@ -321,7 +235,146 @@ def gene_target_enrichment(
     return enrichment_series
 
 
-# endregion Gene Target Enrichment
+def find_dense_clusters(
+    network: nx.Graph | nx.DiGraph,
+    labels: list[Hashable] | dict[Hashable, float | int] | pd.Series,
+    radius: int = 3,
+    quantile_cutoff: float = 0.20,
+) -> pd.DataFrame:
+    """Find the clusters within a network with high label density
+
+    Parameters
+    ----------
+    network : nx.Graph | nx.DiGraph
+        Network to find clusters from
+    labels : list | dict | pd.Series
+        Labels to find density of. Can be a list of nodes in the network
+        where are labeled nodes will be treated equally, or a dict or
+        Series keyed by nodes in the network which can specify a label
+        weight (such as multiple labels for a single node). If a dict or
+        Series, values should be ints or floats.
+    radius : int
+        Radius to use for finding density. Specifies how far out from a
+        given node labels are counted towards density. A radius of 0
+        only counts the single node, and so will just return the
+        `labels` values back unchanged. Default value of 3.
+    quantile_cutoff : float
+        Quantile cutoff for defining high density, the nodes within the
+        top 100*`quantile`% of label density are considered high
+        density. Must be between 0 and 1.
+
+    Returns
+    -------
+    pd.DataFrame
+        A dataframe indexed by reaction, with columns for density and
+        cluster. The clusters are assigned integers starting from 0 to
+        differentiate them. The clusters are not ordered.
+
+    Notes
+    -----
+    This method finds the label density of the graph, then defines high density
+    nodes as those in the top `quantile` (so if quantile = 0.15, the top 15%
+    of nodes in terms of density will be defined as high density).
+    Following this, the low density nodes are removed (doesn't impact `network`
+    which is copied), and the connected components of the graph that remains.
+    These components are the high density components which are returned.
+    """
+    if isinstance(network, nx.DiGraph):
+        network = network.to_undirected()
+    if not isinstance(network, nx.Graph):
+        raise ValueError(
+            f"Network must be a networkx network, but received {type(network)}"
+        )
+    density = label_density(network=network, labels=labels, radius=radius)
+    # Find which nodes are below the quantile density cutoff
+    cutoff = np.quantile(density, 1 - quantile_cutoff)
+    low_density = density[density < cutoff].index
+    # Copy the network, and remove all low density nodes
+    high_density_network = network.copy()
+    high_density_network.remove_nodes_from(low_density)
+    # Create a dataframe for the results
+    res_df = pd.DataFrame(
+        None,
+        index=density[density >= cutoff].index,
+        columns=["density", "cluster"],
+        dtype="float",
+    )
+    # Find the connected components, and assign each to a cluster
+    current_cluster = 0
+    for comp in nx.connected_components(high_density_network):
+        nodes = list(comp)
+        res_df.loc[nodes, "density"] = density[nodes]
+        res_df.loc[nodes, "cluster"] = current_cluster
+        current_cluster += 1
+    res_df["cluster"] = res_df["cluster"].astype("int")
+    return res_df
+
+
+# endregion Main Functions
+
+# region Graph Neighborhoods
+
+
+def graph_neighborhoods(
+    network: nx.Graph, radius: int
+) -> dict[Hashable, set[Hashable]]:
+    """
+    Find the neighborhoods of a graph
+
+    Parameters
+    ----------
+    network : nx.Graph
+        The network whose neighborhoods will be identified
+    radius : int
+        The radius determining the sizes of the neighborhoods
+
+    Returns
+    -------
+    neighborhoods : dict of nodes to sets of nodes
+        Dict describing the nodes in the graph, keyed by
+        node with values of sets of nodes in the neighborhood
+        of the node (including the node itself)
+    """
+    return {
+        n: neighborhood
+        for n, neighborhood in graph_neighborhood_iter(
+            network=network, radius=radius
+        )
+    }
+
+
+def graph_gene_neighborhoods(
+    network: nx.Graph, model: cobra.Model, radius: int
+) -> dict[Hashable, set[str]]:
+    """
+    Find the neighborhoods of a graph
+
+    Parameters
+    ----------
+    network : nx.Graph
+        The network whose neighborhoods will be identified
+    model : cobra.Model
+        The cobra model associated with the metabolic network
+    radius : int
+        The radius determining the sizes of the neighborhoods
+
+    Returns
+    -------
+    neighborhoods : dict of nodes to sets of gene ids
+        Dict describing the nodes in the graph, keyed by
+        node with values of sets of gene ids in the neighborhood
+        of the node
+    """
+    return {
+        n: neighborhood
+        for n, neighborhood in graph_gene_neighborhood_iter(
+            network=network, model=model, radius=radius
+        )
+    }
+
+
+# endregion Graph Neighborhoods
+
 
 # region neighborhood iterators
 
@@ -353,7 +406,7 @@ def graph_neighborhood_iter(
         yield node, neighborhood
 
 
-def graph_neighborhood_iter_genes(
+def graph_gene_neighborhood_iter(
     network: nx.Graph, model: cobra.Model, radius: int
 ):
     """
