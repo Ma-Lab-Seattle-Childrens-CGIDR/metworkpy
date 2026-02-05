@@ -44,13 +44,10 @@ metdivergence = "metworkpy.scripts.metdivergence:main_run"
 [dependency-groups]
 dev = [
   "ruff<1.0.0,>=0.11.0",
+  "ty>=0.0.10",
   "pre-commit<4.0.0,>=3.7.1",
-  "python-lsp-server[all]>=1.12.2",
-  "mypy>=1.19.0",
   "pandas-stubs>=2.2.2.240807",
   "types-networkx>=3.4.2.20250509",
-  "pyrefly>=0.47.0",
-  "ty>=0.0.10",
 ]
 test = ["highspy>=1.10.0", "osqp>=1.0.3", "pytest>=8.0.1"]
 docs = [
