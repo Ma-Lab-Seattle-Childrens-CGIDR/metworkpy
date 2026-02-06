@@ -5,7 +5,7 @@ Functions for computing the Mutual Information Network for a Metabolic Model"""
 from __future__ import annotations
 
 import itertools
-from typing import Tuple, TypeVar
+from typing import Optional, Tuple, TypeVar
 
 # External Imports
 import joblib  # type: ignore
@@ -14,9 +14,9 @@ import pandas as pd
 import scipy  # type: ignore
 import tqdm  # type: ignore
 from numpy.typing import ArrayLike
-from .mutual_information_functions import mutual_information
 
 # Local Imports
+from .mutual_information_functions import mutual_information
 
 
 # region Main Function
@@ -24,7 +24,12 @@ T = TypeVar("T", np.ndarray, pd.DataFrame, ArrayLike)
 
 
 def mi_network_adjacency_matrix(
-    samples: T, processes: int = -1, progress_bar: bool = False, **kwargs
+    samples: T,
+    cutoff: Optional[float] = None,
+    cutoff_quantile: Optional[float] = None,
+    processes: int = -1,
+    progress_bar: bool = False,
+    **kwargs,
 ) -> T:
     """
     Create a Mutual Information Network Adjacency matrix from flux samples.
@@ -36,6 +41,13 @@ def mi_network_adjacency_matrix(
         ArrayLike containing the samples, columns
         should represent different reactions while rows should represent
         different samples
+    cutoff : float, optional
+        Lower bound for mutual information, all values smaller than this are
+        set to 0
+    cutoff_quantile : float, Optional
+        Lower bound for mutual information as a quantile, must be a value
+        between 0 and 1 representing the quantile to use as a cutoff.
+        Any values below this quantile will be set to 0.
     processes : int
         Number of processes to use when calculating the mutual information
     progress_bar : bool
@@ -59,6 +71,8 @@ def mi_network_adjacency_matrix(
     # Wraps mi_pariwise, here for backward compatibility
     return mi_pairwise(
         dataset=samples,
+        cutoff=cutoff,
+        cutoff_quantile=cutoff_quantile,
         processes=processes,
         progress_bar=progress_bar,
         **kwargs,
@@ -70,7 +84,12 @@ def mi_network_adjacency_matrix(
 
 # region Pairwise Mutual Information
 def mi_pairwise(
-    dataset: T, processes: int = -1, progress_bar: bool = False, **kwargs
+    dataset: T,
+    cutoff: Optional[float] = None,
+    cutoff_quantile: Optional[float] = None,
+    processes: int = -1,
+    progress_bar: bool = False,
+    **kwargs,
 ) -> T:
     """
     Calculate all pairwise values of mutual information for columns in dataset
@@ -79,7 +98,14 @@ def mi_pairwise(
     ----------
     dataset : ArrayLike or DataFrame or NDArray
         The dataset to calculate pairwise mutual information values for,
-        should be a 2-dimensional array or dataframe
+        should be a 2-dimensional array or Dataframe
+    cutoff : float, optional
+        Lower bound for mutual information, all values smaller than this are
+        set to 0
+    cutoff_quantile : float, Optional
+        Lower bound for mutual information as a quantile, must be a value
+        between 0 and 1 representing the quantile to use as a cutoff.
+        Any values below this quantile will be set to 0.
     processes : int, default=-1
         The number of processes to use for calculating the pairwise mutual information
     progress_bar : bool, default=False
@@ -115,6 +141,15 @@ def mi_pairwise(
         ):
             mi_result.loc[idx1, idx2] = mi
             mi_result.loc[idx2, idx1] = mi
+        # Apply the cutoff if it exists
+        if cutoff_quantile is not None:
+            cutoff = np.quantile(
+                mi_result,
+                cutoff_quantile,
+                overwrite_input=False,
+            )
+        if cutoff is not None:
+            mi_result.loc[mi_result < cutoff] = 0.0
     else:
         dataset = np.array(dataset)  # Coerce arraylike into array
         mi_result = np.zeros((dataset.shape[1], dataset.shape[1]))
@@ -131,6 +166,15 @@ def mi_pairwise(
         ):
             mi_result[idx1, idx2] = mi
             mi_result[idx2, idx1] = mi
+        # Apply cutoff if necessary
+        if cutoff_quantile is not None:
+            cutoff = np.quantile(
+                mi_result,
+                cutoff_quantile,
+                overwrite_input=False,
+            )
+        if cutoff is not None:
+            mi_result[mi_result < cutoff] = 0.0
     return mi_result
 
 
