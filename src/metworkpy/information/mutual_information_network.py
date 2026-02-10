@@ -5,7 +5,7 @@ Functions for computing the Mutual Information Network for a Metabolic Model"""
 from __future__ import annotations
 
 import itertools
-from typing import Literal, Optional, Tuple, TypeVar
+from typing import cast, Literal, Optional, Tuple, TypeVar, Union
 
 # External Imports
 import joblib  # type: ignore
@@ -90,10 +90,11 @@ def mi_pairwise(
     permutations: int = 9999,
     cutoff: Optional[float] = None,
     cutoff_quantile: Optional[float] = None,
+    cutoff_significance: Optional[float] = None,
     processes: int = -1,
     progress_bar: bool = False,
     **kwargs,
-) -> T:
+) -> Union[T, Tuple[T, T]]:
     """
     Calculate all pairwise values of mutual information for columns in dataset
 
@@ -112,10 +113,15 @@ def mi_pairwise(
     cutoff : float, optional
         Lower bound for mutual information, all values smaller than this are
         set to 0
-    cutoff_quantile : float, Optional
+    cutoff_quantile : float, optional
         Lower bound for mutual information as a quantile, must be a value
         between 0 and 1 representing the quantile to use as a cutoff.
         Any values below this quantile will be set to 0.
+    cutoff_significance : float, optional
+        Upper bound for the significance of the mutual information,
+        any mutual information values with p-values above this
+        cutoff will have their mutual information set to 0.
+        Requires that calculate_pvalue is True.
     processes : int, default=-1
         The number of processes to use for calculating the pairwise mutual information
     progress_bar : bool, default=False
@@ -137,6 +143,11 @@ def mi_pairwise(
     -----
     The parallelization uses joblib, and so can be configured with joblib's parallel_config context manager
     """
+    # Check that if cutoff_significance is not None, calculate_pvalue is True
+    if cutoff_significance is not None and calculate_pvalue:
+        raise ValueError(
+            "If cutoff_significance is not None, calculate_pvalue must be True"
+        )
     # Add the keywords related to the p-value to the kwargs dict
     kwargs["calculate_pvalue"] = calculate_pvalue
     kwargs["alternative"] = alternative
@@ -170,6 +181,9 @@ def mi_pairwise(
                 mi_result.loc[idx2, idx1] = mi
                 pvalue_result.loc[idx1, idx2] = pvalue
                 pvalue_result.loc[idx2, idx1] = pvalue
+        # Apply the significance cutoff if it exists
+        if cutoff_significance is not None:
+            mi_result.loc[pvalue_result > cutoff_significance] = 0.0
         # Apply the cutoff if it exists
         if cutoff_quantile is not None:
             cutoff = np.quantile(
@@ -178,7 +192,7 @@ def mi_pairwise(
                 overwrite_input=False,
             )
         if cutoff is not None:
-            mi_result.loc[mi_result < cutoff] = 0.0
+            mi_result.loc[pvalue_result < cutoff] = 0.0
     else:
         dataset = np.array(dataset)  # Coerce arraylike into array
         mi_result = np.zeros((dataset.shape[1], dataset.shape[1]))
@@ -205,6 +219,9 @@ def mi_pairwise(
                 mi_result[idx2, idx1] = mi
                 pvalue_result[idx1, idx2] = pvalue
                 pvalue_result[idx2, idx1] = pvalue
+        # Apply the significance cutoff if it exists
+        if cutoff_significance is not None:
+            mi_result[pvalue_result > cutoff_significance] = 0.0
         # Apply cutoff if necessary
         if cutoff_quantile is not None:
             cutoff = np.quantile(
@@ -214,6 +231,7 @@ def mi_pairwise(
             )
         if cutoff is not None:
             mi_result[mi_result < cutoff] = 0.0
+    mi_result = cast(T, mi_result)
     if not calculate_pvalue:
         return mi_result
     return mi_result, pvalue_result
