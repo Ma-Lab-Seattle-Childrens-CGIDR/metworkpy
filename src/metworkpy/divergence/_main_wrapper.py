@@ -2,11 +2,21 @@
 
 # Imports
 # Standard Library Imports
-from typing import Optional, Union, Callable, Any
+from functools import partial
+from typing import (
+    Any,
+    Callable,
+    Literal,
+    Optional,
+    Protocol,
+    Union,
+    NamedTuple,
+)
 
 # External Imports
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
+from scipy import stats
 
 # Local Imports
 from metworkpy.utils._arguments import _parse_metric
@@ -17,19 +27,35 @@ from metworkpy.divergence._data_validation import (
 from metworkpy.utils._jitter import _jitter_single
 
 
+class ContinuousDivergenceFunction(Protocol):
+    def __call__(
+        self,
+        p: NDArray[Union[float]],
+        q: NDArray[Union[float]],
+        n_neighbors: int,
+        metric: float,
+    ) -> float: ...
+
+
+class DivergenceResult(NamedTuple):
+    divergence: float
+    pvalue: float
+
+
 def _wrap_divergence_functions(
     p: ArrayLike,
     q: ArrayLike,
     discrete_method: Callable[[NDArray[Any], NDArray[Any]], float],
-    continuous_method: Callable[
-        [NDArray[float], NDArray[float], int, float], float
-    ],
+    continuous_method: ContinuousDivergenceFunction,
+    calculate_pvalue: bool = False,
+    alternative: Literal["less", "greater", "two-sided"] = "greater",
+    permutations: int = 9999,
     n_neighbors: int = 5,
     discrete: bool = False,
     jitter: Optional[float] = None,
     jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
-) -> float:
+) -> Union[float, DivergenceResult]:
     """Calculate the divergence between two distributions represented by samples p and q
 
     Parameters
@@ -52,6 +78,12 @@ def _wrap_divergence_functions(
         distributions, should take two positional arguments for p and q,
         as well as keyword arguments for n_neighbors, and metric (which
         will be a float representing a Minkowski p-norm).
+    calculate_pvalue : bool, default=False
+        Whether the p-value should be calculated using a permutation test
+    alternative : 'less', 'greater', or 'two-sided', default='greater'
+        The alternative to use, passed to SciPy's `permutation_test<https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html>`_
+    permutations : int, default=9999
+         The number of permuatations to use when calculating the p-value
     n_neighbors : int
         Number of neighbors to use for computing mutual information.
         Will attempt to coerce into an integer. Must be at least 1.
@@ -74,7 +106,8 @@ def _wrap_divergence_functions(
     Returns
     -------
     float
-        The divergence between p and q
+        The divergence between p and q, or if calculate_pvalue is True,
+        returns a named tuple of divergence and p-value.
     """
     try:
         n_neighbors = int(n_neighbors)
@@ -89,6 +122,12 @@ def _wrap_divergence_functions(
         generator = np.random.default_rng(jitter_seed)
         p = _jitter_single(p, jitter=jitter, generator=generator)
         q = _jitter_single(q, jitter=jitter, generator=generator)
+    permutation_test_kwargs = {
+        "permutation_type": "independent",
+        "n_resamples": permutations,
+        "alternative": alternative,
+        "axis": 0,
+    }
     if discrete:
         try:
             p = _validate_discrete(p)
@@ -98,8 +137,26 @@ def _wrap_divergence_functions(
                 f"p and q must represent single dimensional samples, and so have shape (n_samples, 1)"
                 f"but p has dimension {p.shape[1]}, and q has dimension {q.shape[1]}."
             ) from err
-        return discrete_method(p, q)
-
-    return continuous_method(
-        p, q, n_neighbors=n_neighbors, metric=distance_metric
+        if not calculate_pvalue:
+            return discrete_method(p, q)
+        else:
+            perm_res = stats.permutation_test(
+                [p, q], discrete_method, **permutation_test_kwargs
+            )
+            return DivergenceResult(
+                divergence=perm_res.statistic, pvalue=perm_res.pvalue
+            )
+    if not calculate_pvalue:
+        return continuous_method(
+            p, q, n_neighbors=n_neighbors, metric=distance_metric
+        )
+    perm_res = stats.permutation_test(
+        [p, q],
+        partial(
+            continuous_method, n_neighbors=n_neighbors, metric=distance_metric
+        ),
+        **permutation_test_kwargs,
+    )
+    return DivergenceResult(
+        divergence=perm_res.statistic, pvalue=perm_res.pvalue
     )

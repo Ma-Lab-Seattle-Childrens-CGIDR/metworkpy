@@ -5,7 +5,7 @@ those distributions.
 # Standard Library Imports
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 # External Imports
 import numpy as np
@@ -14,7 +14,10 @@ from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
 
 # Local Imports
-from metworkpy.divergence._main_wrapper import _wrap_divergence_functions
+from metworkpy.divergence._main_wrapper import (
+    _wrap_divergence_functions,
+    DivergenceResult,
+)
 from metworkpy.divergence._pairwise_divergence import _divergence_array
 
 
@@ -22,12 +25,15 @@ from metworkpy.divergence._pairwise_divergence import _divergence_array
 def kl_divergence(
     p: ArrayLike,
     q: ArrayLike,
+    calculate_pvalue: bool = False,
+    alternative: Literal["less", "greater", "two-sided"] = "greater",
+    permutations: int = 9999,
     n_neighbors: int = 5,
     discrete: bool = False,
     jitter: Optional[float] = None,
     jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
-) -> float:
+) -> Union[float, DivergenceResult]:
     """Calculate the Kulback-Leibler divergence between two distributions represented by samples p and q
 
     Parameters
@@ -42,6 +48,12 @@ def kl_divergence(
         (n_samples, n_dimensions). If `q` is one dimensional, it will be
         reshaped to (n_samples,1). If it is not a np.ndarray, this
         function will attempt to coerce it into one.
+    calculate_pvalue : bool, default=False
+        Whether the p-value should be calculated using a permutation test
+    alternative : 'less', 'greater', or 'two-sided', default='greater'
+        The alternative to use, passed to SciPy's `permutation_test<https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html>`_
+    permutations : int, default=9999
+         The number of permuatations to use when calculating the p-value
     n_neighbors : int
         Number of neighbors to use for computing mutual information.
         Will attempt to coerce into an integer. Must be at least 1.
@@ -88,6 +100,9 @@ def kl_divergence(
         q=q,
         discrete_method=_kl_disc,
         continuous_method=_kl_cont,
+        calculate_pvalue=calculate_pvalue,
+        alternative=alternative,
+        permutations=permutations,
         n_neighbors=n_neighbors,
         discrete=discrete,
         jitter=jitter,
