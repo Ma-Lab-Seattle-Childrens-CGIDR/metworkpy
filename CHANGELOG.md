@@ -8,7 +8,9 @@
 - Added cutoff parameter for mutual information network calculations
 - Added option to calculate p-value using a permutation test for the mutual
   information function (uses scipy.permutation test)
-- Added option for calculating the p-values to the mi_pairwise function as well
+- Added option for calculating the p-values to the mi_pairwise function as well,
+  and to threshold the mi_pairwise return value using a set cutoff, a quantile
+  cutoff, or a significance cutoff
 - Divergence functions can now return p-values using permutations tests
 
 ## Version 0.2.9
