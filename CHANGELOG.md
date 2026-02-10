@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 0.2.10
+
+- Removed deprecated path function of importlib from example submodule
+- Changed network density functions to use joblib for parallel processing
+- Made gene list parameter optional in KO divergence function
+- Added cutoff parameter for mutual information network calculations
+- Added option to calculate p-value using a permutation test for the mutual
+  information function (uses scipy.permutation test)
+- Added option for calculating the p-values to the mi_pairwise function as well
+
 ## Version 0.2.9
 
 - Reverting breaking change in previous version, adding flag to modify behaviour

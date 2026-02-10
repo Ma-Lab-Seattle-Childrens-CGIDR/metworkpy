@@ -9,13 +9,15 @@ between a continuous and discrete distribution.
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Union
+from functools import partial
+from typing import Literal, Tuple, Union
 
 # External Imports
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree, distance_matrix
 from scipy.special import digamma
+from scipy import stats
 
 # local imports
 from metworkpy.utils._arguments import _parse_metric
@@ -29,12 +31,15 @@ def mutual_information(
     discrete_x: bool = False,
     discrete_y: bool = False,
     n_neighbors: int = 5,
+    calculate_pvalue: bool = False,
+    alternative: Literal["less", "greater", "two-sided"] = "greater",
+    permutations: int = 9999,
     jitter: Union[None, float] = None,
     jitter_seed: Union[None, int] = None,
     metric_x: Union[str, float] = "euclidean",
     metric_y: Union[str, float] = "euclidean",
-    truncate: bool = False,
-) -> float:
+    clip: bool = False,
+) -> Union[float, Tuple[float, float]]:
     """
     Parameters
     ----------
@@ -56,6 +61,13 @@ def mutual_information(
         Number of neighbors to use for computing mutual information.
         Will attempt to coerce into an integer. Must be at least 1.
         Default 5.
+    calculate_pvalue : bool
+         Whether to calculate a p-value for the mutual information using
+         a permutation test
+    alternative : 'less', 'greater', or 'two-sided'
+         The alternative to use, passed to SciPy's `permutation_test<https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html>`_
+    permutations : int
+         The number of permuatations to use when calculating the p-value
     jitter : Union[None, float, tuple[float,float]]
         Amount of noise to add to avoid ties. If None no noise is added.
         If a float, that is the standard deviation of the random noise
@@ -72,13 +84,14 @@ def mutual_information(
         Metric to use for computing distance between points in y, can be
         "Euclidean", "Manhattan", or "Chebyshev". Can also be a float
         representing the Minkowski p-norm.
-    truncate : bool
-        Whether to ensure the mutual information is positive
+    clip : bool
+        Whether to ensure the mutual information is non-negative
 
     Returns
     -------
-    float
-        The mutual information between x and y
+    float or tuple of float,float
+        The mutual information between x and y, or if calculate_pvalue is True,
+        a tuple of the mutual information and the p-value
 
     Notes
     -----
@@ -132,38 +145,102 @@ def mutual_information(
             discrete_y=discrete_y,
         )
     mi = None
+    pvalue = None
     if discrete_x ^ discrete_y:  # if one of x or y is discrete
         if discrete_x:
-            mi = _mi_disc_cont(
-                continuous=y,
-                discrete=x,
-                n_neighbors=n_neighbors,
-                metric_cont=metric_y,
-            )
+            if not calculate_pvalue:
+                mi = _mi_disc_cont(
+                    discrete=x,
+                    continuous=y,
+                    n_neighbors=n_neighbors,
+                    metric_cont=metric_y,
+                    clip=clip,
+                )
+            else:
+                permutation_res = stats.permutation_test(
+                    [x, y],
+                    partial(
+                        _mi_disc_cont,
+                        n_neighbors=n_neighbors,
+                        metric_cont=metric_y,
+                        clip=clip,
+                    ),
+                    permutation_type="pairings",
+                    alternative=alternative,
+                    axis=0,
+                )
+                mi = permutation_res.statistic
+                pvalue = permutation_res.pvalue
         if discrete_y:
-            mi = _mi_disc_cont(
-                continuous=x,
-                discrete=y,
-                n_neighbors=n_neighbors,
-                metric_cont=metric_x,
-            )
+            if not calculate_pvalue:
+                mi = _mi_disc_cont(
+                    discrete=y,
+                    continuous=x,
+                    n_neighbors=n_neighbors,
+                    metric_cont=metric_x,
+                    clip=clip,
+                )
+            else:
+                permutation_res = stats.permutation_test(
+                    [y, x],
+                    partial(
+                        _mi_disc_cont,
+                        n_neighbors=n_neighbors,
+                        metric_cont=metric_y,
+                        clip=clip,
+                    ),
+                    permutation_type="pairings",
+                    alternative=alternative,
+                    axis=0,
+                )
+                mi = permutation_res.statistic
+                pvalue = permutation_res.pvalue
     elif not (discrete_x or discrete_y):  # if both are continuous
-        mi = _mi_cont_cont(
-            x=x,
-            y=y,
-            n_neighbors=n_neighbors,
-            metric_x=metric_x,
-            metric_y=metric_y,
-        )
+        if not calculate_pvalue:
+            mi = _mi_cont_cont(
+                x=x,
+                y=y,
+                n_neighbors=n_neighbors,
+                metric_x=metric_x,
+                metric_y=metric_y,
+                clip=clip,
+            )
+        else:
+            permutation_res = stats.permutation_test(
+                [x, y],
+                partial(
+                    _mi_cont_cont,
+                    n_neighbors=n_neighbors,
+                    metric_x=metric_x,
+                    metric_y=metric_y,
+                    clip=clip,
+                ),
+                permutation_type="pairings",
+                alternative=alternative,
+                axis=0,
+            )
+            mi = permutation_res.statistic
+            pvalue = permutation_res.pvalue
     elif discrete_x and discrete_y:
-        mi = _mi_disc_disc(x=x, y=y)
+        if not calculate_pvalue:
+            mi = _mi_disc_disc(x=x, y=y, clip=clip)
+        else:
+            permutation_res = stats.permutation_test(
+                [x, y],
+                partial(_mi_disc_disc, clip=clip),
+                permutation_type="pairings",
+                alternative=alternative,
+                axis=0,
+            )
+            mi = permutation_res.statistic
+            pvalue = permutation_res.pvalue
     else:
         raise ValueError(
             "Error with discrete_x and/or discrete_y parameters, both must be boolean."
         )
-    if truncate:
-        return max(mi, 0)
-    return mi
+    if not calculate_pvalue:
+        return mi
+    return mi, pvalue
 
 
 # endregion Main Mutual Information Function
@@ -177,6 +254,7 @@ def _mi_cont_cont(
     n_neighbors: int,
     metric_x: float,
     metric_y: float,
+    clip: bool = False,
 ):
     """Calculate the mutual information between two continuous distributions using the nearest neighbor method.
     Dispatches to either _mi_cont_cont_cheb_only, or _mi_cont_cont_gen depending on which is applicable (
@@ -198,6 +276,8 @@ def _mi_cont_cont(
     metric_y : float
         Metric to use for computing distance between points in y (must
         be `float>=1` representing the Minkowski p-norm)
+    clip : bool
+        Whether the return value should be forced to be non-negative
 
     Returns
     -------
@@ -208,9 +288,28 @@ def _mi_cont_cont(
     if ((metric_x == np.inf) and (metric_y == np.inf)) or (
         x.shape[1] == 1 and y.shape[1] == 1
     ):
-        return _mi_cont_cont_cheb_only(x=x, y=y, n_neighbors=n_neighbors)
-    return _mi_cont_cont_gen(
-        x=x, y=y, n_neighbors=n_neighbors, metric_x=metric_x, metric_y=metric_y
+        if not clip:
+            return _mi_cont_cont_cheb_only(x=x, y=y, n_neighbors=n_neighbors)
+        return max(
+            0.0, _mi_cont_cont_cheb_only(x=x, y=y, n_neighbors=n_neighbors)
+        )
+    if not clip:
+        return _mi_cont_cont_gen(
+            x=x,
+            y=y,
+            n_neighbors=n_neighbors,
+            metric_x=metric_x,
+            metric_y=metric_y,
+        )
+    return max(
+        0.0,
+        _mi_cont_cont_gen(
+            x=x,
+            y=y,
+            n_neighbors=n_neighbors,
+            metric_x=metric_x,
+            metric_y=metric_y,
+        ),
     )
 
 
@@ -335,6 +434,7 @@ def _mi_disc_cont(
     continuous: np.ndarray,
     n_neighbors: int,
     metric_cont: float = 2.0,
+    clip: bool = False,
     **kwargs,
 ) -> float:
     """Calculate the mutual information between a discrete and continuous distribution using the nearest neighbor method.
@@ -352,8 +452,8 @@ def _mi_disc_cont(
     metric_cont : float
         Metric to use for computing distance between points in y (must
         be `float>=1` representing Minkowski p-norm)
-    **kwargs
-        Arguments passed to KDTree
+    clip : bool
+        Whether the return value should be forced to be non-negative
 
     Returns
     -------
@@ -410,12 +510,22 @@ def _mi_disc_cont(
         )
         - 1
     )
-    return (
-        digamma(n_data_points)
-        - digamma(count_array).mean()
-        + digamma(n_neighbors)
-        - digamma(neighbors_within_radius).mean()
-    )  # See equation 2 of Ross, 2014
+    if not clip:
+        return (
+            digamma(n_data_points)
+            - digamma(count_array).mean()
+            + digamma(n_neighbors)
+            - digamma(neighbors_within_radius).mean()
+        )  # See equation 2 of Ross, 2014
+    return max(
+        0.0,
+        (
+            digamma(n_data_points)
+            - digamma(count_array).mean()
+            + digamma(n_neighbors)
+            - digamma(neighbors_within_radius).mean()
+        ),
+    )
 
 
 # endregion Continuous-Discrete MI
@@ -423,7 +533,7 @@ def _mi_disc_cont(
 # region Discrete-Discrete MI
 
 
-def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
+def _mi_disc_disc(x: np.ndarray, y: np.ndarray, clip: bool = False):
     """Calculate the mutual information between samples from two discrete distributions
 
     Parameters
@@ -434,6 +544,8 @@ def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
     y : np.ndarray
         Array representing the samples from a discrete distribution,
         should have shape (n_samples, 1)
+    clip : bool
+        Whether the return value should be forced to be non-negative
 
     Returns
     -------
@@ -460,7 +572,9 @@ def _mi_disc_disc(x: np.ndarray, y: np.ndarray):
             mi += (
                 joint * np.log(joint / (x_f * y_f))
             ).item()  # NOTE: Log is base e (i.e. natural)
-    return mi
+    if not clip:
+        return mi
+    return max(0.0, mi)
 
 
 # endregion Discrete-Discrete MI

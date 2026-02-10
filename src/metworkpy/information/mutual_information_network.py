@@ -5,7 +5,7 @@ Functions for computing the Mutual Information Network for a Metabolic Model"""
 from __future__ import annotations
 
 import itertools
-from typing import Optional, Tuple, TypeVar
+from typing import Literal, Optional, Tuple, TypeVar
 
 # External Imports
 import joblib  # type: ignore
@@ -85,6 +85,9 @@ def mi_network_adjacency_matrix(
 # region Pairwise Mutual Information
 def mi_pairwise(
     dataset: T,
+    calculate_pvalue: bool = False,
+    alternative: Literal["less", "greater", "two-sided"] = "greater",
+    permutations: int = 9999,
     cutoff: Optional[float] = None,
     cutoff_quantile: Optional[float] = None,
     processes: int = -1,
@@ -99,6 +102,13 @@ def mi_pairwise(
     dataset : ArrayLike or DataFrame or NDArray
         The dataset to calculate pairwise mutual information values for,
         should be a 2-dimensional array or Dataframe
+    calculate_pvalue : bool
+         Whether to calculate a p-value for the mutual information using
+         a permutation test
+    alternative : 'less', 'greater', or 'two-sided'
+         The alternative to use, passed to SciPy's `permutation_test<https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html>`_
+    permutations : int
+         The number of permuatations to use when calculating the p-value
     cutoff : float, optional
         Lower bound for mutual information, all values smaller than this are
         set to 0
@@ -115,21 +125,32 @@ def mi_pairwise(
 
     Returns
     -------
-    DataFrame or NDArray
+    DataFrame or NDArray or Tuple of DataFrame or NDArray
         The mutual information between every pair of columns in dataset. If dataset
         is a numpy NDArray or an Arraylike, will return a numpy NDArray. If dataset
-        is a pandas DataFrame, will return a pandas DataFrame.
+        is a pandas DataFrame, will return a pandas DataFrame. If calculate_pvalue
+        is True, will instead return a tuple of the appropriate array type,
+        with the first element being the mutual information array, and the second
+        being the p-values
 
     Notes
     -----
     The parallelization uses joblib, and so can be configured with joblib's parallel_config context manager
     """
+    # Add the keywords related to the p-value to the kwargs dict
+    kwargs["calculate_pvalue"] = calculate_pvalue
+    kwargs["alternative"] = alternative
+    kwargs["permutations"] = permutations
     if isinstance(dataset, pd.DataFrame):
         mi_result = pd.DataFrame(
             0.0, index=dataset.columns, columns=dataset.columns
         )
+        if calculate_pvalue:
+            pvalue_result = pd.DataFrame(
+                1.0, index=dataset.columns, columns=dataset.columns
+            )
         num_combinations = scipy.special.comb(dataset.shape[1], 2)
-        for idx1, idx2, mi in tqdm.tqdm(
+        for idx1, idx2, ret_value in tqdm.tqdm(
             joblib.Parallel(n_jobs=processes, return_as="generator")(
                 joblib.delayed(_mi_single_pair)(
                     dataset[i], dataset[j], i, j, **kwargs
@@ -139,8 +160,16 @@ def mi_pairwise(
             disable=not progress_bar,
             total=num_combinations,
         ):
-            mi_result.loc[idx1, idx2] = mi
-            mi_result.loc[idx2, idx1] = mi
+            if not calculate_pvalue:
+                mi = ret_value
+                mi_result.loc[idx1, idx2] = mi
+                mi_result.loc[idx2, idx1] = mi
+            else:
+                mi, pvalue = ret_value
+                mi_result.loc[idx1, idx2] = mi
+                mi_result.loc[idx2, idx1] = mi
+                pvalue_result.loc[idx1, idx2] = pvalue
+                pvalue_result.loc[idx2, idx1] = pvalue
         # Apply the cutoff if it exists
         if cutoff_quantile is not None:
             cutoff = np.quantile(
@@ -153,8 +182,10 @@ def mi_pairwise(
     else:
         dataset = np.array(dataset)  # Coerce arraylike into array
         mi_result = np.zeros((dataset.shape[1], dataset.shape[1]))
+        if calculate_pvalue:
+            pvalue_result = np.ones((dataset.shape[1], dataset.shape[1]))
         num_combinations = scipy.special.comb(dataset.shape[1], 2)
-        for idx1, idx2, mi in tqdm.tqdm(
+        for idx1, idx2, ret_value in tqdm.tqdm(
             joblib.Parallel(n_jobs=processes, return_as="generator")(
                 joblib.delayed(_mi_single_pair)(
                     dataset[:, i], dataset[:, j], i, j, **kwargs
@@ -164,8 +195,16 @@ def mi_pairwise(
             disable=not progress_bar,
             total=num_combinations,
         ):
-            mi_result[idx1, idx2] = mi
-            mi_result[idx2, idx1] = mi
+            if not calculate_pvalue:
+                mi = ret_value
+                mi_result[idx1, idx2] = mi
+                mi_result[idx2, idx1] = mi
+            else:
+                mi, pvalue = ret_value
+                mi_result[idx1, idx2] = mi
+                mi_result[idx2, idx1] = mi
+                pvalue_result[idx1, idx2] = pvalue
+                pvalue_result[idx2, idx1] = pvalue
         # Apply cutoff if necessary
         if cutoff_quantile is not None:
             cutoff = np.quantile(
@@ -175,7 +214,9 @@ def mi_pairwise(
             )
         if cutoff is not None:
             mi_result[mi_result < cutoff] = 0.0
-    return mi_result
+    if not calculate_pvalue:
+        return mi_result
+    return mi_result, pvalue_result
 
 
 U = TypeVar("U", int, str)
