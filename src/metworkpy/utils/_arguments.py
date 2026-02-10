@@ -101,7 +101,7 @@ def _match_abbr(word: str, *args, **kwargs) -> re.Pattern:
     return re.compile(pattern, *args, **kwargs)
 
 
-def _parse_metric(metric: Union[str, float]):
+def _parse_metric(metric: Union[str, float]) -> float:
     if isinstance(metric, int):
         metric = float(metric)
     if isinstance(metric, float):
@@ -130,3 +130,4 @@ def _parse_metric(metric: Union[str, float]):
         return 1.0
     if arg == "chebyshev":
         return np.inf
+    raise ValueError("Failed to parse metric!")
