@@ -9,6 +9,7 @@
 - Added option to calculate p-value using a permutation test for the mutual
   information function (uses scipy.permutation test)
 - Added option for calculating the p-values to the mi_pairwise function as well
+- Divergence functions can now return p-values using permutations tests
 
 ## Version 0.2.9
 
