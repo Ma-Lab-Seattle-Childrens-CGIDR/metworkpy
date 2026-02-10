@@ -144,6 +144,14 @@ def mutual_information(
             discrete_x=discrete_x,
             discrete_y=discrete_y,
         )
+    # Create a kwarg dict for the permutation tests
+    permutation_test_kwargs = {
+        "permutation_type": "pairings",
+        "n_resamples": permutations,
+        "alternative": alternative,
+        "axis": 0,
+    }
+
     mi = None
     pvalue = None
     if discrete_x ^ discrete_y:  # if one of x or y is discrete
@@ -165,9 +173,7 @@ def mutual_information(
                         metric_cont=metric_y,
                         clip=clip,
                     ),
-                    permutation_type="pairings",
-                    alternative=alternative,
-                    axis=0,
+                    **permutation_test_kwargs,
                 )
                 mi = permutation_res.statistic
                 pvalue = permutation_res.pvalue
@@ -189,9 +195,7 @@ def mutual_information(
                         metric_cont=metric_y,
                         clip=clip,
                     ),
-                    permutation_type="pairings",
-                    alternative=alternative,
-                    axis=0,
+                    **permutation_test_kwargs,
                 )
                 mi = permutation_res.statistic
                 pvalue = permutation_res.pvalue
@@ -215,9 +219,7 @@ def mutual_information(
                     metric_y=metric_y,
                     clip=clip,
                 ),
-                permutation_type="pairings",
-                alternative=alternative,
-                axis=0,
+                **permutation_test_kwargs,
             )
             mi = permutation_res.statistic
             pvalue = permutation_res.pvalue
@@ -228,9 +230,7 @@ def mutual_information(
             permutation_res = stats.permutation_test(
                 [x, y],
                 partial(_mi_disc_disc, clip=clip),
-                permutation_type="pairings",
-                alternative=alternative,
-                axis=0,
+                **permutation_test_kwargs,
             )
             mi = permutation_res.statistic
             pvalue = permutation_res.pvalue
