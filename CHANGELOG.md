@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.3.1
+
+- Refactored divergence array code to use joblib, and enable calculating
+  p-value. Additionally, the divergence array functions in KL and JS modules can
+  now take an axis argument specifying which axis to slice along.
+
 ## Version 0.3.0
 
 - Removed deprecated path function of importlib from example submodule
