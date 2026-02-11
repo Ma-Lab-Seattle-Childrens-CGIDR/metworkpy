@@ -4,130 +4,116 @@
 # Standard Library Imports
 from __future__ import annotations
 
-from functools import partial
-from multiprocessing import shared_memory, Pool, cpu_count
-from typing import Callable
+from multiprocessing import cpu_count
+from typing import Protocol, Tuple, Union
 
 # External Imports
+import joblib
 import numpy as np
 import pandas as pd
 
 # Local Imports
-from metworkpy.utils._arguments import _parse_metric
-from metworkpy.utils._parallel import _create_shared_memory_numpy_array
+from ._main_wrapper import DivergenceResult
+
+
+class DivergenceFunction(Protocol):
+    def __call__(
+        self,
+        p: np.typing.ArrayLike,
+        q: np.typing.ArrayLike,
+        **kwargs,
+    ) -> Union[float, DivergenceResult]: ...
+
+
+ArrayInput = Union[pd.DataFrame, np.ndarray]
+Array1D = Union[
+    pd.DataFrame,
+    np.ndarray[Tuple[int], np.dtype[Union[np.float32, np.float64]]],
+]
 
 
 def _divergence_array(
-    p: pd.DataFrame | np.ndarray,
-    q: pd.DataFrame | np.ndarray,
-    divergence_function: Callable[[np.ndarray, np.ndarray, int, float], float],
-    n_neighbors: int = 5,
-    metric: float | str = 2.0,
+    p: ArrayInput,
+    q: ArrayInput,
+    divergence_function: DivergenceFunction,
+    calculate_pvalue: bool = False,
+    # The axis to slice along (i.e. 1 represents calculating the divergence for every column)
+    axis: int = 1,
     processes: int = 1,
-) -> np.ndarray | pd.Series:
+    **kwargs,
+) -> Union[Array1D, Tuple[Array1D, Array1D]]:
     processes = min(processes, cpu_count())
-    if isinstance(p, pd.DataFrame):
-        p_array = p.to_numpy()
-    elif isinstance(p, np.ndarray):
-        p_array = p
+    # Check that if either p or q are DataFrames, they both are, and that
+    # their column indices align
+    if isinstance(p, pd.DataFrame) or isinstance(q, pd.DataFrame):
+        assert isinstance(p, pd.DataFrame) and isinstance(q, pd.DataFrame), (
+            "If p or q is a DataFrame, they both must be DataFrames"
+        )
+        if axis == 1:
+            assert p.columns.equals(q.columns), (
+                "p and q must have the same index along specified axis"
+            )
+        elif axis == 0:
+            assert p.index.equals(q.index), (
+                "p and q must have the same index along specified axis"
+            )
+        p_array, q_array = p.to_numpy(), q.to_numpy()
     else:
+        p_array, q_array = np.array(p), np.array(q)
+    if p_array.shape[axis] != q_array.shape[axis]:
         raise ValueError(
-            f"p is of an invalid type, expected numpy ndarray or "
-            f"pandas DataFrame but received {type(p)}"
+            f"p and q must have the same length along specified axis, but p has {p.shape[axis]} columns "
+            f"and q has {q.shape[axis]} columns"
         )
-    if isinstance(q, pd.DataFrame):
-        q_array = q.to_numpy()
-    elif isinstance(q, np.ndarray):
-        q_array = q
-    else:
-        raise ValueError(
-            f"q is of an invalid type, expected numpy ndarray or "
-            f"pandas DataFrame but received {type(q)}"
-        )
-    if p_array.shape[1] != q_array.shape[1]:
-        raise ValueError(
-            f"p and q must have the same number of columns, but p has {p.shape[1]} columns "
-            f"and q has {q.shape[1]} columns"
-        )
-    if (
-        p_array.shape[0] == 0
-        or q_array.shape[0] == 0
-        or p_array.shape[1] == 0
-        or q_array.shape[1] == 0
-    ):
+    if np.any(p_array.shape == 0) or (np.any(q_array.shape == 0)):
         raise ValueError(
             "All input array dimensions must be non-zero, but at least 1 dimension of the input arrays has a size of 0."
         )
-    metric = _parse_metric(metric=metric)
-    ncols = p_array.shape[1]
-    (
-        p_nrows,
-        p_ncols,
-        p_dtype,
-        p_shared_name,
-    ) = _create_shared_memory_numpy_array(p_array)
-    (
-        q_nrows,
-        q_ncols,
-        q_dtype,
-        q_shared_name,
-    ) = _create_shared_memory_numpy_array(q_array)
-    p_shm = shared_memory.SharedMemory(name=p_shared_name)
-    q_shm = shared_memory.SharedMemory(name=q_shared_name)
-    try:
-        divergence_array = np.zeros(ncols, dtype=float)
-        with Pool(processes=processes) as pool:
-            for col, div in pool.imap_unordered(
-                partial(
-                    _divergence_array_worker,
-                    divergence_function=divergence_function,
-                    p_nrows=p_nrows,
-                    p_ncols=p_ncols,
-                    p_dtype=p_dtype,
-                    p_shared_name=p_shared_name,
-                    q_nrows=q_nrows,
-                    q_ncols=q_ncols,
-                    q_dtype=q_dtype,
-                    q_shared_name=q_shared_name,
-                    n_neighbors=n_neighbors,
-                    metric=metric,
-                ),
-                range(ncols),
-                chunksize=ncols // processes,
-            ):
-                divergence_array[col] = div
-    finally:
-        p_shm.unlink()
-        q_shm.unlink()
+    divergence_result = np.zeros((p_array.shape[axis],))
+    if calculate_pvalue:
+        pvalue_result = np.zeros((p_array.shape[axis],))
+    # Add calculate p-value to the kwargs dict
+    kwargs["calculate_pvalue"] = calculate_pvalue
+    for i, res_value in joblib.Parallel(
+        n_jobs=processes, return_as="generator_unordered"
+    )(
+        joblib.delayed(_divergence_array_worker)(
+            index=i,
+            p=p,
+            q=q,
+            axis=axis,
+            divergence_function=divergence_function,
+            **kwargs,
+        )
+        for i in range(p_array.shape[axis])
+    ):
+        if not calculate_pvalue:
+            divergence_result[i] = res_value
+        else:
+            divergence, pvalue = res_value
+            divergence_result[i] = divergence
+            pvalue_result[i] = pvalue
     if isinstance(p, pd.DataFrame):
-        return pd.Series(divergence_array, index=p.columns)
-    if isinstance(q, pd.DataFrame):
-        return pd.Series(divergence_array, index=q.columns)
-    return divergence_array
+        if not calculate_pvalue:
+            return pd.DataFrame(divergence_result, index=p.columns)
+        return pd.DataFrame(divergence_result, index=p.columns), pd.DataFrame(
+            pvalue_result, index=p.columns
+        )
+    if not calculate_pvalue:
+        return divergence_result
+    return divergence_result, pvalue_result
 
 
 def _divergence_array_worker(
-    col: int,
-    divergence_function: Callable[[np.ndarray, np.ndarray, int, float], float],
-    p_nrows: int,
-    p_ncols: int,
-    p_dtype: np.dtype,
-    p_shared_name: str,
-    q_ncols: int,
-    q_nrows: int,
-    q_dtype: np.dtype,
-    q_shared_name: str,
-    n_neighbors: int = 5,
-    metric: float = 2.0,
-):
-    p_shm = shared_memory.SharedMemory(name=p_shared_name)
-    p_array = np.ndarray((p_nrows, p_ncols), dtype=p_dtype, buffer=p_shm.buf)
-    q_shm = shared_memory.SharedMemory(name=q_shared_name)
-    q_array = np.ndarray((q_nrows, q_ncols), dtype=q_dtype, buffer=q_shm.buf)
-
-    # Get the two columns
-    p = p_array[:, (col,)]
-    q = q_array[:, (col,)]
-
-    # Calculate the JS Divergence
-    return col, divergence_function(p, q, n_neighbors, metric)
+    index: int,
+    p: np.typing.ArrayLike,
+    q: np.typing.ArrayLike,
+    axis: int,
+    divergence_function: DivergenceFunction,
+    **kwargs,
+) -> Union[Tuple[int, float], Tuple[int, float, float]]:
+    return index, divergence_function(
+        p=p.take(indices=index, axis=axis),
+        q=q.take(indices=index, axis=axis),
+        **kwargs,
+    )

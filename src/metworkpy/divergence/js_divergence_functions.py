@@ -3,11 +3,10 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Literal, Optional, Union
+from typing import Literal, Optional, Tuple, Union
 
 # External Imports
 import numpy as np
-import pandas as pd
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
 from scipy.spatial.distance import jensenshannon
@@ -18,7 +17,11 @@ from metworkpy.divergence._main_wrapper import (
     _wrap_divergence_functions,
     DivergenceResult,
 )
-from metworkpy.divergence._pairwise_divergence import _divergence_array
+from metworkpy.divergence._pairwise_divergence import (
+    _divergence_array,
+    ArrayInput,
+    Array1D,
+)
 
 
 # region Main Function
@@ -106,53 +109,57 @@ def js_divergence(
 
 
 def js_divergence_array(
-    p: pd.DataFrame | np.ndarray,
-    q: pd.DataFrame | np.ndarray,
-    n_neighbors: int = 5,
-    metric: float | str = 2.0,
+    p: ArrayInput,
+    q: ArrayInput,
+    axis: int = 1,
     processes: int = 1,
-) -> np.ndarray | pd.Series:
-    """Calculate the Jensen-Shannon divergence between the columns in two arrays using the
-    nearest neighbors method.
+    **kwargs,
+) -> Union[Array1D, Tuple[Array1D, Array1D]]:
+    """Calculate the Jensen-Shannon divergence between arrays along the
+    specified axis.
 
     Parameters
     ----------
-    p : pd.DataFrame | np.ndarray
-        Flux sample array, with columns representing different reactions
-        and rows representing different samples. Should have same number
-        of columns as q.
-    q : pd.DataFrame | np.ndarray
-        Flux sample array, with columns representing different reactions
-        and rows representing different samples. Should have same number
-        of columns as p.
-    n_neighbors : int
-        Number of neighbors to use when estimating divergence
-    metric : float | str
-        Metric to use for computing distance between points in p and q,
-        can be \"Euclidean\", \"Manhattan\", or \"Chebyshev\". Can also
-        be a float representing the Minkowski p-norm.
+    p : ArrayInput
+        Sample array, where slices along the specified axis represent
+        the distributions to calculate the divergence between.
+    q : ArrayInput
+        Sample array, where slices along the specified axis represent
+        the distributions to calculate the divergence between.
+    axis : int, default=1
+        Axis to slice along to get the arrays representing samples from
+        the distributions to calculate the divergence between. For example,
+        axis=1 specified that 2-dimensional the p and q arrays will be sliced
+        along the columns. The size of p and q along this axis must match.
     processes : int
         Number of processes to use when calculating the divergence
         (default 1)
+    kwargs
+        Keyword arguments are passed to the `js_divergence` function
 
     Returns
     -------
-    np.ndarray | pd.DataFrame
-        Array with length equal to the number of columns in p and q, the
-        ith value representing the divergence between the ith column of
-        p and the ith column of q. If both p and q are numpy ndarrays,
+    Array1D or Tuple of Array1D, Array1D
+        Array with length equal to the shape along the axis in p and q, the
+        ith value representing the divergence between the ith slice along
+        specified axis of p and q. f both p and q are numpy ndarrays,
         this returns a ndarray with shape (ncols,). If either p or q are
         pandas DataFrames then returns a pandas Series with index the
         same as the columns in the DataFrame (p takes priority if the
         column names differ).
+
+    Notes
+    -----
+        If either p or q are pandas DataFrames, they both must be and their
+        indices along the specified axis must be the same
     """
     return _divergence_array(
         p=p,
         q=q,
-        divergence_function=_js_cont,
-        n_neighbors=n_neighbors,
-        metric=metric,
+        divergence_function=js_divergence,  # type: ignore
+        axis=axis,
         processes=processes,
+        **kwargs,
     )
 
 
