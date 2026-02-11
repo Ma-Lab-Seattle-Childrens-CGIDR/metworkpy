@@ -223,6 +223,16 @@ class TestMainMI(unittest.TestCase):
             np.isclose(mi_2d_2d_0_3_0_6_jitter, mi_2d_2d_0_3_0_6, rtol=1e-7)
         )
 
+    def test_pvalue(self):
+        stat, pvalue = mi.mutual_information(
+            x=self.norm_2d_0_3_sample_1000[:, 0].reshape(-1, 1),
+            y=self.norm_2d_0_3_sample_1000[:, 1].reshape(-1, 1),
+            n_neighbors=3,
+            metric_x="cheb",
+            metric_y="cheb",
+            calculate_pvalue=True,
+        )
+
 
 class TestContCont(unittest.TestCase):
     @classmethod

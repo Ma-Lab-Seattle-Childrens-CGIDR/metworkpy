@@ -243,7 +243,7 @@ V = TypeVar("V", int, str)
 
 def _mi_single_pair(
     item1: ArrayLike, item2: ArrayLike, idx1: U, idx2: V, **kwargs
-) -> Tuple[U, V, float]:
+) -> Tuple[U, V, Union[float, Tuple[float, float]]]:
     """
     Calculate the mutual information for a single pair of features
 
@@ -255,7 +255,7 @@ def _mi_single_pair(
         The index of pair for which the mutual information is being calculated (just passed through
         but simplified the mi_pairwise function)
     kwargs
-        Keyword arguments passed through to the mutual_information_function
+        Keyword arguments passed through to the mutual_information function
 
     Returns
     -------
