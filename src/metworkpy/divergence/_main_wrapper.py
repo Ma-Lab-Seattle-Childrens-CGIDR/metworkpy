@@ -30,8 +30,8 @@ from metworkpy.utils._jitter import _jitter_single
 class ContinuousDivergenceFunction(Protocol):
     def __call__(
         self,
-        p: NDArray[Union[float]],
-        q: NDArray[Union[float]],
+        p: NDArray[float],
+        q: NDArray[float],
         n_neighbors: int,
         metric: float,
     ) -> float: ...
