@@ -624,6 +624,84 @@ class TestCreateNetwork(unittest.TestCase):
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 50)
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 50)
 
+    def test_bipartite(self):
+        textbook_model = cobra.io.load_model(
+            "textbook"
+        )  # ecoli core metabolism
+        # Test for not directed, not weighted
+        textbook_network = create_metabolic_network(
+            model=textbook_model, weighted=False, directed=False
+        )
+        self.assertTrue(nx.is_bipartite(textbook_network))
+        self.assertTrue(
+            nx.algorithms.bipartite.is_bipartite_node_set(
+                textbook_network, textbook_model.reactions.list_attr("id")
+            )
+        )
+        self.assertTrue(
+            nx.algorithms.bipartite.is_bipartite_node_set(
+                textbook_network, textbook_model.metabolites.list_attr("id")
+            )
+        )
+        # Test for directed, not weighted
+        textbook_network = create_metabolic_network(
+            model=textbook_model, weighted=False, directed=True
+        )
+        self.assertTrue(nx.is_bipartite(textbook_network))
+        # Can't check bipartite nodes for directed graphs
+        # Test for not directed, weighted by stoichiometry
+        textbook_network = create_metabolic_network(
+            model=textbook_model,
+            weighted=True,
+            directed=False,
+            weight_by="stoichiometry",
+        )
+        self.assertTrue(nx.is_bipartite(textbook_network))
+        self.assertTrue(
+            nx.algorithms.bipartite.is_bipartite_node_set(
+                textbook_network, textbook_model.reactions.list_attr("id")
+            )
+        )
+        self.assertTrue(
+            nx.algorithms.bipartite.is_bipartite_node_set(
+                textbook_network, textbook_model.metabolites.list_attr("id")
+            )
+        )
+        # Test for not directed, weighted by flux
+        textbook_network = create_metabolic_network(
+            model=textbook_model,
+            weighted=True,
+            directed=False,
+            weight_by="flux",
+        )
+        self.assertTrue(nx.is_bipartite(textbook_network))
+        self.assertTrue(
+            nx.algorithms.bipartite.is_bipartite_node_set(
+                textbook_network, textbook_model.reactions.list_attr("id")
+            )
+        )
+        self.assertTrue(
+            nx.algorithms.bipartite.is_bipartite_node_set(
+                textbook_network, textbook_model.metabolites.list_attr("id")
+            )
+        )
+        # Test for directed, weighted by stoichiometry
+        textbook_network = create_metabolic_network(
+            model=textbook_model,
+            weighted=True,
+            directed=True,
+            weight_by="stoichiometry",
+        )
+        self.assertTrue(nx.is_bipartite(textbook_network))
+        # Test for directed, weighted by stoichiometry
+        textbook_network = create_metabolic_network(
+            model=textbook_model,
+            weighted=True,
+            directed=True,
+            weight_by="flux",
+        )
+        self.assertTrue(nx.is_bipartite(textbook_network))
+
 
 # endregion Metabolic Network
 
