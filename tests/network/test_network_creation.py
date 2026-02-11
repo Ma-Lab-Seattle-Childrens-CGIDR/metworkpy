@@ -7,21 +7,18 @@ import unittest
 # External Imports
 import cobra
 from cobra.core.configuration import Configuration
-from cobra.flux_analysis import flux_variability_analysis
 import networkx as nx
-import numpy as np
 import pandas as pd
-from scipy.sparse import csc_array, csr_array
 
 # Local Imports
 from metworkpy.utils.models import read_model
 from metworkpy.network.network_construction import (
-    _adj_mat_ud_uw,
-    _adj_mat_d_uw,
-    _adj_mat_d_w_flux,
-    _adj_mat_d_w_stoichiometry,
-    _adj_mat_ud_w_flux,
-    _adj_mat_ud_w_stoichiometry,
+    _create_adj_matrix_d_uw,
+    _create_adj_matrix_ud_uw,
+    _create_adj_matrix_d_w_flux,
+    _create_adj_matrix_ud_w_flux,
+    _create_adj_matrix_d_w_stoich,
+    _create_adj_matrix_ud_w_stoich,
     create_adjacency_matrix,
     create_metabolic_network,
     create_mutual_information_network,
@@ -45,19 +42,44 @@ class TestAdjMatUdUw(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
-        cls.adj_mat = _adj_mat_ud_uw(cls.test_model)
-        cls.tiny_adj_mat = _adj_mat_ud_uw(cls.tiny_model)
-        cls.tiny_known = csr_array(
+        cls.adj_mat = _create_adj_matrix_ud_uw(cls.test_model, threshold=0.0)
+        cls.tiny_adj_mat = _create_adj_matrix_ud_uw(
+            cls.tiny_model, threshold=0.0
+        )
+        cls.tiny_known = pd.DataFrame(
             [
-                # A B C R_A_B_C R_A_ex R_B_ex R_C_ex
-                [0, 0, 0, 1, 1, 0, 0],  # A
-                [0, 0, 0, 1, 0, 1, 0],  # B
-                [0, 0, 0, 1, 0, 0, 1],  # C
-                [1, 1, 1, 0, 0, 0, 0],  # R_A_B_C
-                [1, 0, 0, 0, 0, 0, 0],  # R_A_ex
-                [0, 1, 0, 0, 0, 0, 0],  # R_B_ex
-                [0, 0, 1, 0, 0, 0, 0],  # R_C_ex
-            ]
+                #  R_A_B_C R_A_ex R_B_ex R_C_ex A B C
+                [0, 0, 0, 0, 1, 1, 1],  # R_A_B_C
+                [0, 0, 0, 0, 1, 0, 0],  # R_A_ex
+                [0, 0, 0, 0, 0, 1, 0],  # R_B_ex
+                [0, 0, 0, 0, 0, 0, 1],  # R_C_ex
+                [1, 1, 0, 0, 0, 0, 0],  # A
+                [1, 0, 1, 0, 0, 0, 0],  # B
+                [1, 0, 0, 1, 0, 0, 0],  # C
+            ],
+            index=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            columns=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            dtype=bool,
         )
 
     def test_shape(self):
@@ -68,22 +90,11 @@ class TestAdjMatUdUw(unittest.TestCase):
             (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
-    def test_data(self):
-        data = self.adj_mat.data
-        # Should all be 1 (or very close)
-        self.assertTrue(np.isclose(data, 1.0).all())
-        # Should all be positive
-        self.assertTrue((data >= 0.0).all())
-
     def test_type(self):
-        self.assertIsInstance(self.adj_mat, csr_array)
+        self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
-        self.assertTrue(
-            np.isclose(
-                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
-            ).all()
-        )
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
 class TestAdjMatDUw(unittest.TestCase):
@@ -95,19 +106,42 @@ class TestAdjMatDUw(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
-        cls.adj_mat = _adj_mat_d_uw(cls.test_model)
-        cls.tiny_adj_mat = _adj_mat_d_uw(cls.tiny_model)
-        cls.tiny_known = csr_array(
+        cls.adj_mat = _create_adj_matrix_d_uw(cls.test_model, threshold=0)
+        cls.tiny_adj_mat = _create_adj_matrix_d_uw(cls.tiny_model, threshold=0)
+        cls.tiny_known = pd.DataFrame(
             [
-                # A B C R_A_B_C R_A_ex R_B_ex R_C_ex
-                [0, 0, 0, 1, 1, 0, 0],  # A
-                [0, 0, 0, 1, 0, 1, 0],  # B
-                [0, 0, 0, 1, 0, 0, 1],  # C
-                [1, 1, 1, 0, 0, 0, 0],  # R_A_B_C
-                [1, 0, 0, 0, 0, 0, 0],  # R_A_ex
-                [0, 1, 0, 0, 0, 0, 0],  # R_B_ex
+                #  R_A_B_C R_A_ex R_B_ex R_C_ex A B C
+                [0, 0, 0, 0, 1, 1, 1],  # R_A_B_C
+                [0, 0, 0, 0, 1, 0, 0],  # R_A_ex
+                [0, 0, 0, 0, 0, 1, 0],  # R_B_ex
                 [0, 0, 0, 0, 0, 0, 0],  # R_C_ex
-            ]
+                [1, 1, 0, 0, 0, 0, 0],  # A
+                [1, 0, 1, 0, 0, 0, 0],  # B
+                [1, 0, 0, 1, 0, 0, 0],  # C
+            ],
+            index=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            columns=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            dtype=bool,
         )
 
     def test_shape(self):
@@ -118,22 +152,11 @@ class TestAdjMatDUw(unittest.TestCase):
             (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
-    def test_data(self):
-        data = self.adj_mat.data
-        # Should all be 1 (or very close)
-        self.assertTrue(np.isclose(data, 1.0).all())
-        # Should all be positive
-        self.assertTrue((data >= 0.0).all())
-
     def test_type(self):
-        self.assertIsInstance(self.adj_mat, csr_array)
+        self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
-        self.assertTrue(
-            np.isclose(
-                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
-            ).all()
-        )
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
 class TestAdjMatDWFlux(unittest.TestCase):
@@ -144,33 +167,49 @@ class TestAdjMatDWFlux(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
-        fva = flux_variability_analysis(model=cls.test_model)
-        rxn_max = csc_array(fva["maximum"].values.reshape(-1, 1))
-        rxn_min = csc_array(fva["minimum"].values.reshape(-1, 1))
 
-        cls.adj_mat = _adj_mat_d_w_flux(
-            cls.test_model, rxn_bounds=(rxn_min, rxn_max)
+        cls.adj_mat = _create_adj_matrix_d_w_flux(
+            cls.test_model, threshold=0.0
         )
 
-        fva = flux_variability_analysis(model=cls.tiny_model)
-        rxn_max = csc_array(fva["maximum"].values.reshape(-1, 1))
-        rxn_min = csc_array(fva["minimum"].values.reshape(-1, 1))
-
-        cls.tiny_adj_mat = _adj_mat_d_w_flux(
-            cls.tiny_model, rxn_bounds=(rxn_min, rxn_max)
+        cls.tiny_adj_mat = _create_adj_matrix_d_w_flux(
+            cls.tiny_model, threshold=0.0
         )
 
-        cls.tiny_known = csr_array(
+        cls.tiny_known = pd.DataFrame(
             [
-                # A B C R_A_B_C R_A_ex R_B_ex R_C_ex
-                [0, 0, 0, 50, 0, 0, 0],  # A
-                [0, 0, 0, 50, 0, 0, 0],  # B
-                [0, 0, 0, 0, 0, 0, 50],  # C
-                [0, 0, 50, 0, 0, 0, 0],  # R_A_B_C
-                [50, 0, 0, 0, 0, 0, 0],  # R_A_ex
-                [0, 50, 0, 0, 0, 0, 0],  # R_B_ex
+                #  R_A_B_C R_A_ex R_B_ex R_C_ex A B C
+                [0, 0, 0, 0, 0, 0, 50],  # R_A_B_C
+                [0, 0, 0, 0, 50, 0, 0],  # R_A_ex
+                [0, 0, 0, 0, 0, 50, 0],  # R_B_ex
                 [0, 0, 0, 0, 0, 0, 0],  # R_C_ex
-            ]
+                [50, 0, 0, 0, 0, 0, 0],  # A
+                [50, 0, 0, 0, 0, 0, 0],  # B
+                [0, 0, 0, 50, 0, 0, 0],  # C
+            ],
+            index=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            columns=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            dtype=float,
         )
 
     def test_shape(self):
@@ -181,22 +220,11 @@ class TestAdjMatDWFlux(unittest.TestCase):
             (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
-    def test_data(self):
-        data = self.adj_mat.data
-        # Should all be 1 (or very close)
-        self.assertFalse(np.isclose(data, 1.0).all())
-        # Should all be positive
-        self.assertTrue((data >= 0.0).all())
-
     def test_type(self):
-        self.assertIsInstance(self.adj_mat, csr_array)
+        self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
-        self.assertTrue(
-            np.isclose(
-                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
-            ).all()
-        )
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
 class TestAdjMatDWStoichiometry(unittest.TestCase):
@@ -208,19 +236,46 @@ class TestAdjMatDWStoichiometry(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
-        cls.adj_mat = _adj_mat_d_w_stoichiometry(cls.test_model)
-        cls.tiny_adj_mat = _adj_mat_d_w_stoichiometry(cls.tiny_model)
-        cls.tiny_known = csr_array(
+        cls.adj_mat = _create_adj_matrix_d_w_stoich(
+            cls.test_model, threshold=0.0
+        )
+        cls.tiny_adj_mat = _create_adj_matrix_d_w_stoich(
+            cls.tiny_model, threshold=0.0
+        )
+        cls.tiny_known = pd.DataFrame(
             [
-                # A B C R_A_B_C R_A_ex R_B_ex R_C_ex
-                [0, 0, 0, 1, 1, 0, 0],  # A
-                [0, 0, 0, 1, 0, 1, 0],  # B
-                [0, 0, 0, 1, 0, 0, 1],  # C
-                [1, 1, 1, 0, 0, 0, 0],  # R_A_B_C
-                [1, 0, 0, 0, 0, 0, 0],  # R_A_ex
-                [0, 1, 0, 0, 0, 0, 0],  # R_B_ex
+                #  R_A_B_C R_A_ex R_B_ex R_C_ex A B C
+                [0, 0, 0, 0, 1, 1, 1],  # R_A_B_C
+                [0, 0, 0, 0, 1, 0, 0],  # R_A_ex
+                [0, 0, 0, 0, 0, 1, 0],  # R_B_ex
                 [0, 0, 0, 0, 0, 0, 0],  # R_C_ex
-            ]
+                [1, 1, 0, 0, 0, 0, 0],  # A
+                [1, 0, 1, 0, 0, 0, 0],  # B
+                [1, 0, 0, 1, 0, 0, 0],  # C
+            ],
+            index=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            columns=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            dtype=float,
         )
 
     def test_shape(self):
@@ -231,22 +286,11 @@ class TestAdjMatDWStoichiometry(unittest.TestCase):
             (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
-    def test_data(self):
-        data = self.adj_mat.data
-        # Should all be 1 (or very close)
-        self.assertTrue(np.isclose(data, 1.0).all())
-        # Should all be positive
-        self.assertTrue((data >= 0.0).all())
-
     def test_type(self):
-        self.assertIsInstance(self.adj_mat, csr_array)
+        self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
-        self.assertTrue(
-            np.isclose(
-                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
-            ).all()
-        )
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
 class TestAdjMatUdWFlux(unittest.TestCase):
@@ -257,33 +301,49 @@ class TestAdjMatUdWFlux(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
-        fva = flux_variability_analysis(model=cls.test_model)
-        rxn_max = csc_array(fva["maximum"].values.reshape(-1, 1))
-        rxn_min = csc_array(fva["minimum"].values.reshape(-1, 1))
 
-        cls.adj_mat = _adj_mat_ud_w_flux(
-            cls.test_model, rxn_bounds=(rxn_min, rxn_max)
+        cls.adj_mat = _create_adj_matrix_ud_w_flux(
+            cls.test_model, threshold=0.0
         )
 
-        fva = flux_variability_analysis(model=cls.tiny_model)
-        rxn_max = csc_array(fva["maximum"].values.reshape(-1, 1))
-        rxn_min = csc_array(fva["minimum"].values.reshape(-1, 1))
-
-        cls.tiny_adj_mat = _adj_mat_ud_w_flux(
-            cls.tiny_model, rxn_bounds=(rxn_min, rxn_max)
+        cls.tiny_adj_mat = _create_adj_matrix_ud_w_flux(
+            cls.tiny_model, threshold=0.0
         )
 
-        cls.tiny_known = csr_array(
+        cls.tiny_known = pd.DataFrame(
             [
-                # A B C R_A_B_C R_A_ex R_B_ex R_C_ex
-                [0, 0, 0, 50, 50, 0, 0],  # A
-                [0, 0, 0, 50, 0, 50, 0],  # B
-                [0, 0, 0, 50, 0, 0, 50],  # C
-                [50, 50, 50, 0, 0, 0, 0],  # R_A_B_C
-                [50, 0, 0, 0, 0, 0, 0],  # R_A_ex
-                [0, 50, 0, 0, 0, 0, 0],  # R_B_ex
-                [0, 0, 50, 0, 0, 0, 0],  # R_C_ex
-            ]
+                #  R_A_B_C R_A_ex R_B_ex R_C_ex A B C
+                [0, 0, 0, 0, 50, 50, 50],  # R_A_B_C
+                [0, 0, 0, 0, 50, 0, 0],  # R_A_ex
+                [0, 0, 0, 0, 0, 50, 0],  # R_B_ex
+                [0, 0, 0, 0, 0, 0, 50],  # R_C_ex
+                [50, 50, 0, 0, 0, 0, 0],  # A
+                [50, 0, 50, 0, 0, 0, 0],  # B
+                [50, 0, 0, 50, 0, 0, 0],  # C
+            ],
+            index=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            columns=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            dtype=float,
         )
 
     def test_shape(self):
@@ -294,22 +354,11 @@ class TestAdjMatUdWFlux(unittest.TestCase):
             (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
-    def test_data(self):
-        data = self.adj_mat.data
-        # Should all be 1 (or very close)
-        self.assertFalse(np.isclose(data, 1.0).all())
-        # Should all be positive
-        self.assertTrue((data >= 0.0).all())
-
     def test_type(self):
-        self.assertIsInstance(self.adj_mat, csr_array)
+        self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
-        self.assertTrue(
-            np.isclose(
-                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
-            ).all()
-        )
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
 class TestAdjMatUdWStoichiometry(unittest.TestCase):
@@ -320,19 +369,46 @@ class TestAdjMatUdWStoichiometry(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
-        cls.adj_mat = _adj_mat_ud_w_stoichiometry(cls.test_model)
-        cls.tiny_adj_mat = _adj_mat_ud_w_stoichiometry(cls.tiny_model)
-        cls.tiny_known = csr_array(
+        cls.adj_mat = _create_adj_matrix_ud_w_stoich(
+            cls.test_model, threshold=0.0
+        )
+        cls.tiny_adj_mat = _create_adj_matrix_ud_w_stoich(
+            cls.tiny_model, threshold=0.0
+        )
+        cls.tiny_known = pd.DataFrame(
             [
-                # A B C R_A_B_C R_A_ex R_B_ex R_C_ex
-                [0, 0, 0, 1, 1, 0, 0],  # A
-                [0, 0, 0, 1, 0, 1, 0],  # B
-                [0, 0, 0, 1, 0, 0, 1],  # C
-                [1, 1, 1, 0, 0, 0, 0],  # R_A_B_C
-                [1, 0, 0, 0, 0, 0, 0],  # R_A_ex
-                [0, 1, 0, 0, 0, 0, 0],  # R_B_ex
-                [0, 0, 1, 0, 0, 0, 0],  # R_C_ex
-            ]
+                #  R_A_B_C R_A_ex R_B_ex R_C_ex A B C
+                [0, 0, 0, 0, 1, 1, 1],  # R_A_B_C
+                [0, 0, 0, 0, 1, 0, 0],  # R_A_ex
+                [0, 0, 0, 0, 0, 1, 0],  # R_B_ex
+                [0, 0, 0, 0, 0, 0, 1],  # R_C_ex
+                [1, 1, 0, 0, 0, 0, 0],  # A
+                [1, 0, 1, 0, 0, 0, 0],  # B
+                [1, 0, 0, 1, 0, 0, 0],  # C
+            ],
+            index=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            columns=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            dtype=float,
         )
 
     def test_shape(self):
@@ -343,22 +419,11 @@ class TestAdjMatUdWStoichiometry(unittest.TestCase):
             (num_rxns + num_metabolites, num_rxns + num_metabolites),
         )
 
-    def test_data(self):
-        data = self.adj_mat.data
-        # Should all be 1 (or very close)
-        self.assertTrue(np.isclose(data, 1.0).all())
-        # Should all be positive
-        self.assertTrue((data >= 0.0).all())
-
     def test_type(self):
-        self.assertIsInstance(self.adj_mat, csr_array)
+        self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
-        self.assertTrue(
-            np.isclose(
-                self.tiny_adj_mat.toarray(), self.tiny_known.toarray()
-            ).all()
-        )
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
 class TestCreateAdjacencyMatrix(unittest.TestCase):
@@ -369,134 +434,80 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
-        fva = flux_variability_analysis(model=cls.test_model)
-        rxn_max = csc_array(fva["maximum"].values.reshape(-1, 1))
-        rxn_min = csc_array(fva["minimum"].values.reshape(-1, 1))
-        cls.test_model_rxn_bounds = (rxn_min, rxn_max)
-
-        fva = flux_variability_analysis(model=cls.tiny_model)
-        rxn_max = csc_array(fva["maximum"].values.reshape(-1, 1))
-        rxn_min = csc_array(fva["minimum"].values.reshape(-1, 1))
-        cls.tiny_model_rxn_bounds = (rxn_min, rxn_max)
 
     def test_undirected_unweighted(self):
-        adj_mat, _, _ = create_adjacency_matrix(
+        adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=False,
             weighted=False,
-            out_format="csr",
         )
-        adj_mat_known = _adj_mat_ud_uw(model=self.test_model)
-        self.assertTrue(
-            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
+        adj_mat_known = _create_adj_matrix_ud_uw(
+            model=self.test_model, threshold=0.0
         )
+        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
 
     def test_directed_unweighted(self):
-        adj_mat, _, _ = create_adjacency_matrix(
+        adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=True,
             weighted=False,
-            out_format="csr",
         )
-        adj_mat_known = _adj_mat_d_uw(model=self.test_model)
-        self.assertTrue(
-            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
+        adj_mat_known = _create_adj_matrix_d_uw(
+            model=self.test_model, threshold=0.0
         )
+        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
 
     def test_directed_weighted_flux(self):
-        adj_mat, _, _ = create_adjacency_matrix(
+        adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=True,
             weighted=True,
             weight_by="flux",
-            out_format="csr",
+            threshold=0.0,
         )
-        adj_mat_known = _adj_mat_d_w_flux(
-            model=self.test_model, rxn_bounds=self.test_model_rxn_bounds
+        adj_mat_known = _create_adj_matrix_d_w_flux(
+            model=self.test_model, threshold=0.0
         )
-        self.assertTrue(
-            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
-        )
+        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
 
     def test_directed_weighted_stoichiometry(self):
-        adj_mat, _, _ = create_adjacency_matrix(
+        adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=True,
             weighted=True,
             weight_by="stoichiometry",
-            out_format="csr",
+            threshold=0.0,
         )
-        adj_mat_known = _adj_mat_d_w_stoichiometry(model=self.test_model)
-        self.assertTrue(
-            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
+        adj_mat_known = _create_adj_matrix_d_w_stoich(
+            model=self.test_model, threshold=0.0
         )
+        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
 
     def test_undirected_weighted_flux(self):
-        adj_mat, _, _ = create_adjacency_matrix(
+        adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=False,
             weighted=True,
             weight_by="flux",
-            out_format="csr",
+            threshold=0.0,
         )
-        adj_mat_known = _adj_mat_ud_w_flux(
-            model=self.test_model, rxn_bounds=self.test_model_rxn_bounds
+        adj_mat_known = _create_adj_matrix_ud_w_flux(
+            model=self.test_model, threshold=0.0
         )
-        self.assertTrue(
-            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
-        )
+        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
 
     def test_undirected_weighted_stoichiometry(self):
-        adj_mat, _, _ = create_adjacency_matrix(
+        adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=False,
             weighted=True,
             weight_by="stoichiometry",
-            out_format="csr",
+            threshold=0.0,
         )
-        adj_mat_known = _adj_mat_ud_w_stoichiometry(model=self.test_model)
-        self.assertTrue(
-            np.isclose(adj_mat.toarray(), adj_mat_known.toarray()).all()
+        adj_mat_known = _create_adj_matrix_ud_w_stoich(
+            model=self.test_model, threshold=0.0
         )
-
-    def test_out_format(self):
-        for out_form in ["dok", "lil", "csc", "csr"]:
-            adj_mat, _, _ = create_adjacency_matrix(
-                model=self.test_model,
-                directed=False,
-                weighted=False,
-                out_format=out_form,
-            )
-            self.assertEqual(out_form, adj_mat.format)
-        adj_mat, _, _ = create_adjacency_matrix(
-            model=self.test_model,
-            directed=False,
-            weighted=False,
-            out_format="frame",
-        )
-        self.assertIsInstance(adj_mat, pd.DataFrame)
-
-    def test_loopless(self):
-        adj_mat_loopless, _, _ = create_adjacency_matrix(
-            model=self.tiny_model,
-            directed=True,
-            weighted=True,
-            weight_by="flux",
-            out_format="csr",
-            loopless=True,
-        )
-        # Since there are no loops, should be the same
-        adj_mat, _, _ = create_adjacency_matrix(
-            model=self.tiny_model,
-            directed=True,
-            weighted=True,
-            weight_by="flux",
-            out_format="csr",
-            loopless=False,
-        )
-        self.assertTrue(
-            np.isclose(adj_mat.toarray(), adj_mat_loopless.toarray()).all()
-        )
+        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
 
 
 class TestCreateNetwork(unittest.TestCase):
