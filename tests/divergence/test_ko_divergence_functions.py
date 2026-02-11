@@ -3,15 +3,14 @@
 import pathlib
 import unittest
 
-import metworkpy.utils.models
 # External Imports
 
 # Local Imports
 from metworkpy.divergence.ko_divergence_functions import (
     ko_divergence,
-    _parse_divergence_method,
     _convert_target_network,
 )
+import metworkpy.utils
 from metworkpy.utils.models import read_model
 
 
@@ -35,18 +34,6 @@ class TestHelperFunctions(unittest.TestCase):
         ):
             _ = _convert_target_network(test_model, ["fake_gene"])
 
-    def test_parse_divergence_method(self):
-        self.assertEqual(_parse_divergence_method("JS"), "js")
-        self.assertEqual(_parse_divergence_method("jensen-shannon"), "js")
-        self.assertEqual(_parse_divergence_method("jensen"), "js")
-        self.assertEqual(_parse_divergence_method("Jensen"), "js")
-
-        self.assertEqual(_parse_divergence_method("KL"), "kl")
-        self.assertEqual(_parse_divergence_method("kullback–leibler"), "kl")
-        self.assertEqual(_parse_divergence_method("kullback_leibler"), "kl")
-        self.assertEqual(_parse_divergence_method("kull"), "kl")
-        self.assertEqual(_parse_divergence_method("KULL"), "kl")
-
 
 class TestKoDivergence(unittest.TestCase):
     @classmethod
@@ -66,7 +53,7 @@ class TestKoDivergence(unittest.TestCase):
                 "H_system": ["r_C_H", "R_H_exp"],
                 "upper_route": ["r_A_B_D_E", "r_D_G", "r_C_E_F"],
             },
-            divergence_metric="js",
+            divergence_type="js",
             n_neighbors=3,
             sample_count=100,
             jitter=None,
@@ -110,7 +97,7 @@ class TestKoDivergence(unittest.TestCase):
                 "H_system": ["r_C_H", "R_H_exp"],
                 "upper_route": ["r_A_B_D_E", "r_D_G", "r_C_E_F"],
             },
-            divergence_metric="kl",
+            divergence_type="kl",
             n_neighbors=3,
             sample_count=100,
             jitter=1e-25,  # Since this will divide by 0 due to the uniformly 0 reaction fluxes
@@ -166,7 +153,7 @@ class TestKoDivergence(unittest.TestCase):
                 "sys2": ["SUCCt2_2", "SUCCt3", "SUCDi", "SUCOAS"],
                 "sys3": ["TALA", "THD2", "TKT1", "TKT2"],
             },
-            divergence_metric="js",
+            divergence_type="js",
             n_neighbors=3,
             sample_count=100,
             jitter=None,
