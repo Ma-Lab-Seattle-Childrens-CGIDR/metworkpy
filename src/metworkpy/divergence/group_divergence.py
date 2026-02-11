@@ -4,7 +4,7 @@ dataframes for groups of columns
 """
 
 # Standard Library Imports
-from typing import Literal, Hashable
+from typing import Hashable, Literal, Tuple, Union
 from warnings import warn
 
 # External Imports
@@ -22,9 +22,10 @@ def calculate_divergence_grouped(
     dataset2: pd.DataFrame,
     divergence_groups: dict[str, list[Hashable]],
     divergence_type: Literal["kl", "js"] = "kl",
-    processes: int = -1,
+    calculate_pvalue: bool = False,
+    processes: int = 1,
     **kwargs,
-) -> pd.Series:
+) -> Union[pd.Series, Tuple[pd.Series, pd.Series]]:
     """
     Calculate the divergence between data in two dataframes for a set of
     groups of columns
@@ -45,13 +46,17 @@ def calculate_divergence_grouped(
         The number of processes to use for the calculation
     kwargs
         Keyword arguments passed into the divergence method function
+        either `kl_divergence` or `js_divergence` depending on
+        `divergence_type`
 
     Returns
     -------
-    divergence : pd.Series
+    divergence : pd.Series or tuple of pd.Series,pd.Series
         A pandas series indexed by group name, with values representing the
         divergence of that group between the two
-        dataframes
+        dataframes. If `calculate_pvalue` is True, then instead returns a tuple,
+        of two pandas Series, the first being the divergence results, and the
+        second being the p-values.
 
     Notes
     -----
@@ -80,7 +85,12 @@ def calculate_divergence_grouped(
     divergence_results = pd.Series(
         np.nan, index=pd.Index(divergence_groups.keys())
     )
-    for idx, calculated_divergence in enumerate(
+    if calculate_pvalue:
+        pvalue_results = pd.Series(
+            np.nan, index=pd.Index(divergence_groups.keys())
+        )
+    kwargs["calculate_pvalue"] = calculate_pvalue
+    for idx, ret_value in enumerate(
         joblib.Parallel(n_jobs=processes, return_as="generator")(
             joblib.delayed(divergence_function)(
                 dataset1[divergence_groups[group_name]],
@@ -90,5 +100,12 @@ def calculate_divergence_grouped(
             for group_name in divergence_results.index
         )
     ):
-        divergence_results.iloc[idx] = calculated_divergence
-    return divergence_results
+        if not calculate_pvalue:
+            divergence_results.iloc[idx] = ret_value
+        else:
+            div, pval = ret_value
+            divergence_results.iloc[idx] = div
+            pvalue_results.iloc[idx] = pval
+    if not calculate_pvalue:
+        return divergence_results
+    return divergence_results, pvalue_results
