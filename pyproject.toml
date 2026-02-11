@@ -2,7 +2,7 @@
 name = "metworkpy"
 description = "Tools for creating and working with network models of metabolism."
 authors = [{ name = "Braden Griebel", email = "bgriebel@uw.edu" }]
-version = "0.3.1"
+version = "0.4.0"
 readme = "README.md"
 keywords = ["FBA", "metabolism", "IMAT", "metchange"]
 license = { text = "MIT" }
