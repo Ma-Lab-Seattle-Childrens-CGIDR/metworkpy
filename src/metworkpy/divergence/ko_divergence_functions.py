@@ -3,7 +3,7 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Iterable, Optional, Union, cast
+from typing import cast, Any, Iterable, Literal, Optional, Union, Tuple
 import warnings
 
 # External Imports
@@ -14,9 +14,7 @@ import pandas as pd
 import tqdm  # type: ignore
 
 # Local Imports
-from metworkpy.divergence.js_divergence_functions import js_divergence
-from metworkpy.divergence.kl_divergence_functions import kl_divergence
-from metworkpy.utils._arguments import _parse_str_args_dict
+from metworkpy.divergence.group_divergence import calculate_divergence_grouped
 
 
 # region Main Function
@@ -31,17 +29,16 @@ def ko_divergence(
     model: cobra.Model,
     target_networks: list[str] | dict[str, list[str]],
     genes_to_ko: Optional[Iterable[str]] = None,
-    divergence_metric: str = "Jensen-Shannon",
-    n_neighbors: int = 5,
+    divergence_type: Literal["js", "kl"] = "kl",
+    calculate_pvalue: bool = False,
     sample_count: int = 1000,
-    jitter: Optional[float] = None,
-    jitter_seed: Optional[int] = None,
-    distance_metric: Union[float, str] = "euclidean",
     progress_bar: bool = False,
     use_unperturbed_as_true: bool = True,
     sampler_seed: Optional[int | np.random.Generator] = None,
+    sampler_kwargs: Optional[dict[str, Any]] = None,
+    processes: int = 1,
     **kwargs,
-) -> pd.DataFrame:
+) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame]]:
     """Determine the impacts of gene knock-outs on different target reaction or gene networks
 
     Parameters
@@ -61,26 +58,13 @@ def ko_divergence(
     genes_to_ko : Iterable[str], optional
         List of genes to investigate impact of their knock-out,
         defaults to all genes in the model
-    divergence_metric : str
-        Which metric to use for divergence, can be Jensen-Shannon, or
-        Kullback-Leibler
-    n_neighbors : int
-        Number of neighbors to use when estimating divergence
+    divergence_type : 'kl' or 'js', default='kl'
+        Which metric to use for divergence, can be 'kl' for Kullback-Leibler (default)
+        or 'js' for Jensen-Shannon,
+    calculate_pvalue : bool, default=False
+        Whether to calculate the significance value for the divergence
     sample_count : int
-        Number of samples to take when performing flux sampling (will be
-        repeated for each gene knocked out)
-    jitter : Union[None, float, tuple[float,float]]
-        Amount of noise to add to avoid ties. If None no noise is added.
-        If a float, that is the standard deviation of the random noise
-        added to the continuous samples. If a tuple, the first element
-        is the standard deviation of the noise added to the x array, the
-        second element is the standard deviation added to the y array.
-    jitter_seed : Union[None, int]
-        Seed for the random number generator used for adding noise
-    distance_metric : Union[str, float]
-        Metric to use for computing distance between points in p and q,
-        can be \"Euclidean\", \"Manhattan\", or \"Chebyshev\". Can also
-        be a float representing the Minkowski p-norm.
+        The number of samples to take in order to estimate the divergence
     progress_bar : bool
         Whether a progress bar is desired
     use_unperturbed_as_true : bool, default=True
@@ -93,10 +77,17 @@ def ko_divergence(
         Seed used for sampling in order to create reproducible results,
         can be a numpy generator (in which cae it is used directly),
         or an integer (in which case it is used to seed a numpy generator).
-    **kwargs
+    sampler_kwargs : dict of str to Any
         Arguments passed to the sample method of COBRApy, see `COBRApy
         Documentation <https://cobrapy.readthedocs.io/en/latest/autoapi/
         cobra/sampling/index.html#cobra.sampling.sample>`_
+    processes : int, default=1
+        Number of processes to use for this function, passed to the
+        sampler and also used as the number of processes for calculating
+        the divergence for the different groups. Note that if you want a different
+        number of processes for the sampler, you can use the sampler_kwargs dictionary.
+    **kwargs
+        Keyword arguments passed to the divergence method
 
     Returns
     -------
@@ -106,33 +97,13 @@ def ko_divergence(
         particular target network between the unperturbed model and the
         model following the gene knock-out.
     """
+    if sampler_kwargs is None:
+        sampler_kwargs = {"processes": processes}
+    else:
+        if "processes" not in sampler_kwargs:
+            sampler_kwargs["processes"] = processes
     if genes_to_ko is None:
         genes_to_ko = model.genes.list_attr("id")
-    # Setup Random seeding for the sampling
-    if isinstance(sampler_seed, int) or sampler_seed is None:
-        rng = np.random.default_rng(sampler_seed)
-    elif isinstance(sampler_seed, np.random.Generator):
-        rng = sampler_seed
-    else:
-        raise ValueError(
-            f"Seed must be int, numpy Generator, or None but received {type(sampler_seed)}"
-        )
-    divergence_metric = _parse_divergence_method(divergence_metric)
-    if divergence_metric == "js":
-        divergence_function = js_divergence
-    elif divergence_metric == "kl":
-        divergence_function = kl_divergence
-    else:
-        raise ValueError(
-            f"Invalid specification for divergence metric, must be js or kl, but received {divergence_metric}"
-        )
-    ko_res_list = []
-    unperturbed_sample = cobra.sampling.sample(
-        model=model,
-        n=sample_count,
-        seed=rng.integers(low=0, high=np.iinfo(np.intp).max),
-        **kwargs,
-    )
     # If needed, convert the gene network into a dict
     if isinstance(target_networks, list):
         target_networks = {"target_network": target_networks}
@@ -142,9 +113,40 @@ def ko_divergence(
         raise ValueError(
             f"target_gene_network must be a list or a dict, but received a {type(target_networks)}"
         )
-
     for key, target_list in target_networks.items():
         target_networks[key] = _convert_target_network(model, target_list)
+    # Setup Random seeding for the sampling
+    if isinstance(sampler_seed, int) or sampler_seed is None:
+        rng = np.random.default_rng(sampler_seed)
+    elif isinstance(sampler_seed, np.random.Generator):
+        rng = sampler_seed
+    else:
+        raise ValueError(
+            f"Seed must be int, numpy Generator, or None but received {type(sampler_seed)}"
+        )
+    ko_div_df = pd.DataFrame(
+        np.nan,
+        index=pd.Index(genes_to_ko),
+        columns=pd.Index(target_networks.keys()),
+    )
+    if calculate_pvalue:
+        ko_pvalue_df = pd.DataFrame(
+            np.nan,
+            index=pd.Index(genes_to_ko),
+            columns=pd.Index(target_networks.keys()),
+        )
+    # Add in any keyword arguments to the calculate divergence grouped function
+    kwargs["calculate_pvalue"] = calculate_pvalue
+    kwargs["processes"] = processes
+    kwargs["divergence_type"] = divergence_type
+    # Generate the sample for the base model
+    unperturbed_sample = cobra.sampling.sample(
+        model=model,
+        n=sample_count,
+        seed=rng.integers(low=0, high=np.iinfo(np.intp).max),
+        **sampler_kwargs,
+    )
+
     for gene_to_ko in tqdm.tqdm(genes_to_ko, disable=not progress_bar):
         with model as ko_model:
             try:
@@ -153,46 +155,35 @@ def ko_divergence(
                     model=ko_model,
                     n=sample_count,
                     seed=rng.integers(low=0, high=np.iinfo(np.intp).max),
-                    **kwargs,
+                    **sampler_kwargs,
                 )
             except ValueError:
                 # This can happen if the gene knock out causes all reactions to be 0. (or very close)
-                # So continue, leaving that part of the results dataframe as all np.nan
-                res_series = pd.Series(
-                    np.nan, index=list(target_networks.keys())
-                )
-                res_series.name = gene_to_ko
-                ko_res_list.append(res_series)
+                # So continue, leaving that part of the results/pvalue dataframe as all np.nan
                 continue
-        res_series = pd.Series(np.nan, index=list(target_networks.keys()))
-        for network, rxn_list in tqdm.tqdm(
-            target_networks.items(), disable=not progress_bar, leave=False
-        ):
-            # NOTE: The Kullback-Leibler divergence is not symmetrical so the ordering here
-            # can matter. Which distribution is assigned to P vs Q can be controlled with
-            # the use_unperturbed_as_true flag, which defaults to True. If that flag is true,
-            # the unperturbed_sample is used as the P distribution, and the perturbed sample is
-            # used as the Q distrbution. Otherwise these are reversed.
-            res_series[network] = divergence_function(
-                p=(
-                    unperturbed_sample[rxn_list]
-                    if use_unperturbed_as_true
-                    else perturbed_sample[rxn_list]
-                ),
-                q=(
-                    unperturbed_sample[rxn_list]
-                    if not use_unperturbed_as_true
-                    else perturbed_sample[rxn_list]
-                ),
-                n_neighbors=n_neighbors,
-                discrete=False,
-                jitter=jitter,
-                jitter_seed=jitter_seed,
-                distance_metric=distance_metric,
-            )
-        res_series.name = gene_to_ko
-        ko_res_list.append(res_series)
-    return pd.concat(ko_res_list, axis=1).T
+        grouped_div_res = calculate_divergence_grouped(
+            dataset1=(
+                unperturbed_sample
+                if use_unperturbed_as_true
+                else perturbed_sample
+            ),
+            dataset2=(
+                unperturbed_sample
+                if not use_unperturbed_as_true
+                else perturbed_sample
+            ),
+            divergence_groups=target_networks,  # type: ignore   # str is hashable
+            **kwargs,
+        )
+        if not calculate_pvalue:
+            ko_div_df.loc[gene_to_ko] = grouped_div_res
+        else:
+            div, pvalue = grouped_div_res
+            ko_div_df.loc[gene_to_ko] = div
+            ko_pvalue_df.loc[gene_to_ko] = pvalue
+    if not calculate_pvalue:
+        return ko_div_df
+    return ko_div_df, ko_pvalue_df
 
 
 # endregion Main Function
@@ -217,26 +208,6 @@ def _convert_target_network(
                     f"Couldn't find {val} in model genes or reactions, skipping"
                 )
     return res_list
-
-
-def _parse_divergence_method(method: str) -> str:
-    return _parse_str_args_dict(
-        method,
-        {
-            "js": [
-                "js",
-                "jensen-shannon-divergence",
-                "jensen_shannon_divergence",
-                "jensen shannon divergence",
-            ],
-            "kl": [
-                "kl",
-                "kullback–leibler-divergence",
-                "kullback_leibler_divergence",
-                "kullback leibler divergence",
-            ],
-        },
-    )
 
 
 # endregion helper functions
