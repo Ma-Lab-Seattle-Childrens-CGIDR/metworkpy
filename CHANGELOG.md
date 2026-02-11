@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 0.2.10
+## Version 0.3.0
 
 - Removed deprecated path function of importlib from example submodule
 - Changed network density functions to use joblib for parallel processing
@@ -12,6 +12,9 @@
   and to threshold the mi_pairwise return value using a set cutoff, a quantile
   cutoff, or a significance cutoff
 - Divergence functions can now return p-values using permutations tests
+- Significant refactor of the network creation API, done to simplify the code
+  and try to fix some issues. Only user facing API change should be that now the
+  adjacency matrix is always a pandas dataframe.
 
 ## Version 0.2.9
 
