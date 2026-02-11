@@ -1,10 +1,21 @@
 # Changelog
 
-## Version 0.3.1
+## Version 0.4.0
 
 - Refactored divergence array code to use joblib, and enable calculating
   p-value. Additionally, the divergence array functions in KL and JS modules can
   now take an axis argument specifying which axis to slice along.
+- Refactored grouped divergence and ko divergence to allow for calculating
+  significance using permutation testing. Additionally, refactored ko_divergence
+  to use the grouped divergence function instead of repeating its functionality,
+  with the added benefit of allowing the divergence of the different groups to
+  be calculated in parallel. Reworked the API to only accept kl/js literals for
+  'divergence_metric', also renamed "divergence_metric" to "divergence_type" to
+  match grouped divergence function and clarify the purpose. Also, now pass
+  kwargs to the underlying divergence function. Moving the keyword args passed
+  to the sampler function into their own dict and a seperate parameter (though
+  the common ones should still be handled in a way to make this relatively
+  transparent to the user, but this is breaking).
 
 ## Version 0.3.0
 
