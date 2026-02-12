@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 0.4.1
+
+- Fixing issues with scipy permutation test's handling of multi-dimensional
+  observations
+  - Created new permutation test function which handles mutli-dimensional
+    observations in a way that is compatable for the mutual information and
+    divergence functions to be able to calculate p-values
+  - Updated mutual information and divergence functions to use this new
+    permutation test function
+
 ## Version 0.4.0
 
 - Refactored divergence array code to use joblib, and enable calculating
