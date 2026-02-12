@@ -16,7 +16,6 @@ from typing import (
 # External Imports
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
-from scipy import stats
 
 # Local Imports
 from metworkpy.utils._arguments import _parse_metric
@@ -51,7 +50,7 @@ def _wrap_divergence_functions(
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
     permutations: int = 500,
-    permutation_rng: Optional[np.random.Generator | int] = None,
+    permutation_rng: Optional[Union[np.random.Generator, int]] = None,
     permutation_estimation_method: Literal["kernel", "empirical"] = "kernel",
     n_neighbors: int = 5,
     discrete: bool = False,

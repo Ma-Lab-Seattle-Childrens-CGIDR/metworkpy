@@ -34,7 +34,7 @@ def mutual_information(
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
     permutations: int = 500,
-    permutation_rng: Optional[np.random.Generator | int] = None,
+    permutation_rng: Optional[Union[np.random.Generator, int]] = None,
     permutation_estimation_method: Literal["kernel", "empirical"] = "kernel",
     jitter: Union[None, float] = None,
     jitter_seed: Union[None, int] = None,
