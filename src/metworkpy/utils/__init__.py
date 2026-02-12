@@ -22,6 +22,8 @@ from .connected_components import (
     find_representative_nodes,
 )
 
+from .permutation import permutation_test
+
 __all__ = [
     "read_model",
     "write_model",
@@ -43,4 +45,5 @@ __all__ = [
     "expr_to_metchange_gene_weights",
     "find_connected_components",
     "find_representative_nodes",
+    "permutation_test",
 ]

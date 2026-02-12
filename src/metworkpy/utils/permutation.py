@@ -9,6 +9,7 @@ import numpy as np
 from scipy import stats
 
 
+# TODO: Generalize to n datasets
 def permutation_test(
     dataset1: np.ndarray,
     dataset2: np.ndarray,
@@ -18,7 +19,7 @@ def permutation_test(
     n_resamples=500,
     alternative: Literal["less", "greater", "two-sided"] = "two-sided",
     estimation_method: Literal["kernel", "empirical"] = "kernel",
-    rng: Optional[np.random.Generator, int] = None,
+    rng: Optional[np.random.Generator | int] = None,
 ) -> Tuple[float, float]:
     """
     Perform a permutation test for a sample statistic
@@ -63,7 +64,7 @@ def permutation_test(
     null_distribution = np.empty((n_resamples,))
     # Find the null distribution
     if permutation_type == "independent":
-        combined = np.stack(dataset1, dataset2, axis=axis)
+        combined = np.concatenate([dataset1, dataset2], axis=axis)
         # Stack the arrays for sampling
         for idx in range(n_resamples):
             # Shuffle combined
@@ -71,16 +72,16 @@ def permutation_test(
             # Split into x and y to randomly assign to samples
             x = combined.take(range(dataset1.shape[axis]), axis=axis)
             y = combined.take(
-                range(dataset1.shape[axis], combined.shape[axis])
+                range(dataset1.shape[axis], combined.shape[axis]), axis=axis
             )
             null_distribution[idx] = statistic(x, y)
     elif permutation_type == "pairings":
         # To avoid modifying the input arrays, copy then
-        x = dataset1.copy()  # Should be uneccesary, TODO: remove
+        x = dataset1
         y = dataset2.copy()
         for idx in range(n_resamples):
             # Shuffle pairings
-            rng.shuffle(y, axis=axis)  # In place
+            rng.shuffle(y, axis=axis)
             null_distribution[idx] = statistic(x, y)
     else:
         raise ValueError(
