@@ -222,19 +222,21 @@ class TestMainMI(unittest.TestCase):
         self.assertTrue(
             np.isclose(mi_2d_2d_0_3_0_6_jitter, mi_2d_2d_0_3_0_6, rtol=1e-7)
         )
-        
+
     def test_pvalue(self):
         # Test the cheb method
-        mi_2d_2d_0_3_0_6 = mi.mutual_information(
+        mi_res, pvalue = mi.mutual_information(
             x=self.norm_2d_2d_0_3_0_6_sample_1000[:, [0, 1]],
             y=self.norm_2d_2d_0_3_0_6_sample_1000[:, [2, 3]],
             discrete_x=False,
             discrete_y=False,
+            calculate_pvalue=True,
+            permutation_rng=1618,
             n_neighbors=3,
             metric_x=np.inf,
             metric_y=np.inf,
-            calculate_pvalue=True,
         )
+        self.assertLess(pvalue, 0.05)
 
 
 class TestContCont(unittest.TestCase):
