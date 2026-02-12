@@ -25,6 +25,7 @@ from metworkpy.divergence._data_validation import (
     _validate_discrete,
 )
 from metworkpy.utils._jitter import _jitter_single
+from metworkpy.utils import permutation_test
 
 
 class ContinuousDivergenceFunction(Protocol):
@@ -49,7 +50,9 @@ def _wrap_divergence_functions(
     continuous_method: ContinuousDivergenceFunction,
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
-    permutations: int = 9999,
+    permutations: int = 500,
+    permutation_rng: Optional[np.random.Generator | int] = None,
+    permutation_estimation_method: Literal["kernel", "empirical"] = "kernel",
     n_neighbors: int = 5,
     discrete: bool = False,
     jitter: Optional[float] = None,
@@ -81,9 +84,15 @@ def _wrap_divergence_functions(
     calculate_pvalue : bool, default=False
         Whether the p-value should be calculated using a permutation test
     alternative : 'less', 'greater', or 'two-sided', default='greater'
-        The alternative to use, passed to SciPy's `permutation_test<https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html>`_
+        The alternative to use, passed to `metworkpy.utils.permutation_test`
     permutations : int, default=9999
          The number of permuatations to use when calculating the p-value
+    permutation_rng : np.random.Generator or int, Optional
+        A numpy random generator to use for sampling, or an int
+        to seed the default generator.
+    permutation_estimation_method : {"kernel", "empirical"}, default="kernel"
+        Method to use for estimating p-value, either an empirical cdf,
+        or a gaussian_kde
     n_neighbors : int
         Number of neighbors to use for computing mutual information.
         Will attempt to coerce into an integer. Must be at least 1.
@@ -140,23 +149,20 @@ def _wrap_divergence_functions(
         if not calculate_pvalue:
             return discrete_method(p, q)
         else:
-            perm_res = stats.permutation_test(
-                [p, q], discrete_method, **permutation_test_kwargs
+            divergence, pvalue = permutation_test(
+                p, q, discrete_method, **permutation_test_kwargs
             )
-            return DivergenceResult(
-                divergence=perm_res.statistic, pvalue=perm_res.pvalue
-            )
+            return DivergenceResult(divergence=divergence, pvalue=pvalue)
     if not calculate_pvalue:
         return continuous_method(
             p, q, n_neighbors=n_neighbors, metric=distance_metric
         )
-    perm_res = stats.permutation_test(
-        [p, q],
+    divergence, pvalue = permutation_test(
+        p,
+        q,
         partial(
             continuous_method, n_neighbors=n_neighbors, metric=distance_metric
         ),
         **permutation_test_kwargs,
     )
-    return DivergenceResult(
-        divergence=perm_res.statistic, pvalue=perm_res.pvalue
-    )
+    return DivergenceResult(divergence=divergence, pvalue=pvalue)

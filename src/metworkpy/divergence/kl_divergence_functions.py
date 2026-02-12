@@ -29,7 +29,9 @@ def kl_divergence(
     q: np.typing.ArrayLike,
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
-    permutations: int = 9999,
+    permutations: int = 500,
+    permutation_rng: Optional[np.random.Generator | int] = None,
+    permutation_estimation_method: Literal["kernel", "empirical"] = "kernel",
     n_neighbors: int = 5,
     discrete: bool = False,
     jitter: Optional[float] = None,
@@ -56,6 +58,12 @@ def kl_divergence(
         The alternative to use, passed to SciPy's `permutation_test<https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html>`_
     permutations : int, default=9999
          The number of permuatations to use when calculating the p-value
+    permutation_rng : np.random.Generator or int, Optional
+        A numpy random generator to use for sampling, or an int
+        to seed the default generator.
+    permutation_estimation_method : {"kernel", "empirical"}, default="kernel"
+        Method to use for estimating p-value, either an empirical cdf,
+        or a gaussian_kde
     n_neighbors : int
         Number of neighbors to use for computing mutual information.
         Will attempt to coerce into an integer. Must be at least 1.
@@ -105,6 +113,8 @@ def kl_divergence(
         calculate_pvalue=calculate_pvalue,
         alternative=alternative,
         permutations=permutations,
+        permutation_rng=permutation_rng,
+        permutation_estimation_method=permutation_estimation_method,
         n_neighbors=n_neighbors,
         discrete=discrete,
         jitter=jitter,
