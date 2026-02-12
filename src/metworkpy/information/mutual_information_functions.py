@@ -155,81 +155,61 @@ def mutual_information(
     mi = None
     pvalue = None
     if discrete_x ^ discrete_y:  # if one of x or y is discrete
+        mi_func = partial(_mi_disc_cont, n_neighbors=n_neighbors, metric_cont=(metric_y if discrete_x else metric_x), clip=clip)
         if discrete_x:
             if not calculate_pvalue:
-                mi = _mi_disc_cont(
+                mi = mi_func(
                     discrete=x,
                     continuous=y,
-                    n_neighbors=n_neighbors,
-                    metric_cont=metric_y,
-                    clip=clip,
                 )
             else:
                 permutation_res = stats.permutation_test(
                     [x, y],
-                    partial(
-                        _mi_disc_cont,
-                        n_neighbors=n_neighbors,
-                        metric_cont=metric_y,
-                        clip=clip,
-                    ),
+                    mi_func,
                     **permutation_test_kwargs,
                 )
                 mi = permutation_res.statistic
                 pvalue = permutation_res.pvalue
         if discrete_y:
             if not calculate_pvalue:
-                mi = _mi_disc_cont(
+                mi = mi_func(
                     discrete=y,
                     continuous=x,
-                    n_neighbors=n_neighbors,
-                    metric_cont=metric_x,
-                    clip=clip,
                 )
             else:
                 permutation_res = stats.permutation_test(
                     [y, x],
-                    partial(
-                        _mi_disc_cont,
-                        n_neighbors=n_neighbors,
-                        metric_cont=metric_y,
-                        clip=clip,
-                    ),
+                    mi_func,
                     **permutation_test_kwargs,
                 )
                 mi = permutation_res.statistic
                 pvalue = permutation_res.pvalue
     elif not (discrete_x or discrete_y):  # if both are continuous
+        mi_func =  partial(_mi_cont_cont, n_neighbors=n_neighbors,
+                    metric_x=metric_x,
+                    metric_y=metric_y,
+                    clip=clip)
         if not calculate_pvalue:
-            mi = _mi_cont_cont(
+            mi = mi_func(
                 x=x,
                 y=y,
-                n_neighbors=n_neighbors,
-                metric_x=metric_x,
-                metric_y=metric_y,
-                clip=clip,
             )
         else:
             permutation_res = stats.permutation_test(
                 [x, y],
-                partial(
-                    _mi_cont_cont,
-                    n_neighbors=n_neighbors,
-                    metric_x=metric_x,
-                    metric_y=metric_y,
-                    clip=clip,
-                ),
+                mi_func,
                 **permutation_test_kwargs,
             )
             mi = permutation_res.statistic
             pvalue = permutation_res.pvalue
     elif discrete_x and discrete_y:
+        mi_func = partial(_mi_disc_disc, clip=clip)
         if not calculate_pvalue:
-            mi = _mi_disc_disc(x=x, y=y, clip=clip)
+            mi = mi_func(x=x, y=y, clip=clip)
         else:
             permutation_res = stats.permutation_test(
                 [x, y],
-                partial(_mi_disc_disc, clip=clip),
+                mi_func,
                 **permutation_test_kwargs,
             )
             mi = permutation_res.statistic

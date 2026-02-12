@@ -1424,7 +1424,7 @@ wheels = [
 
 [[package]]
 name = "metworkpy"
-version = "0.2.10"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "cobra" },
