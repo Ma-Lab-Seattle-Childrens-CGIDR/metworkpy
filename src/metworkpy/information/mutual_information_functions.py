@@ -10,18 +10,18 @@ between a continuous and discrete distribution.
 # Standard Library Imports
 from __future__ import annotations
 from functools import partial
-from typing import Literal, Tuple, Union
+from typing import cast, Literal, Optional, Tuple, Union
 
 # External Imports
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree, distance_matrix
 from scipy.special import digamma
-from scipy import stats
 
 # local imports
 from metworkpy.utils._arguments import _parse_metric
 from metworkpy.utils._jitter import _jitter
+from metworkpy.utils.permutation import permutation_test
 
 
 # region Main Mutual Information Function
@@ -33,7 +33,9 @@ def mutual_information(
     n_neighbors: int = 5,
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
-    permutations: int = 9999,
+    permutations: int = 500,
+    permutation_rng: Optional[np.random.Generator | int] = None,
+    permutation_estimation_method: Literal["kernel", "empirical"] = "kernel",
     jitter: Union[None, float] = None,
     jitter_seed: Union[None, int] = None,
     metric_x: Union[str, float] = "euclidean",
@@ -65,9 +67,15 @@ def mutual_information(
          Whether to calculate a p-value for the mutual information using
          a permutation test
     alternative : 'less', 'greater', or 'two-sided'
-         The alternative to use, passed to SciPy's `permutation_test<https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html>`_
+         The alternative to use, passed to `metworkpy.utils.permutation.permutation_test`
     permutations : int
          The number of permuatations to use when calculating the p-value
+    permutation_rng : np.random.Generator or int, Optional
+        A numpy random generator to use for sampling, or an int
+        to seed the default generator.
+    permutation_estimation_method : {"kernel", "empirical"}, default="kernel"
+        Method to use for estimating p-value, either an empirical cdf,
+        or a gaussian_kde
     jitter : Union[None, float, tuple[float,float]]
         Amount of noise to add to avoid ties. If None no noise is added.
         If a float, that is the standard deviation of the random noise
@@ -149,13 +157,20 @@ def mutual_information(
         "permutation_type": "pairings",
         "n_resamples": permutations,
         "alternative": alternative,
+        "estimation_method": permutation_estimation_method,
         "axis": 0,
+        "rng": permutation_rng,
     }
 
-    mi = None
+    mi = 0.0
     pvalue = None
     if discrete_x ^ discrete_y:  # if one of x or y is discrete
-        mi_func = partial(_mi_disc_cont, n_neighbors=n_neighbors, metric_cont=(metric_y if discrete_x else metric_x), clip=clip)
+        mi_func = partial(
+            _mi_disc_cont,
+            n_neighbors=n_neighbors,
+            metric_cont=(metric_y if discrete_x else metric_x),
+            clip=clip,
+        )
         if discrete_x:
             if not calculate_pvalue:
                 mi = mi_func(
@@ -163,13 +178,12 @@ def mutual_information(
                     continuous=y,
                 )
             else:
-                permutation_res = stats.permutation_test(
-                    [x, y],
+                mi, pvalue = permutation_test(
+                    x,
+                    y,
                     mi_func,
-                    **permutation_test_kwargs,
+                    **permutation_test_kwargs,  # type: ignore
                 )
-                mi = permutation_res.statistic
-                pvalue = permutation_res.pvalue
         if discrete_y:
             if not calculate_pvalue:
                 mi = mi_func(
@@ -177,50 +191,50 @@ def mutual_information(
                     continuous=x,
                 )
             else:
-                permutation_res = stats.permutation_test(
-                    [y, x],
+                mi, pvalue = permutation_test(
+                    y,
+                    x,
                     mi_func,
-                    **permutation_test_kwargs,
+                    **permutation_test_kwargs,  # type: ignore
                 )
-                mi = permutation_res.statistic
-                pvalue = permutation_res.pvalue
     elif not (discrete_x or discrete_y):  # if both are continuous
-        mi_func =  partial(_mi_cont_cont, n_neighbors=n_neighbors,
-                    metric_x=metric_x,
-                    metric_y=metric_y,
-                    clip=clip)
+        mi_func = partial(
+            _mi_cont_cont,
+            n_neighbors=n_neighbors,
+            metric_x=metric_x,
+            metric_y=metric_y,
+            clip=clip,
+        )
         if not calculate_pvalue:
             mi = mi_func(
                 x=x,
                 y=y,
             )
         else:
-            permutation_res = stats.permutation_test(
-                [x, y],
+            mi, pvalue = permutation_test(
+                x,
+                y,
                 mi_func,
-                **permutation_test_kwargs,
+                **permutation_test_kwargs,  # type: ignore
             )
-            mi = permutation_res.statistic
-            pvalue = permutation_res.pvalue
     elif discrete_x and discrete_y:
         mi_func = partial(_mi_disc_disc, clip=clip)
         if not calculate_pvalue:
             mi = mi_func(x=x, y=y, clip=clip)
         else:
-            permutation_res = stats.permutation_test(
-                [x, y],
+            mi, pvalue = permutation_test(
+                x,
+                y,
                 mi_func,
-                **permutation_test_kwargs,
+                **permutation_test_kwargs,  # type: ignore
             )
-            mi = permutation_res.statistic
-            pvalue = permutation_res.pvalue
     else:
         raise ValueError(
             "Error with discrete_x and/or discrete_y parameters, both must be boolean."
         )
     if not calculate_pvalue:
         return mi
-    return mi, pvalue
+    return cast(float, mi), cast(float, pvalue)
 
 
 # endregion Main Mutual Information Function
