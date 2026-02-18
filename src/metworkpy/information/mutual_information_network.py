@@ -25,12 +25,8 @@ T = TypeVar("T", np.ndarray, pd.DataFrame, ArrayLike)
 
 def mi_network_adjacency_matrix(
     samples: T,
-    cutoff: Optional[float] = None,
-    cutoff_quantile: Optional[float] = None,
-    processes: int = -1,
-    progress_bar: bool = False,
     **kwargs,
-) -> T:
+) -> Union[T, Tuple[T, T]]:
     """
     Create a Mutual Information Network Adjacency matrix from flux samples.
     Uses kth nearest neighbor method for estimating mutual information.
@@ -41,19 +37,8 @@ def mi_network_adjacency_matrix(
         ArrayLike containing the samples, columns
         should represent different reactions while rows should represent
         different samples
-    cutoff : float, optional
-        Lower bound for mutual information, all values smaller than this are
-        set to 0
-    cutoff_quantile : float, Optional
-        Lower bound for mutual information as a quantile, must be a value
-        between 0 and 1 representing the quantile to use as a cutoff.
-        Any values below this quantile will be set to 0.
-    processes : int
-        Number of processes to use when calculating the mutual information
-    progress_bar : bool
-        Whether a progress bar should be displayed
     kwargs
-        Keyword arguments passed to the mutual_information function
+        Keyword arguments passed to the `mi_pairwise` function
 
     Returns
     -------
@@ -64,17 +49,12 @@ def mi_network_adjacency_matrix(
 
     See Also
     --------
+    mi_pairwise : Function wrapped by this function
 
-    1. Kraskov, A., Stögbauer, H., & Grassberger, P. (2004). Estimating mutual information. Physical Review E, 69(6), 066138.
-         Method for estimating mutual information between samples from two continuous distributions.
     """
-    # Wraps mi_pariwise, here for backward compatibility
+    # Wraps mi_pairwise, here for backward compatibility
     return mi_pairwise(
         dataset=samples,
-        cutoff=cutoff,
-        cutoff_quantile=cutoff_quantile,
-        processes=processes,
-        progress_bar=progress_bar,
         **kwargs,
     )
 
@@ -87,7 +67,7 @@ def mi_pairwise(
     dataset: T,
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
-    permutations: int = 9999,
+    permutations: int = 500,
     cutoff: Optional[float] = None,
     cutoff_quantile: Optional[float] = None,
     cutoff_significance: Optional[float] = None,
@@ -107,7 +87,7 @@ def mi_pairwise(
          Whether to calculate a p-value for the mutual information using
          a permutation test
     alternative : 'less', 'greater', or 'two-sided'
-         The alternative to use, passed to SciPy's `permutation_test<https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html>`_
+         The alternative to use
     permutations : int
          The number of permuatations to use when calculating the p-value
     cutoff : float, optional

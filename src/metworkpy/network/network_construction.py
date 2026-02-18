@@ -11,7 +11,7 @@ import networkx as nx
 
 # Local Imports
 from metworkpy.information.mutual_information_network import (
-    mi_network_adjacency_matrix,
+    mi_pairwise,
 )
 
 
@@ -20,12 +20,11 @@ def create_mutual_information_network(
     model: Optional[cobra.Model] = None,
     flux_samples: pd.DataFrame | np.ndarray | None = None,
     reaction_names: Iterable[str] | None = None,
+    cutoff_significance: Optional[float] = None,
     n_samples: int = 10_000,
-    n_neighbors: int = 5,
-    truncate: bool = True,
     reciprocal_weights: bool = False,
-    processes: Optional[int] = 1,
-    progress_bar: bool = False,
+    processes: int = 1,
+    **kwargs,
 ) -> nx.Graph:
     """Create a mutual information network from the provided metabolic model
 
@@ -40,26 +39,23 @@ def create_mutual_information_network(
         these flux samples.
     reaction_names : Optional[Iterable[str]]
         Names for the reactions
+    cutoff_significance : float, optional
+        Upper bound for the significance of the mutual information,
+        any mutual information values with p-values above this
+        cutoff will have their mutual information set to 0.
+        Will calculate this p-value using permutation testing,
+        see `mi_pairwise` for more information.
     n_samples : int
         Number of samples to take if flux_samples is None (ignored if
         flux_samples is not None)
-    n_neighbors : int
-        Number of neighbors to use during the mutual information
-        estimation
-    truncate : bool
-        Whether the mutual information values should be truncated at 0.
-        Mutual information should always be greater than or equal to 0,
-        but the estimates can be negative. If true, all the mutual
-        information values which are less than 0 will be set to 0.
     reciprocal_weights : bool
         Whether the non-zero weights in the network should be the
         reciprocal of mutual information.
-    processes : Optional[int]
-        Number of processes to use during the mutual information
-        calculation
-    progress_bar : bool
-        Whether a progress bar should be shown for the mutual
-        information calculations
+    processes : int
+        Number of processes to use during the flux sampling and
+        mutual information calculation
+    kwargs
+        Keyword arguments passed to the `mi_pairwise` function
 
     Returns
     -------
@@ -67,54 +63,54 @@ def create_mutual_information_network(
         A networkx Graph, which nodes representing different reactions
         and edge weights corresponding to estimated mutual information
     """
-    if model is None and flux_samples is None:
-        raise ValueError(
-            "Requires either a metabolic model, or flux samples but received "
-            "neither"
-        )
     if flux_samples is None:
+        if model is None:
+            raise ValueError(
+                "Requires either a metabolic model, or flux samples but received "
+                "neither"
+            )
         flux_samples = cobra.sampling.sample(
             model=model, n=n_samples, processes=processes
         )
-    if isinstance(flux_samples, pd.DataFrame):
-        sample_array = flux_samples.to_numpy()
-        if not reaction_names:
-            reaction_names = flux_samples.columns
-    elif isinstance(flux_samples, np.ndarray):
-        sample_array = flux_samples
+    if isinstance(flux_samples, np.ndarray):
         if not reaction_names:
             if model:
                 reaction_names = model.reactions.list_attr("id")
             else:
                 reaction_names = [
-                    f"rxn_{i}" for i in range(sample_array.shape[1])
+                    f"rxn_{i}" for i in range(flux_samples.shape[1])
                 ]
+        sample_df = pd.DataFrame(
+            flux_samples, columns=pd.Index(reaction_names)
+        )
+    elif isinstance(flux_samples, pd.DataFrame):
+        sample_df = flux_samples
+        if reaction_names is not None:
+            sample_df.columns = pd.Index(reaction_names)
     else:
         raise ValueError(
             f"Invalid type for flux samples, requires pandas DataFrame or "
             f"numpy ndarray, but "
             f"received {type(flux_samples)}"
         )
-    if processes is None:
-        processes = -1
-    adj_mat = mi_network_adjacency_matrix(
-        samples=sample_array,
-        n_neighbors=n_neighbors,
-        processes=processes,
-        progress_bar=progress_bar,
-    )
-    if truncate:
-        adj_mat[adj_mat < 0] = 0
+    if cutoff_significance is not None:
+        kwargs["calculate_pvalue"] = True
+    if not cutoff_significance:
+        adj_mat = cast(
+            pd.DataFrame,
+            mi_pairwise(dataset=sample_df, processes=processes, **kwargs),
+        )
+    else:
+        adj_mat, _ = mi_pairwise(
+            dataset=sample_df, processes=processes, **kwargs
+        )
+        adj_mat = cast(pd.DataFrame, adj_mat)
     if reciprocal_weights:
         # Should be all floats, so no issue with integer division
         adj_mat[adj_mat > 0] = np.reciprocal(adj_mat[adj_mat > 0])
-    mi_network = nx.from_numpy_array(
-        adj_mat, create_using=nx.Graph, parallel_edges=False
-    )
-    _ = nx.relabel_nodes(
-        mi_network,
-        {idx: f"{rxn}" for idx, rxn in enumerate(reaction_names)},
-        copy=False,
+    mi_network = nx.from_pandas_adjacency(
+        adj_mat,
+        create_using=nx.Graph,
     )
     return mi_network
 
