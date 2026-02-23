@@ -27,7 +27,7 @@ class DivergenceFunction(Protocol):
 
 ArrayInput = Union[pd.DataFrame, np.ndarray]
 Array1D = Union[
-    pd.DataFrame,
+    pd.Series,
     np.ndarray[Tuple[int], np.dtype[Union[np.float32, np.float64]]],
 ]
 
@@ -95,8 +95,8 @@ def _divergence_array(
             pvalue_result[i] = pvalue
     if isinstance(p, pd.DataFrame):
         if not calculate_pvalue:
-            return pd.DataFrame(divergence_result, index=p.columns)
-        return pd.DataFrame(divergence_result, index=p.columns), pd.DataFrame(
+            return pd.Series(divergence_result, index=p.columns)
+        return pd.Series(divergence_result, index=p.columns), pd.Series(
             pvalue_result, index=p.columns
         )
     if not calculate_pvalue:
