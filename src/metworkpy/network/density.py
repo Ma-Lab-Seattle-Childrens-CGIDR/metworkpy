@@ -212,6 +212,8 @@ def gene_target_enrichment(
             f"Gene labels must be a list or a set but received a "
             f"{type(gene_targets)}"
         )
+    # Filter the gene targets for only those in the model
+    gene_targets &= set(metabolic_model.genes.list_attr("id"))
     if len(gene_targets) < 1:
         warn("No labeled genes, p-values all 1.0, odds-ratio all 0.0")
         if metric == "p-value":
