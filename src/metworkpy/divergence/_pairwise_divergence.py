@@ -79,8 +79,8 @@ def _divergence_array(
     )(
         joblib.delayed(_divergence_array_worker)(
             index=i,
-            p=p,
-            q=q,
+            p=p_array,
+            q=q_array,
             axis=axis,
             divergence_function=divergence_function,
             **kwargs,
