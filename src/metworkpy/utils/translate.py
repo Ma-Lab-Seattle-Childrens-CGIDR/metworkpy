@@ -44,7 +44,7 @@ def gene_to_reaction_list(
     for gene in gene_list:
         for rxn in model.genes.get_by_id(gene).reactions:
             rxn_list += [rxn.id]
-    return rxn_list
+    return list(set(rxn_list))
 
 
 def reaction_to_gene_list(
