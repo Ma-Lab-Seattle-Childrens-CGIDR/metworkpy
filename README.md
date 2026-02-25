@@ -51,6 +51,10 @@ uses the
 [GPL-3.0-only](https://github.com/MetExplore/dexom-python?tab=GPL-3.0-1-ov-file)
 license).
 
+The permutation test implementation uses modified code from Scipy's stats module
+(licensed under the BSD-3-Clause, see above) for estimating the empirical
+p-value in line with []
+
 ## References
 
 ### IMAT References
@@ -65,3 +69,7 @@ license).
 
 1. [Kraskov, A., Stögbauer, H., & Grassberger, P. (2004). Estimating mutual information. Physical Review E, 69(6), 066138.](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.69.066138)
 1. [Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0087357)
+
+### Permutation Testing
+
+1. [Phipson, B., & Smyth, G. K. (2010). Permutation p-values should never be zero: Calculating exact p-values when permutations are randomly drawn. Statistical Applications in Genetics and Molecular Biology, 9(1). https://doi.org/10.2202/1544-6115.1585](https://arxiv.org/abs/1603.05766)

@@ -18,7 +18,7 @@ def permutation_test(
     permutation_type: Literal["independent", "pairings"] = "independent",
     n_resamples=500,
     alternative: Literal["less", "greater", "two-sided"] = "two-sided",
-    estimation_method: Literal["kernel", "empirical"] = "kernel",
+    estimation_method: Literal["kernel", "empirical"] = "empirical",
     rng: Optional[Union[np.random.Generator, int]] = None,
 ) -> Tuple[float, float]:
     """
@@ -31,7 +31,7 @@ def permutation_test(
         have broadcastable shapes except along axis
     statistic : Callable
         Function which takes two numpy arrays (which have the same shape
-        except along axis), and returns a floaat
+        except along axis), and returns a float
     axis : int, default=0
         The sample axis for the two datsets
     permutation_type : {'independent', 'pairings'}, default='independent'
@@ -43,9 +43,11 @@ def permutation_test(
         The number of permutations to perform
     alternative : {"less", "greater", "two-sided"}, default='two-sided'
         Alternative hypothesis
-    estimation_method : {"kernel", "empirical"}, default="kernel"
-        Method to use for estimating p-value, either an empirical cdf,
-        or a gaussian_kde
+    estimation_method : {"kernel", "empirical"}, default="empirical"
+        Method to use for estimating p-value, either an empirical estimate,
+        or a gaussian_kde. The empirical method returns an upper bound on the
+        p-value that is somewhat conservative, and is based on [1]_
+        and the implementation in SciPy.
     rng : np.random.Generator or int, Optional
         A numpy random generator to use for sampling, or an int
         to seed the default generator.
@@ -54,6 +56,15 @@ def permutation_test(
     -------
     tuple of float,float
         Tuple of the sample statistic and the calculated p-value
+
+    Notes
+    -----
+
+    .. [1] Phipson, B., & Smyth, G. K. (2010). Permutation p-values
+       should never be zero: Calculating exact p-values when
+       permutations are randomly drawn. Statistical Applications
+       in Genetics and Molecular Biology, 9(1).
+       https://doi.org/10.2202/1544-6115.1585
     """
     # Calculate the sample statistic
     sample_stat = statistic(dataset1, dataset2)
@@ -97,9 +108,22 @@ def permutation_test(
             sample_stat, np.inf
         )
     elif estimation_method == "empirical":
-        ecdf = stats.ecdf(null_distribution)
-        prob_less = ecdf.cdf.evaluate(sample_stat)
-        prob_greater = ecdf.sf.evaluate(sample_stat)
+        # Apply an adjustment based on 'Permutation p-values should never be zero:
+        # calculating exact p-values when permutations are randomly drawn'
+        # First find eps, which is floating point tolerance
+        # Also based on Scipy's permutation test implementation
+        eps = (
+            0
+            if not np.isdtype(null_distribution.dtype, "real floating")
+            else np.finfo(null_distribution.dtype).eps * 100
+        )
+        gamma = np.abs(eps * sample_stat)
+        prob_less = float(
+            np.count_nonzero(null_distribution <= sample_stat + gamma) + 1
+        ) / float(n_resamples + 1)
+        prob_greater = float(
+            np.count_nonzero(null_distribution >= sample_stat - gamma) + 1
+        ) / float(n_resamples + 1)
     else:
         raise ValueError(
             f"estimation_method must be 'kernel' or 'empirical' but received {estimation_method}"
@@ -109,7 +133,7 @@ def permutation_test(
     elif alternative == "greater":
         return sample_stat, prob_greater
     elif alternative == "two-sided":
-        return sample_stat, 2 * (1 - max(prob_less, prob_greater))
+        return sample_stat, 2 * min(prob_less, prob_greater)
     else:
         raise ValueError(
             f"alternative must be either 'less', 'greater', or 'two-sided', but received {alternative}"
