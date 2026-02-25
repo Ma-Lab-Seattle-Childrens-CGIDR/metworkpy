@@ -247,6 +247,7 @@ def find_dense_clusters(
     labels: list[Hashable] | dict[Hashable, float | int] | pd.Series,
     radius: int = 3,
     quantile_cutoff: float = 0.20,
+    **kwargs,
 ) -> pd.DataFrame:
     """Find the clusters within a network with high label density
 
@@ -269,6 +270,8 @@ def find_dense_clusters(
         Quantile cutoff for defining high density, the nodes within the
         top 100*`quantile`% of label density are considered high
         density. Must be between 0 and 1.
+    kwargs
+        Passed to `label_density` function
 
     Returns
     -------
@@ -292,7 +295,9 @@ def find_dense_clusters(
         raise ValueError(
             f"Network must be a networkx network, but received {type(network)}"
         )
-    density = label_density(network=network, labels=labels, radius=radius)
+    density = label_density(
+        network=network, labels=labels, radius=radius, **kwargs
+    )
     # Find which nodes are below the quantile density cutoff
     cutoff = np.quantile(density, 1 - quantile_cutoff)
     low_density = density[density < cutoff].index
@@ -308,7 +313,9 @@ def find_dense_clusters(
     )
     # Find the connected components, and assign each to a cluster
     current_cluster = 0
-    for comp in nx.connected_components(high_density_network):
+    for current_cluster, comp in enumerate(
+        nx.connected_components(high_density_network)
+    ):
         nodes = list(comp)
         res_df.loc[nodes, "density"] = density[nodes]
         res_df.loc[nodes, "cluster"] = current_cluster
