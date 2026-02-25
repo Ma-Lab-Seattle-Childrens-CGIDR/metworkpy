@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.5.0
+
+- Updated empirical estimation method in the permutation test function to
+  account for underestimation of p-values as discussed in
+  [Permutation p-values should never be zero: calculating exact p-values when permutations are randomly drawn](https://arxiv.org/abs/1603.05766)
+
 ## Version 0.4.1
 
 - Fixing issues with scipy permutation test's handling of multi-dimensional
