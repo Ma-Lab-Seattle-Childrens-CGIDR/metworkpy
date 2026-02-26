@@ -1,8 +1,7 @@
 # Standard Library Imports
 from __future__ import annotations
-from collections import deque
-import re
-from typing import Optional, Any
+import ast
+from typing import Any, Optional, Union
 import warnings
 
 # External Imports
@@ -27,7 +26,7 @@ def gene_to_rxn_weights(
     ----------
     model : cobra.Model
         cobra.Model: A cobra model
-    gene_weights : pd.Series
+    gene_weights : pd.Series or dict of str to Value
         pd.Series: A series of gene weights
     fn_dict : dict
         dict: A dictionary of functions to use for each operator
@@ -59,184 +58,78 @@ def gene_to_rxn_weights(
         missing_genes_series = pd.Series(0, index=missing_genes)
         gene_weights = pd.concat([gene_weights, missing_genes_series])
 
-    # Create the rxn_weight series, filled with all 0
-    rxn_weights = pd.Series(0, index=[rxn.id for rxn in model.reactions])
+    # Convert the fill_val into the same type as the gene_weights
+    fill_val = pd.Series(fill_val, dtype=gene_weights.dtype).iloc[0]
 
+    # Create the rxn_weight series, filled with all 0
+    rxn_weights = pd.Series(
+        fill_val, index=pd.Index(model.reactions.list_attr("id"))
+    )
+
+    if fn_dict is None:
+        fn_dict = IMAT_FUNC_DICT
     # For each reaction, trinarize it based on the expression data
     for rxn in model.reactions:
-        gpr = rxn.gene_reaction_rule
-        rxn_weights[rxn.id] = eval_gpr(gpr, gene_weights, fn_dict)
-    rxn_weights.fillna(fill_val, inplace=True)
+        rxn_weights[rxn.id] = eval_gpr(
+            rxn.gpr, gene_weights, fn_dict, fill_val
+        )
     return rxn_weights
 
 
 def eval_gpr(
-    gpr: str, gene_weights: pd.Series, fn_dict: Optional[dict] = None
-) -> Any | None:
-    """Evaluate a single GPR string using the provided gene weights and
-    function dictionary.
+    gpr: Optional[
+        Union[cobra.core.GPR, ast.Expression, list, ast.BoolOp, ast.Name]
+    ],
+    gene_weights: Union[pd.Series, dict],
+    fn_dict: dict,
+    fill_val: Any = 0,
+) -> Any:
+    """
+    Evaluate a cobra GPR with specified functions for the Boolean operations
 
     Parameters
     ----------
-    gpr : str
-        str: A single GPR string
-    gene_weights : pd.Series
-        pd.Series: A series of gene weights
+    gpr : GPR or Expression or list or BoolOp or Name optional
+        The GPR to evaluate
+    gene_weights: pd.Series or dict
+        Weights to assign to each gene
     fn_dict : dict
-        dict: A dictionary of functions to use for each operator, in GPR
-        the operators are normally AND and OR, by default this is
-        {"AND":min, "OR":max}
-
-    Returns
-    -------
-    float | None
-        The GPR score
+        Dict of 'AND' and 'OR' (strings) to functions which can
+        take two gene weights and return a single value
+    fill_val : Any
+        Value to replace any missing weights with
     """
-    if not gpr:  # If GPR is empty string, return None
-        return None
-    if fn_dict is None:
-        fn_dict = {"AND": min, "OR": max}
-    gpr_expr = _str_to_deque(gpr)
-    gpr_expr = _to_postfix(gpr_expr)
-    return _eval_gpr_deque(
-        gpr_expr=gpr_expr, gene_weights=gene_weights, fn_dict=fn_dict
-    )
-
-
-def _eval_gpr_deque(gpr_expr: deque, gene_weights: pd.Series, fn_dict: dict):
-    eval_stack = []
-    for token in gpr_expr:
-        if token not in fn_dict:
-            eval_stack.append(gene_weights[token])
-            continue
-        val1 = eval_stack.pop()
-        val2 = eval_stack.pop()
-        eval_stack.append(fn_dict[token](val1, val2))
-    if len(eval_stack) != 1:
-        raise ValueError(f"Failed to parse GPR Expression: {gpr_expr}")
-    return eval_stack.pop()
-
-
-def _str_to_deque(
-    in_string: str, replacements: Optional[dict] = None
-) -> deque[str]:
-    """Convert a string to a list of strings, splitting on whitespace and
-    parentheses.
-
-    Parameters
-    ----------
-    in_string : str
-        str: Specify the input string
-    replacements : dict
-        dict: Replace certain strings with other strings before
-        splitting, uses regex
-
-    Returns
-    -------
-    deque[str]
-        A deque of strings
-    """
-    if not replacements:
-        replacements = {
-            "\\b[Aa][Nn][Dd]\\b": "AND",
-            "\\b[Oo][Rr]\\b": "OR",
-            "&&?": " AND ",
-            r"\|\|?": " OR ",
-        }
-    in_string = in_string.replace("(", " ( ").replace(")", " ) ")
-    for key, value in replacements.items():
-        in_string = re.sub(key, value, in_string)
-    return deque(in_string.split())
-
-
-def _process_token(
-    token: str, postfix: deque[str], operator_stack: deque[str], precedence
-):
-    """The process_token function takes in a token, the postfix list, the
-    operator stack and precedence dictionary. It performs the shunting
-    yard algorithm for a single provided token.
-
-    Parameters
-    ----------
-    token : str
-        Current token
-    postfix : list[str]
-        Current state of output
-    operator_stack : list[str]
-        Current operator stack
-    precedence : dict[str:int]
-        Determines the operators precedence
-
-    Returns
-    -------
-    None
-        Nothing
-    """
-    # If token is not operator, add it to postfix
-    if (token not in precedence) and (token != "(") and (token != ")"):
-        postfix.append(token)
-        return
-    # If token is operator, move higher priority operators from stack to
-    # output, then add the operator itself to the postfix expression
-    if token in precedence:
-        while (
-            (len(operator_stack) > 0)
-            and (operator_stack[-1] != "(")
-            and (precedence[operator_stack[-1]] >= precedence[token])
-        ):
-            op = operator_stack.pop()
-            postfix.append(op)
-        operator_stack.append(token)
-        return
-    # For left parenthesis add to operator stack
-    if token == "(":
-        operator_stack.append(token)
-        return
-    # For right parenthesis pop operator stack until reach
-    # matching left parenthesis
-    if token == ")":
-        if len(operator_stack) == 0:  # Check for mismatch in parentheses
-            raise ValueError("Mismatched Parenthesis in Expression")
-        while len(operator_stack) > 0 and operator_stack[-1] != "(":
-            op = operator_stack.pop()
-            postfix.append(op)
-        if (
-            len(operator_stack) == 0 or operator_stack[-1] != "("
-        ):  # Check for mismatch in parentheses
-            raise ValueError("Mismatched Parenthesis in Expression")
-        _ = operator_stack.pop()  # Remove left paren from stack
-        return None
-
-
-def _to_postfix(
-    infix: deque[str], precedence: Optional[dict] = None
-) -> deque[str]:
-    """Convert an infix expression to postfix notation.
-
-    Parameters
-    ----------
-    infix : deque[str]
-        deque[str]: A deque of strings representing an infix expression
-    precedence : dict[str:int]
-        Dictionary of operators determining precedence
-
-    Returns
-    -------
-    list[str]
-        A list of strings representing the postfix expression
-    """
-    # Set default precedence
-    if precedence is None:
-        precedence = {"AND": 1, "OR": 1}
-    postfix = deque()
-    operator_stack = deque()
-    # For each token, use shunting yard algorithm to process it
-    for token in infix:
-        _process_token(token, postfix, operator_stack, precedence)
-    # Empty the operator stack
-    while len(operator_stack) > 0:
-        op = operator_stack.pop()
-        if op == "(":
-            raise ValueError("Mismatched Parenthesis in Expression")
-        postfix.append(op)
-    return postfix
+    if isinstance(gpr, (ast.Expression, cobra.core.GPR)):
+        if not gpr.body:
+            return fill_val
+        return eval_gpr(
+            gpr=gpr.body,  # type:ignore
+            gene_weights=gene_weights,
+            fn_dict=fn_dict,
+            fill_val=fill_val,
+        )
+    elif isinstance(gpr, ast.Name):
+        return gene_weights.get(gpr.id, fill_val)
+    elif isinstance(gpr, ast.BoolOp):
+        op = gpr.op
+        if isinstance(op, ast.Or):
+            return fn_dict["OR"](  # type: ignore
+                *[
+                    eval_gpr(e, gene_weights, fn_dict, fill_val)  # type: ignore
+                    for e in gpr.values
+                ]
+            )
+        elif isinstance(op, ast.And):
+            return fn_dict["AND"](  # type: ignore
+                *[
+                    eval_gpr(e, gene_weights, fn_dict, fill_val)  # type: ignore
+                    for e in gpr.values
+                ]
+            )
+        else:
+            raise TypeError(
+                f"Unsupported Boolean Operation: {op.__class__.__name__}"
+            )
+    elif gpr is None:
+        return fill_val
+    raise TypeError(f"Unsupported GPR type: {type(gpr)}")

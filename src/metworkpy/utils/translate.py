@@ -11,11 +11,7 @@ import cobra
 import pandas as pd
 
 # Local Imports
-from metworkpy.gpr.gpr_functions import (
-    _str_to_deque,
-    _to_postfix,
-    _eval_gpr_deque,
-)
+from metworkpy.gpr.gpr_functions import eval_gpr
 
 
 # endregion Imports
@@ -83,19 +79,17 @@ def reaction_to_gene_list(
         if len(genes) == 1:  # If there is only one gene, it is essential
             gene_list.append(genes[0])
             continue
-        gpr_expr = _str_to_deque(
-            model.reactions.get_by_id(rxn).gene_reaction_rule
-        )
-        gpr_expr = _to_postfix(gpr_expr)
+        gpr_expr = model.reactions.get_by_id(rxn).gpr
         gene_weights = pd.Series(1, index=genes)
         for gene in gene_weights.index:
             gene_weights[gene_weights.index] = 1  # Turn on all genes
             gene_weights[gene] = -1  # Knock Out each gene in turn
             if (
-                _eval_gpr_deque(
-                    gpr_expr=gpr_expr,
+                eval_gpr(
+                    gpr=gpr_expr,
                     gene_weights=gene_weights,
                     fn_dict={"AND": min, "OR": max},
+                    fill_val=0.0,
                 )
                 == -1
             ):
