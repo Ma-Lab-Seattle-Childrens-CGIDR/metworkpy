@@ -31,6 +31,8 @@ __all__ = [
     "reaction_to_gene_dict",
     "reaction_to_gene_list",
     "bipartite_project",
+    "fuzzy_reaction_set",
+    "fuzzy_reaction_intersection",
     "find_metabolite_synthesis_network_genes",
     "find_metabolite_synthesis_network_reactions",
     "metchange",
@@ -87,6 +89,8 @@ from metworkpy.network import (
     reaction_target_density,
     find_dense_clusters,
     bipartite_project,
+    fuzzy_reaction_set,
+    fuzzy_reaction_intersection,
 )
 
 from metworkpy.metabolites import (

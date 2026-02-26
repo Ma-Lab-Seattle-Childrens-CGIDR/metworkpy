@@ -15,6 +15,8 @@ from .neighborhoods import (
 )
 from .projection import bipartite_project
 
+from .fuzzy import fuzzy_reaction_set, fuzzy_reaction_intersection
+
 __all__ = [
     "create_metabolic_network",
     "create_adjacency_matrix",
@@ -26,4 +28,6 @@ __all__ = [
     "find_dense_clusters",
     "bipartite_project",
     "create_mutual_information_network",
+    "fuzzy_reaction_set",
+    "fuzzy_reaction_intersection",
 ]

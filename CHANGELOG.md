@@ -22,10 +22,10 @@
   users to select whether translating from reactions to genes should require
   that the genes are required for the reaction or not
 - Added fuzzy module for network with methods for converting sets of genes into
-  fuzzy reaction sets with configurable membership functions. In future, the
-  density submodule will be split into an enrichment module, and this fuzzy
-  module with the previous density module being only for the label density on
-  the graph.
+  fuzzy reaction sets with configurable membership functions.
+- Added method for fuzzy-intersection to fuzzy sub-module. Added
+  robustrankaggregpy as a dependency so that RRA can be used as an intersection
+  method.
 
 ## Version 0.5.0
 

@@ -1436,6 +1436,7 @@ dependencies = [
     { name = "optlang" },
     { name = "pandas" },
     { name = "pyarrow" },
+    { name = "robustrankaggregpy" },
     { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "scipy", version = "1.15.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "sympy" },
@@ -1497,6 +1498,7 @@ requires-dist = [
     { name = "osqp", marker = "extra == 'hybrid'", specifier = ">=1.0.3" },
     { name = "pandas", specifier = ">=2.2.0" },
     { name = "pyarrow", specifier = ">=16.0.0" },
+    { name = "robustrankaggregpy", specifier = ">=0.3.0" },
     { name = "scipy", specifier = ">=1.12.0" },
     { name = "sympy", specifier = ">=1.12" },
     { name = "tqdm", specifier = ">=4.66.4" },
@@ -2616,6 +2618,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a1/53/830aa4c3066a8ab0ae9a9955976fb770fe9c6102117c8ec4ab3ea62d89e8/rich-14.0.0.tar.gz", hash = "sha256:82f1bc23a6a21ebca4ae0c45af9bdbc492ed20231dcb63f297d6d1021a9d5725", size = 224078, upload-time = "2025-03-30T14:15:14.23Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0d/9b/63f4c7ebc259242c89b3acafdb37b41d1185c07ff0011164674e9076b491/rich-14.0.0-py3-none-any.whl", hash = "sha256:1c9491e1951aac09caffd42f448ee3d04e58923ffe14993f6e83068dc395d7e0", size = 243229, upload-time = "2025-03-30T14:15:12.283Z" },
+]
+
+[[package]]
+name = "robustrankaggregpy"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "numpy", version = "2.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pandas" },
+    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "scipy", version = "1.15.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/85/bd/4d0041b347aa7ffa15483dc1eca339a31c477b9509d7bfdd9e19802346a8/robustrankaggregpy-0.3.0.tar.gz", hash = "sha256:b40c5c19ba3addfaaa601e3e99ba6c50db33dd55ed403475c60854deb1bc5086", size = 5859, upload-time = "2026-02-26T22:58:08.493Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fa/ac/6252bbb89f6aba02efe67490f352b8345e0bad044f59c1a3e6776d2c44d3/robustrankaggregpy-0.3.0-py3-none-any.whl", hash = "sha256:f432d5b509d8f330feeedf65898d816dc4b52f48264f2d4b5ca31bd726668272", size = 6902, upload-time = "2026-02-26T22:58:07.108Z" },
 ]
 
 [[package]]
