@@ -22,7 +22,7 @@ __all__ = [
     "create_metabolic_network",
     "create_mutual_information_network",
     "create_adjacency_matrix",
-    "label_density",
+    "reaction_target_density",
     "find_dense_clusters",
     "gene_to_reaction_df",
     "gene_to_reaction_list",
@@ -84,7 +84,7 @@ from metworkpy.network import (
     create_metabolic_network,
     create_mutual_information_network,
     create_adjacency_matrix,
-    label_density,
+    reaction_target_density,
     find_dense_clusters,
     bipartite_project,
 )

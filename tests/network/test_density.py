@@ -13,7 +13,7 @@ from scipy import stats
 from metworkpy import read_model
 from metworkpy.network import create_metabolic_network, bipartite_project
 from metworkpy.network.density import (
-    label_density,
+    reaction_target_density,
     find_dense_clusters,
     gene_target_density,
     gene_target_enrichment,
@@ -41,7 +41,7 @@ class TestLabelDensity(unittest.TestCase):
         cls.test_labels = {0: 2, 5: 3, 7: 2}
 
     def test_label_density(self):
-        label_density_calc = label_density(
+        label_density_calc = reaction_target_density(
             self.test_graph, labels=self.test_labels, radius=1, processes=1
         )
         label_density_exp = pd.Series(
