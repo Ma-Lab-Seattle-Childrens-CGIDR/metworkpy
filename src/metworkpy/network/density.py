@@ -95,6 +95,7 @@ def gene_target_density(
     metabolic_model: cobra.Model,
     gene_labels: Union[pd.Series, list, dict],
     radius: int = 3,
+    essential: bool = False,
     processes: Optional[int] = None,
 ) -> pd.Series:
     """
@@ -119,6 +120,13 @@ def gene_target_density(
         The radius to use for finding density, specifies how far out from
         a given node labels are counted towards density. A radius of 0 only
         counts the genes associated with the single node.
+    essential : bool
+        Whether for a gene to be in a neighborhood it should be
+        essential for at least 1 reaction in that neighborhood. If
+        False, all genes associated with reactions within the radius
+        are counted as in the neighborhood. If True, only genes
+        which are required for at least 1 reaction within the radius
+        are counted as in the neighborhood.
     processes : int, optional
         Number of processes to use
 
@@ -141,7 +149,9 @@ def gene_target_density(
     elif isinstance(gene_labels, dict):
         gene_labels = pd.Series(gene_labels)
     density_series = pd.Series(np.nan, index=pd.Index(metabolic_network.nodes))
-    rxn_to_gene_set_dict = _get_rxn_to_gene_set(model=metabolic_model)
+    rxn_to_gene_set_dict = _get_rxn_to_gene_set(
+        model=metabolic_model, essential=essential
+    )
     for node, density in Parallel(n_jobs=processes, return_as="generator")(
         delayed(_gene_density_worker)(
             node,
@@ -163,6 +173,7 @@ def gene_target_enrichment(
     metric: Literal["odds-ratio", "p-value"] = "p-value",
     alternative: Literal["two-sided", "less", "greater"] = "greater",
     radius: int = 3,
+    essential: bool = False,
     processes: Optional[int] = None,
 ) -> pd.Series:
     """
@@ -193,6 +204,13 @@ def gene_target_enrichment(
         finding enrichment, specifies how far out from a given node labels are
         counted towards enrichment. A radius of 0 only counts the genes
         associated with the single node.
+    essential : bool
+        Whether for a gene to be in a neighborhood it should be
+        essential for at least 1 reaction in that neighborhood. If
+        False, all genes associated with reactions within the radius
+        are counted as in the neighborhood. If True, only genes
+        which are required for at least 1 reaction within the radius
+        are counted as in the neighborhood.
     processes : int, optional
         Number of processes to use
 
@@ -229,7 +247,9 @@ def gene_target_enrichment(
     enrichment_series = pd.Series(
         np.nan, index=pd.Index(metabolic_network.nodes)
     )
-    rxn_to_gene_set_dict = _get_rxn_to_gene_set(model=metabolic_model)
+    rxn_to_gene_set_dict = _get_rxn_to_gene_set(
+        model=metabolic_model, essential=essential
+    )
     for node, odds, pval in Parallel(
         n_jobs=processes, return_as="generator_unordered"
     )(
