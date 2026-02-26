@@ -1,5 +1,32 @@
 # Changelog
 
+<!--toc:start-->
+
+- [Changelog](#changelog)
+  - [Version DEV](#version-dev)
+  - [Version 0.5.0](#version-050)
+  - [Version 0.4.1](#version-041)
+  - [Version 0.4.0](#version-040)
+  - [Version 0.3.0](#version-030)
+  - [Version 0.2.9](#version-029)
+  - [Version 0.2.8](#version-028)
+  - [Version 0.2.7](#version-027)
+
+<!--toc:end-->
+
+## Version DEV
+
+- Updated GPR parsing to directly use the ASTs rather than reparsing the strings
+  (which should bring a significant performance improvement)
+- Adding essentiality parameters to several of the density functions, allowing
+  users to select whether translating from reactions to genes should require
+  that the genes are required for the reaction or not
+- Added fuzzy module for network with methods for converting sets of genes into
+  fuzzy reaction sets with configurable membership functions. In future, the
+  density submodule will be split into an enrichment module, and this fuzzy
+  module with the previous density module being only for the label density on
+  the graph.
+
 ## Version 0.5.0
 
 - Updated empirical estimation method in the permutation test function to
@@ -21,7 +48,7 @@
 - Refactored divergence array code to use joblib, and enable calculating
   p-value. Additionally, the divergence array functions in KL and JS modules can
   now take an axis argument specifying which axis to slice along.
-- Refactored grouped divergence and ko divergence to allow for calculating
+- Refactored grouped divergence and KO divergence to allow for calculating
   significance using permutation testing. Additionally, refactored ko_divergence
   to use the grouped divergence function instead of repeating its functionality,
   with the added benefit of allowing the divergence of the different groups to
