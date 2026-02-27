@@ -2,6 +2,8 @@ from .network_construction import (
     create_metabolic_network,
     create_adjacency_matrix,
     create_mutual_information_network,
+    create_reaction_network,
+    create_metabolite_network,
 )
 from .density import (
     reaction_target_density,
@@ -20,6 +22,8 @@ from .fuzzy import fuzzy_reaction_set, fuzzy_reaction_intersection
 __all__ = [
     "create_metabolic_network",
     "create_adjacency_matrix",
+    "create_reaction_network",
+    "create_metabolite_network",
     "reaction_target_density",
     "gene_target_density",
     "gene_target_enrichment",

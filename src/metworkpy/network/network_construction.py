@@ -1,7 +1,7 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Literal, Iterable, Optional, cast
+from typing import Callable, Literal, Iterable, Optional, cast
 
 # External Imports
 import cobra  # type: ignore
@@ -13,6 +13,7 @@ import networkx as nx
 from metworkpy.information.mutual_information_network import (
     mi_pairwise,
 )
+from metworkpy.network.projection import bipartite_project
 
 
 # region Main Function
@@ -203,6 +204,180 @@ def create_metabolic_network(
     if nodes_to_remove:
         out_network.remove_nodes_from(nodes_to_remove)
     return out_network
+
+
+def create_reaction_network(
+    model: cobra.Model,
+    weighted: bool,
+    directed: bool,
+    weight_by: Literal["stoichiometry", "flux"] = "stoichiometry",
+    nodes_to_remove: list[str] | None = None,
+    reciprocal_weights: bool = False,
+    threshold: float = 0.0,
+    projection_weight: str | Callable[[float, float], float] | None = None,
+    projection_reciprocal: bool = False,
+    **kwargs,
+):
+    """
+    Create a reaction connectivity network from the
+    metabolic model
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model to create the network from
+    weighted : bool
+        Whether the network should be weighted
+    directed : bool
+        Whether the network should be directed
+    weight_by : 'stoichiometry' or 'flux', default='stoichiometry'
+        String indicating if the network should be weighted by
+        'stoichiometry', or 'flux' (see notes for more information).
+        Ignored if `weighted = False`
+    nodes_to_remove : list[str] | None
+        List of any metabolites or reactions that should be removed from
+        the final network. This can be used to remove metabolites that
+        participate in a large number of reactions, but are not desired
+        in downstream analysis such as water, or ATP, or pseudo
+        reactions like biomass. Each metabolite/reaction should be the
+        string ID associated with them in the cobra model.
+    reciprocal_weights : bool
+        Whether to use the reciprocal of the weights, useful if higher
+        flux should equate with lower weights in the final network (for
+        use with graph algorithms)
+    threshold : float
+        Threshold, below which to consider a bound to be 0
+    projection_weight : str | Callable[[float, float], float] | None
+        How to weight the projected graph. If None, the projected graph
+        will not be weighted. If "ratio", the edges will be weighted
+        based on the ratio between actual shared neighbors and maximum
+        possible shared neighbors. If "count", the edges will be
+        weighted by the number of shared neighbors. A function can also
+        be provided, which takes two float arguments (the weights of two
+        edges), and returns a float.
+    projection_reciprocal : bool
+        If converting from a directed graph to an undirected one,
+        whether to only keep edges that appear in both directions in the
+        original directed network.
+    kwargs
+        Keyword arguments are passed to the cobra flux_variability_analysis method
+        when weight_by is flux
+    """
+    # Create the metabolic network
+    metabolic_network = create_metabolic_network(
+        model=model,
+        weighted=weighted,
+        directed=directed,
+        weight_by=weight_by,
+        nodes_to_remove=nodes_to_remove,
+        reciprocal_weights=reciprocal_weights,
+        threshold=threshold,
+        **kwargs,
+    )
+    # Get a list of reactions which are in the model and not in the nodes_to_remove
+    if nodes_to_remove:
+        rxns_to_remove_set = set(nodes_to_remove)
+    else:
+        rxns_to_remove_set = set()
+    reaction_ids = {
+        r.id for r in model.reactions if r.id not in rxns_to_remove_set
+    }
+    # Project onto only reactions
+    return bipartite_project(
+        network=metabolic_network,
+        node_set=reaction_ids,
+        directed=directed,
+        weight=projection_weight,
+        weight_attribute="weight",
+        reciprocal=projection_reciprocal,
+    )
+
+
+def create_metabolite_network(
+    model: cobra.Model,
+    weighted: bool,
+    directed: bool,
+    weight_by: Literal["stoichiometry", "flux"] = "stoichiometry",
+    nodes_to_remove: list[str] | None = None,
+    reciprocal_weights: bool = False,
+    threshold: float = 0.0,
+    projection_weight: str | Callable[[float, float], float] | None = None,
+    projection_reciprocal: bool = False,
+    **kwargs,
+):
+    """
+    Create a metabolite connectivity network from the
+    metabolic model
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model to create the network from
+    weighted : bool
+        Whether the network should be weighted
+    directed : bool
+        Whether the network should be directed
+    weight_by : 'stoichiometry' or 'flux', default='stoichiometry'
+        String indicating if the network should be weighted by
+        'stoichiometry', or 'flux' (see notes for more information).
+        Ignored if `weighted = False`
+    nodes_to_remove : list[str] | None
+        List of any metabolites or reactions that should be removed from
+        the final network. This can be used to remove metabolites that
+        participate in a large number of reactions, but are not desired
+        in downstream analysis such as water, or ATP, or pseudo
+        reactions like biomass. Each metabolite/reaction should be the
+        string ID associated with them in the cobra model.
+    reciprocal_weights : bool
+        Whether to use the reciprocal of the weights, useful if higher
+        flux should equate with lower weights in the final network (for
+        use with graph algorithms)
+    threshold : float
+        Threshold, below which to consider a bound to be 0
+    projection_weight : str | Callable[[float, float], float] | None
+        How to weight the projected graph. If None, the projected graph
+        will not be weighted. If "ratio", the edges will be weighted
+        based on the ratio between actual shared neighbors and maximum
+        possible shared neighbors. If "count", the edges will be
+        weighted by the number of shared neighbors. A function can also
+        be provided, which takes two float arguments (the weights of two
+        edges), and returns a float.
+    projection_reciprocal : bool
+        If converting from a directed graph to an undirected one,
+        whether to only keep edges that appear in both directions in the
+        original directed network.
+    kwargs
+        Keyword arguments are passed to the cobra flux_variability_analysis method
+        when weight_by is flux
+    """
+    # Create the metabolic network
+    metabolic_network = create_metabolic_network(
+        model=model,
+        weighted=weighted,
+        directed=directed,
+        weight_by=weight_by,
+        nodes_to_remove=nodes_to_remove,
+        reciprocal_weights=reciprocal_weights,
+        threshold=threshold,
+        **kwargs,
+    )
+    # Get a list of reactions which are in the model and not in the nodes_to_remove
+    if nodes_to_remove:
+        mets_to_remove_set = set(nodes_to_remove)
+    else:
+        mets_to_remove_set = set()
+    met_ids = {
+        m.id for m in model.metabolites if m.id not in mets_to_remove_set
+    }
+    # Project onto only reactions
+    return bipartite_project(
+        network=metabolic_network,
+        node_set=met_ids,
+        directed=directed,
+        weight=projection_weight,
+        weight_attribute="weight",
+        reciprocal=projection_reciprocal,
+    )
 
 
 def create_adjacency_matrix(

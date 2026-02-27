@@ -20,6 +20,8 @@ __all__ = [
     "js_divergence",
     "get_example_model",
     "create_metabolic_network",
+    "create_reaction_network",
+    "create_metabolite_network",
     "create_mutual_information_network",
     "create_adjacency_matrix",
     "reaction_target_density",
