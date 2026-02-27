@@ -26,6 +26,8 @@
 - Added method for fuzzy-intersection to fuzzy sub-module. Added
   robustrankaggregpy as a dependency so that RRA can be used as an intersection
   method.
+- Added methods to network construction for creating reaction and metabolic
+  networks more directly
 
 ## Version 0.5.0
 
