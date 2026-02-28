@@ -17,9 +17,9 @@ from scipy import stats
 # Local Imports
 from metworkpy.network.neighborhoods import (
     _graph_gene_neighborhood,
-    _get_rxn_to_gene_set,
     _graph_neighborhood,
 )
+from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
 
 
 # region Main Functions
@@ -149,7 +149,7 @@ def gene_target_density(
     elif isinstance(gene_labels, dict):
         gene_labels = pd.Series(gene_labels)
     density_series = pd.Series(np.nan, index=pd.Index(metabolic_network.nodes))
-    rxn_to_gene_set_dict = _get_rxn_to_gene_set(
+    rxn_to_gene_set_dict = get_reaction_to_gene_translation_dict(
         model=metabolic_model, essential=essential
     )
     for node, density in Parallel(n_jobs=processes, return_as="generator")(
@@ -247,7 +247,7 @@ def gene_target_enrichment(
     enrichment_series = pd.Series(
         np.nan, index=pd.Index(metabolic_network.nodes)
     )
-    rxn_to_gene_set_dict = _get_rxn_to_gene_set(
+    rxn_to_gene_set_dict = get_reaction_to_gene_translation_dict(
         model=metabolic_model, essential=essential
     )
     for node, odds, pval in Parallel(

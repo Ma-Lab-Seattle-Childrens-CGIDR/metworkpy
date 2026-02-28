@@ -31,10 +31,10 @@ from scipy.stats import gmean
 
 # Local Imports
 from metworkpy.network.neighborhoods import (
-    _get_rxn_to_gene_set,
     _graph_gene_neighborhood,
     _graph_neighborhood,
 )
+from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
 
 
 class FuzzyMembershipFunction(Protocol):
@@ -551,8 +551,10 @@ def fuzzy_reaction_set(
     # Ensure the gene_set is a set of genes
     gene_set = set(gene_set)
     # Get a mapping from reactions to genes
-    rxn_to_gene_dict: dict[str, set[str]] = _get_rxn_to_gene_set(
-        model=metabolic_model, essential=essential
+    rxn_to_gene_dict: dict[str, set[str]] = (
+        get_reaction_to_gene_translation_dict(
+            model=metabolic_model, essential=essential
+        )
     )
     # Create the results series
     rxn_set = pd.Series(
