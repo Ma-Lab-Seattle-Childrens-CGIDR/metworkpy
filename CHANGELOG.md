@@ -3,7 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
-  - [Version DEV](#version-dev)
+  - [Version 0.6.0](#version-060)
   - [Version 0.5.0](#version-050)
   - [Version 0.4.1](#version-041)
   - [Version 0.4.0](#version-040)
@@ -14,7 +14,7 @@
 
 <!--toc:end-->
 
-## Version DEV
+## Version 0.6.0
 
 - Updated GPR parsing to directly use the ASTs rather than reparsing the strings
   (which should bring a significant performance improvement)
@@ -28,6 +28,11 @@
   method.
 - Added methods to network construction for creating reaction and metabolic
   networks more directly
+- Updated utils.translate functionality to make more direct use of cobra
+  methods. Removed translations for Dataframes as they were ill-defined. Added
+  parameters to all methods to allow selecting whether gene-reaction
+  associations should require essentiality (i.e. a gene being required for a
+  reaction to function).
 
 ## Version 0.5.0
 
