@@ -109,7 +109,8 @@ def membership_simple_reaction_density(
 ) -> float:
     """
     Membership function which computes the membership based on how
-    many genes within distance `radius` are in the target gene set
+    many reactions withhin distance `radius` are associated with
+    a gene in the target gene set
 
     Parameters
     ----------
@@ -201,7 +202,7 @@ def membership_distance_weighted_gene_density(
     Returns
     -------
     membership : float
-        The membership of the reaciton in the reaction set
+        The membership of the reaction in the reaction set
     """
     # Iterate through the layers in a bfs search
     membership = 0.0
@@ -214,24 +215,18 @@ def membership_distance_weighted_gene_density(
             break
         # Convert the nodes into a gene set
         gene_neighborhood = functools.reduce(
-            lambda left, right: left & right,
+            lambda left, right: left | right,
             map(reaction_to_gene_dict.get, nodes),
         )
 
+        if len(gene_neighborhood - previous_genes) == 0:
+            continue
+        membership += weight_fn(distance) * (
+            len((gene_neighborhood & gene_set) - previous_genes)
+            / len(gene_neighborhood - previous_genes)
+        )
         if not allow_repeats:
-            if len(gene_neighborhood - previous_genes) == 0:
-                continue
-            membership = weight_fn(distance) * (
-                len((gene_neighborhood & gene_set) - previous_genes)
-                / len(gene_neighborhood - previous_genes)
-            )
             previous_genes |= gene_neighborhood
-        else:
-            if len(gene_neighborhood) == 0:
-                continue
-            membership = weight_fn(distance) * (
-                len(gene_neighborhood & gene_set) / len(gene_neighborhood)
-            )
 
     return membership
 
@@ -271,7 +266,7 @@ def membership_distance_weighted_reaction_density(
     Returns
     -------
     membership : float
-        The membership of the reaciton in the reaction set
+        The membership of the reaction in the reaction set
     """
     # Iterate through the layers in a bfs search
     membership = 0.0
@@ -287,24 +282,23 @@ def membership_distance_weighted_reaction_density(
             if len(gene_set & reaction_to_gene_dict.get(rxn, set())) > 0:
                 target_rxn_count += 1.0
 
-        membership = weight_fn(distance) * (
+        membership += weight_fn(distance) * (
             target_rxn_count / float(len(nodes))
         )
 
     return membership
 
 
-def membership_knn_gene_density(
+def membership_knn_gene_distance(
     reaction: cobra.Reaction,
     network: nx.Graph,
     gene_set: set[str],
     reaction_to_gene_dict: dict[str, set[str]],
     max_radius: int = 5,
     k_neighbors: int = 3,
-    diameter: Optional[int] = None,
     allow_repeats: bool = False,
 ) -> float:
-    """
+    r"""
     Membership function which computes the membership based on distance
     to the kth neighbor.
 
@@ -326,9 +320,6 @@ def membership_knn_gene_density(
     k_neighbors : int
         The number of neighbors in the gene_set to use for estimating
         density in the graph
-    diameter : int, optional
-        The diameter of the network. If not provided it will be calculated from
-        `network`
     allow_repeats : bool, default=False
         Whether to allow genes to be counted multiple times,
         genes that have been seen before will not be counted
@@ -337,64 +328,49 @@ def membership_knn_gene_density(
     Returns
     -------
     membership : float
-        The membership of the reaciton in the reaction set
+        The membership of the reaction in the reaction set
 
     Notes
     -----
     The membership is calculated as
 
-    .. math:: 1 - \frac{knn-distance}{diameter}
+    .. math:: \frac{1}{knn-distance+1}
 
     The :math:`knn-distance` is the distance from the reaction to the
     kth neighbor which is in the gene set, so that if k=1, and the reaction
     is directly associated with a gene the knn-distance will be 0. If k=2,
     the distance from the reaction to the second closest node associated
     with a gene in gene_set will be used.
-
-    The `fuzzy_reaction_set` function will automatically find the diameter
-    if needed, so you don't need to worry about it getting recalculated for
-    each reaction being evaluated if you are using this function as a
-    membership function via `fuzzy_reaction_set`.
     """
-    if diameter is None:
-        diameter = nx.diameter(network)
     if k_neighbors == 0:
         raise ValueError("k_neighbors must be greater than 0")
     neighbors_seen = 0
     previous_genes = set()
     for distance, nodes in enumerate(nx.bfs_layers(network, reaction.id)):
-        if neighbors_seen >= k_neighbors:
-            break
-        if distance > max_radius:
-            break
         # Get the genes in the neighborhood
         gene_neighborhood = functools.reduce(
-            lambda left, right: left & right,
+            lambda left, right: left | right,
             map(reaction_to_gene_dict.get, nodes),
         )
         neighbors_seen += len((gene_neighborhood & gene_set) - previous_genes)
         if not allow_repeats:
             previous_genes |= gene_neighborhood
-    else:
-        # Set the distance to be the full diameter of the graph
-        # since that will set the membership to 0.0
-        distance = diameter + 1
-    # The subtraction from distance is due to it incrementing
-    # an additional time past when the knn was found, since the check
-    # is at the start of the for loop
-    return 1.0 - ((distance - 1.0) / diameter)
+        if neighbors_seen >= k_neighbors:
+            break
+        if distance + 1 > max_radius:
+            return 0.0
+    return 1 / float(distance + 1)
 
 
-def membership_knn_reaction_density(
+def membership_knn_reaction_distance(
     reaction: cobra.Reaction,
     network: nx.Graph,
     gene_set: set[str],
     reaction_to_gene_dict: dict[str, set[str]],
     max_radius: int = 5,
     k_neighbors: int = 3,
-    diameter: Optional[int] = None,
 ) -> float:
-    """
+    r"""
     Membership function which computes the membership based on distance
     to the kth neighbor.
 
@@ -416,6 +392,9 @@ def membership_knn_reaction_density(
     k_neighbors : int
         The number of neighbors in the gene_set to use for estimating
         density in the graph
+    dimension : int, default=2
+        Dimension parameter, used for scaling the density, see notes
+        Larger values will result in smaller membership values.
     diameter : int, optional
         The diameter of the network. If not provided it will be calculated from
         `network`
@@ -423,13 +402,13 @@ def membership_knn_reaction_density(
     Returns
     -------
     membership : float
-        The membership of the reaciton in the reaction set
+        The membership of the reaction in the reaction set
 
     Notes
     -----
     The membership is calculated as
 
-    .. math:: 1 - \frac{knn-distance}{diameter}
+    .. math:: \frac{1}{knn-distance+1}
 
     The :math:`knn-distance` is the distance from the reaction to the
     kth neighbor reaction which is associated with a gene in the gene set,
@@ -437,23 +416,11 @@ def membership_knn_reaction_density(
     the knn-distance will be 0. If k=2, the distance from the reaction
     to the second closest node associated with a gene in gene_set will
     be used.
-
-    The `fuzzy_reaction_set` function will automatically find the diameter
-    if needed, so you don't need to worry about it getting recalculated for
-    each reaction being evaluated if you are using this function as a
-    membership function via `fuzzy_reaction_set`.
     """
-    if diameter is None:
-        diameter = nx.diameter(network)
     if k_neighbors == 0:
         raise ValueError("k_neighbors must be greater than 0")
     neighbors_seen = 0
     for distance, nodes in enumerate(nx.bfs_layers(network, reaction.id)):
-        if neighbors_seen >= k_neighbors:
-            break
-        if distance > max_radius:
-            distance = diameter + 1
-            break
         # Count the number of reactions in the layer
         # Which are associated with a gene in gene_set
         target_rxn_count = 0.0
@@ -462,14 +429,14 @@ def membership_knn_reaction_density(
             if len(gene_set & reaction_to_gene_dict.get(rxn, set())) > 0:
                 target_rxn_count += 1.0
         neighbors_seen += target_rxn_count
-    else:
-        # Set the distance to be the full diameter of the graph
-        # since that will set the membership to 0.0
-        distance = diameter + 1
+        if neighbors_seen >= k_neighbors:
+            break
+        if distance + 1 > max_radius:
+            return 0.0
     # The subtraction from distance is due to it incrementing
     # an additional time past when the knn was found, since the check
     # is at the start of the for loop
-    return 1.0 - ((float(distance) - 1.0) / diameter)
+    return 1 / float(distance + 1)
 
 
 # endregion Membership Functions
@@ -481,8 +448,8 @@ MEMBERSHIP_FUNCTIONS = {
     "simple reaction density": membership_simple_reaction_density,
     "weighted gene density": membership_distance_weighted_gene_density,
     "weighted reaction density": membership_distance_weighted_reaction_density,
-    "knn gene density": membership_knn_gene_density,
-    "knn reaction density": membership_knn_reaction_density,
+    "knn gene density": membership_knn_gene_distance,
+    "knn reaction density": membership_knn_reaction_distance,
 }
 
 
@@ -515,7 +482,7 @@ def fuzzy_reaction_set(
         signature of `FuzzyMembershipFunction`
     scale : bool or float, optional
         Whether to scale the results of the membership values. If
-        None or False, no scaling will be applied. If True, will
+        False or None, no scaling will be applied. If True, will
         be scaled to be between 0 and 1 using a min-max scaler.
         If a float, the scaling will use a min-max scaler, but
         treat `scale` as the max.
@@ -546,6 +513,12 @@ def fuzzy_reaction_set(
     * 'knn gene density'
     * 'knn reaction density'
 
+    The difference between the gene and reaction density functions, are
+    how multiple genes being associated with a single reaction are counted.
+    For the gene type, multiple genes will all count towards the membership,
+    whereas with the reaction type reactions are counted only once regardless
+    of how many genes associated with them are in the gene set.
+
     See Also
     --------
     membership_simple_gene_density : Used when 'simple gene density' selected
@@ -567,13 +540,6 @@ def fuzzy_reaction_set(
 
     if not callable(membership_fn):
         raise ValueError("Received invalid membership function")
-    # If needed, find the diameter of the network
-    if (
-        membership_fn == membership_knn_gene_density
-        or membership_fn == membership_knn_reaction_density
-    ):
-        if "diameter" not in kwargs:
-            kwargs["diameter"] = nx.diameter(metabolic_network)
     # Convert directed graphs into undirected graphs
     if isinstance(metabolic_network, nx.DiGraph):
         metabolic_network = nx.to_undirected(metabolic_network)
@@ -596,7 +562,7 @@ def fuzzy_reaction_set(
         rxn_set.index,
         Parallel(n_jobs=processes, return_as="generator")(
             delayed(membership_fn)(
-                rxn,
+                metabolic_model.reactions.get_by_id(rxn),
                 network=metabolic_network,
                 gene_set=gene_set,
                 reaction_to_gene_dict=rxn_to_gene_dict,
@@ -606,12 +572,13 @@ def fuzzy_reaction_set(
         ),
     ):
         rxn_set[rxn] = membership
+
     if scale:
         if isinstance(scale, float):
             max_val = scale
         else:
             max_val = rxn_set.max()
-        rxn_set = rxn_set / max_val
+        rxn_set = (rxn_set - rxn_set.min()) / max_val
     return rxn_set
 
 
@@ -635,6 +602,46 @@ def fuzzy_reaction_intersection(
     """
     Converts `gene_sets` into fuzzy reaction sets, and find their intersection
     using `intersection_fn`
+
+    Parameters
+    ----------
+    gene_sets : iterable of iterable of str
+        Sets of genes to find the fuzzy reaction set intersection for
+    metabolic_network : nx.Graph or nx.DiGraph
+        Metabolic reaction network represented by a networkx Graph or DiGraph.
+        DiGraphs will be converted to Graphs before processing.
+    metabolic_model : cobra.Model
+        Metabolic model from which the metabolic network was constructed
+        (used for translating reactions to genes)
+    intersection_fn : {"mean", "min", "max", "geom", "rra"} or Callable[[pd.DataFrame], pd.Series]
+        Either a str specifying an intersection function (see notes), or
+        a Callable which takes a DataFrame, where each column is a fuzzy reaction
+        set and returns a Series which is a new fuzzy reaction set representing
+        the intersection of the input fuzzy reaction sets.
+    intersection_fn_kwargs : dict of str to Any
+        kwargs passed to the intersection function
+    rank_method : {"average", "min", "max", "first", "dense"}
+        If the `intersection_fn` is 'rra', how are ties in the
+        membership values handled when performing ranking
+    kwargs
+        Keyword arguments are passed to `fuzzy_reaction_set`
+
+    Returns
+    -------
+    intersection : pd.Series
+        A pandas Series representing a fuzzy reaction set constructed
+        by intersecting the fuzzy reaction sets derived from the
+        `gene_sets`.
+
+    Notes
+    -----
+    The possible methods for the intersection are:
+    * mean: Take the arithmetic mean of the membership values
+    * min: Take the minimum of the membership values
+    * max: Take the max of the membership values
+    * geom: Take the geometric mean of the membership values
+    * rra: Perform robust rank aggregation on the membership values,
+      and the subtract the resulting rho-score from 1.0
     """
     # Construct the DataFrame from the gene sets
     rxn_set_list = []
