@@ -10,12 +10,12 @@ from .expression_utils import (
     expr_to_metchange_gene_weights,
 )
 from .translate import (
-    gene_to_reaction_dict,
-    gene_to_reaction_df,
     gene_to_reaction_list,
-    reaction_to_gene_df,
-    reaction_to_gene_dict,
     reaction_to_gene_list,
+    reaction_to_gene_ids,
+    gene_to_reaction_ids,
+    get_gene_to_reaction_translation_dict,
+    get_reaction_to_gene_translation_dict,
 )
 from .connected_components import (
     find_connected_components,
@@ -36,12 +36,12 @@ __all__ = [
     "count_to_cpm",
     "rpkm_to_tpm",
     "fpkm_to_tpm",
-    "gene_to_reaction_df",
     "gene_to_reaction_list",
-    "gene_to_reaction_dict",
-    "reaction_to_gene_df",
     "reaction_to_gene_list",
-    "reaction_to_gene_dict",
+    "reaction_to_gene_ids",
+    "gene_to_reaction_ids",
+    "get_gene_to_reaction_translation_dict",
+    "get_reaction_to_gene_translation_dict",
     "expr_to_metchange_gene_weights",
     "find_connected_components",
     "find_representative_nodes",

@@ -16,7 +16,10 @@ from cobra.exceptions import OptimizationError
 from tqdm import tqdm
 
 # Local Imports
-from metworkpy.utils import reaction_to_gene_df, reaction_to_gene_list
+from metworkpy.utils import (
+    reaction_to_gene_list,
+    get_reaction_to_gene_translation_dict,
+)
 
 
 # region Main Functions
@@ -138,6 +141,7 @@ def find_metabolite_synthesis_network_genes(
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
+    essential: bool = False,
     **kwargs,
 ) -> pd.DataFrame[bool | float]:
     """Find which genes are used to generate each metabolite in the model
@@ -172,6 +176,11 @@ def find_metabolite_synthesis_network_genes(
         maximum_objective` are considered essential.
     progress_bar : bool
         Whether to display a progress bar
+    essential : bool
+        When translating from reactions to genes to get the
+        gene metabolite network for the pFBA method, whether
+        to only include genes which are essential for a reaction
+        in the genes associated with said reaction.
     **kwargs : dict
         Keyword arguments passed to
         `cobra.flux_analysis.variability.find_essential_genes`, or to
@@ -240,14 +249,27 @@ def find_metabolite_synthesis_network_genes(
                     )
                 ).fluxes
                 pfba_sol.name = "fluxes"
-                gene_fluxes = reaction_to_gene_df(
-                    model, pfba_sol.to_frame()
-                ).reset_index()
+                # Create a dataframe indexed by reaction, with a column for genes
+                rxn_to_gene_frame = (
+                    pd.Series(
+                        get_reaction_to_gene_translation_dict(
+                            model=model, essential=essential
+                        ),
+                    )
+                    .explode()
+                    .to_frame(name="gene")
+                )
+                pfba_frame = pfba_sol.to_frame(name="fluxes")
+                gene_fluxes = pfba_frame.merge(
+                    rxn_to_gene_frame,
+                    how="left",
+                    left_index=True,
+                    right_index=True,
+                ).reset_index(drop=True)
                 # Set the values of res_df such that the value reflects the
                 # maximum value in terms of magnitude, but sign is maintained,
-                # i.e. if a gene is
-                gene_fluxes_max = gene_fluxes.groupby("genes").max()["fluxes"]
-                gene_fluxes_min = gene_fluxes.groupby("genes").min()["fluxes"]
+                gene_fluxes_max = gene_fluxes.groupby("gene").max()["fluxes"]
+                gene_fluxes_min = gene_fluxes.groupby("gene").min()["fluxes"]
                 res_df.loc[
                     gene_fluxes_max.abs() >= gene_fluxes_min.abs(), metabolite
                 ] = gene_fluxes_max[
@@ -532,7 +554,7 @@ def add_metabolite_absorb_reaction_(
     )
     absorbing_constraint = model.problem.Constraint(
         sympy.Add(
-            *metabolite_gen_exprs, -1 * absorbing_reaction.forward_variable
+            *metabolite_gen_exprs, (-1) * absorbing_reaction.forward_variable
         ),
         name=absorbing_constraint_name,
         lb=0.0,
