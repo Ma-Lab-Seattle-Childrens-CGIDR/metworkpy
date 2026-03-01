@@ -27,7 +27,8 @@ from robustrankaggregpy.aggregate_ranks import (
     rank_matrix_from_df,
     rho_scores,
 )
-from scipy.stats import gmean
+from scipy.stats import gmean, rv_discrete
+from scipy import stats
 
 # Local Imports
 from metworkpy.network.neighborhoods import (
@@ -147,11 +148,57 @@ def membership_simple_reaction_density(
 # region weight functions
 
 
-def weight_fn_geom(distance: int) -> float:
+def weight_fn_geom_series(distance: int, r: int = 2) -> float:
     """
-    Weights layers using geometric series of 1/2^(n+1)
+    Weights distances using geometric series of 1/r^(n+1)
     """
-    return 1.0 / (math.pow(2.0, distance + 1))
+    return 1.0 / float(math.pow(2, distance + 1))
+
+
+def weight_fn_distr(
+    distance: int, weight_distr: rv_discrete, **kwargs
+) -> float:
+    """
+    Weight the distance using a scipy discrete distribution
+
+    Parameters
+    ----------
+    distance : int
+        The distance to calculate the weight for
+    distr : rv_discrete
+        The Scipy distribution to use when calculating
+        the weight
+    kwargs
+        Keyword arguments are passed through to the
+        rv_discrete's pmf function
+    """
+    return weight_distr.pmf(distance, **kwargs)
+
+
+def weight_fn_poisson(distance: int, lam: float = 0.0) -> float:
+    """Calculate the weight using a Poisson distribution
+
+    Parameters
+    ----------
+    distance : int
+        Distance to calculate the weight for
+    lam : float, default=0.0
+        The lambda of the poisson distribution
+    """
+    return weight_fn_distr(
+        distance=distance, weight_distr=stats.poisson, mu=lam
+    )
+
+
+def weight_fn_reciprocal(distance: int) -> float:
+    """
+    Weights distances using the formula 1/(distance+1)
+
+    Notes
+    -----
+    Distance has 1 added to avoid zero division
+    """
+    return 1 / float(distance + 1)
 
 
 # endregion weight functions
@@ -163,8 +210,9 @@ def membership_distance_weighted_gene_density(
     gene_set: set[str],
     reaction_to_gene_dict: dict[str, set[str]],
     max_radius: int = 3,
-    weight_fn: Callable[[int], float] = weight_fn_geom,
+    weight_fn: Callable[[int], float] = weight_fn_geom_series,
     allow_repeats: bool = False,
+    **kwargs,
 ) -> float:
     """
     Membership function which computes the membership based on how
@@ -198,6 +246,8 @@ def membership_distance_weighted_gene_density(
         genes that have been seen before will be removed from the
         gene neighborhood prior to calculating the membership
         contribution for the layer
+    kwargs
+        Keyword arguments passed through to the weight function
 
     Returns
     -------
@@ -221,7 +271,7 @@ def membership_distance_weighted_gene_density(
 
         if len(gene_neighborhood - previous_genes) == 0:
             continue
-        membership += weight_fn(distance) * (
+        membership += weight_fn(distance, **kwargs) * (
             len((gene_neighborhood & gene_set) - previous_genes)
             / len(gene_neighborhood - previous_genes)
         )
@@ -237,7 +287,8 @@ def membership_distance_weighted_reaction_density(
     gene_set: set[str],
     reaction_to_gene_dict: dict[str, set[str]],
     max_radius: int = 3,
-    weight_fn: Callable[[int], float] = weight_fn_geom,
+    weight_fn: Callable[[int], float] = weight_fn_geom_series,
+    **kwargs,
 ) -> float:
     """
     Membership function which computes the membership based on how
@@ -262,6 +313,8 @@ def membership_distance_weighted_reaction_density(
         The function used to compute the weight for genes
         depending on their distance from the reaction. Should
         take in the distance, and return a weight.
+    kwargs
+        Keyword arguments passed through to the weight function
 
     Returns
     -------
@@ -282,7 +335,7 @@ def membership_distance_weighted_reaction_density(
             if len(gene_set & reaction_to_gene_dict.get(rxn, set())) > 0:
                 target_rxn_count += 1.0
 
-        membership += weight_fn(distance) * (
+        membership += weight_fn(distance, **kwargs) * (
             target_rxn_count / float(len(nodes))
         )
 
@@ -296,7 +349,9 @@ def membership_knn_gene_distance(
     reaction_to_gene_dict: dict[str, set[str]],
     max_radius: int = 5,
     k_neighbors: int = 3,
+    weight_fn: Callable[[int], float] = weight_fn_reciprocal,
     allow_repeats: bool = False,
+    **kwargs,
 ) -> float:
     r"""
     Membership function which computes the membership based on distance
@@ -320,10 +375,16 @@ def membership_knn_gene_distance(
     k_neighbors : int
         The number of neighbors in the gene_set to use for estimating
         density in the graph
+    weight_fn : Callable(int)->float, default=weight_fn_reciprocal
+        Function to use for calculating the membership associated
+        with a distance
     allow_repeats : bool, default=False
         Whether to allow genes to be counted multiple times,
         genes that have been seen before will not be counted
         towards the number of neighbors
+    kwargs
+        Additional keyword arguments passed through to
+        the `weight_fn`
 
     Returns
     -------
@@ -332,10 +393,6 @@ def membership_knn_gene_distance(
 
     Notes
     -----
-    The membership is calculated as
-
-    .. math:: \frac{1}{knn-distance+1}
-
     The :math:`knn-distance` is the distance from the reaction to the
     kth neighbor which is in the gene set, so that if k=1, and the reaction
     is directly associated with a gene the knn-distance will be 0. If k=2,
@@ -359,7 +416,7 @@ def membership_knn_gene_distance(
             break
         if distance + 1 > max_radius:
             return 0.0
-    return 1 / float(distance + 1)
+    return weight_fn(distance, **kwargs)
 
 
 def membership_knn_reaction_distance(
@@ -369,6 +426,8 @@ def membership_knn_reaction_distance(
     reaction_to_gene_dict: dict[str, set[str]],
     max_radius: int = 5,
     k_neighbors: int = 3,
+    weight_fn: Callable[[int], float] = weight_fn_reciprocal,
+    **kwargs,
 ) -> float:
     r"""
     Membership function which computes the membership based on distance
@@ -392,12 +451,18 @@ def membership_knn_reaction_distance(
     k_neighbors : int
         The number of neighbors in the gene_set to use for estimating
         density in the graph
+    weight_fn : Callable(int)->float, default=weight_fn_reciprocal
+        Function to use for calculating the membership associated
+        with a distance
     dimension : int, default=2
         Dimension parameter, used for scaling the density, see notes
         Larger values will result in smaller membership values.
     diameter : int, optional
         The diameter of the network. If not provided it will be calculated from
         `network`
+    kwargs
+        Additional keyword arguments passed through to
+        the `weight_fn`
 
     Returns
     -------
@@ -406,10 +471,6 @@ def membership_knn_reaction_distance(
 
     Notes
     -----
-    The membership is calculated as
-
-    .. math:: \frac{1}{knn-distance+1}
-
     The :math:`knn-distance` is the distance from the reaction to the
     kth neighbor reaction which is associated with a gene in the gene set,
     so that if k=1, and the reaction is directly associated with a gene
@@ -433,10 +494,88 @@ def membership_knn_reaction_distance(
             break
         if distance + 1 > max_radius:
             return 0.0
-    # The subtraction from distance is due to it incrementing
-    # an additional time past when the knn was found, since the check
-    # is at the start of the for loop
-    return 1 / float(distance + 1)
+    return weight_fn(distance, **kwargs)
+
+
+def membership_gene_enrichment(
+    reaction: cobra.Reaction,
+    network: nx.Graph,
+    gene_set: set[str],
+    reaction_to_gene_dict: dict[str, set[str]],
+    radius: int,
+    total_genes: Optional[int] = None,
+) -> float:
+    """
+    Membership function which computes the membership by calculating the
+    enrichment of target set genes which are in a neighborhood defined
+    by the `radius` around the reaction. The membership will be
+    1-pvalue where pvalue is calculated using a Fisher's exact test
+    to quantify the enrichment.
+
+    Parameters
+    ----------
+    reaction : cobra.Reaction
+        The reaction to find the membership of
+    network : nx.Graph
+        Connectivity graph of the network
+    gene_set : set of str
+        The set of gene's to translate into a reaction set
+    reaction_to_gene_dict : dict of str to set of str
+        A dict for translating from reactions to sets of genes
+        associated with each reaction
+    radius : int
+        The distance used to define network neighborhoods
+    total_genes : int, optional
+        The total number of genes associated with the reactions
+        in the network, if not provided will calculate this based
+        on the reaction_to_gene_dict.
+
+    Returns
+    -------
+    membership : float
+        The membership of the reaction in the reaction set, calculated
+        as 1-(p-value), where p-value is the enrichment p-value
+
+    Notes
+    -----
+    If used with the `fuzzy_reaction_set` method, the total genes will
+    automatically be calculated and passed in if not provided, so you
+    don't need to do that manually (though it can still be over ridden if desired).
+    """
+    gene_neighborhood = _graph_gene_neighborhood(
+        network=network,
+        radius=radius,
+        node=reaction.id,
+        rxn_to_gene_set_dict=reaction_to_gene_dict,
+    )
+    if len(gene_neighborhood) == 0:
+        return 0.0
+    if total_genes is None:
+        total_genes = len(
+            functools.reduce(
+                lambda x, y: x | y,
+                map(
+                    lambda r: reaction_to_gene_dict.get(r, set()),
+                    network.nodes,
+                ),
+                set(),
+            )
+        )
+    pval = stats.fisher_exact(
+        np.array(
+            [
+                [
+                    len(gene_set & gene_neighborhood),
+                    len(gene_set - gene_neighborhood),
+                ],
+                [
+                    len(gene_neighborhood - gene_set),
+                    total_genes - len(gene_neighborhood | gene_set),
+                ],
+            ]
+        )
+    ).pvalue
+    return 1 - pval
 
 
 # endregion Membership Functions
@@ -450,6 +589,7 @@ MEMBERSHIP_FUNCTIONS = {
     "weighted reaction density": membership_distance_weighted_reaction_density,
     "knn gene density": membership_knn_gene_distance,
     "knn reaction density": membership_knn_reaction_distance,
+    "gene enrichment": membership_gene_enrichment,
 }
 
 
@@ -493,7 +633,7 @@ def fuzzy_reaction_set(
     processes : int, optional
         Number of processes to use for parallel processing
     kwargs
-        Keyword arguments passed to the membership_fn
+        Additional keyword arguments are passed to the membership_fn
 
     Returns
     -------
@@ -512,6 +652,7 @@ def fuzzy_reaction_set(
     * 'weighted reaction density'
     * 'knn gene density'
     * 'knn reaction density'
+    * 'gene enrichment'
 
     The difference between the gene and reaction density functions, are
     how multiple genes being associated with a single reaction are counted.
@@ -527,6 +668,7 @@ def fuzzy_reaction_set(
     membership_distance_weighted_reaction_density : Used when 'weighted reaction density' selected
     membership_knn_gene_density : Used when 'knn gene density' selected
     membership_knn_reaction_density : Used when 'knn reaction density' selected
+    membership_gene_enrichment : Used when 'gene enrichment' selected
     """
     # Get the correct membership function
     if isinstance(membership_fn, str):
@@ -556,10 +698,22 @@ def fuzzy_reaction_set(
             model=metabolic_model, essential=essential
         )
     )
+    # If the membership function is gene enrichment, pre-calculate the
+    # number of genes in the network if needed
+    if membership_fn == membership_gene_enrichment:
+        if "total_genes" not in kwargs:
+            kwargs["total_genes"] = len(
+                functools.reduce(
+                    lambda x, y: x | y,
+                    map(
+                        lambda r: rxn_to_gene_dict.get(r, set()),
+                        metabolic_network.nodes,
+                    ),
+                    set(),
+                )
+            )
     # Create the results series
-    rxn_set = pd.Series(
-        0.0, index=pd.Index(metabolic_model.reactions.list_attr("id"))
-    )
+    rxn_set = pd.Series(0.0, index=pd.Index(metabolic_network.nodes))
     for rxn, membership in zip(
         rxn_set.index,
         Parallel(n_jobs=processes, return_as="generator")(

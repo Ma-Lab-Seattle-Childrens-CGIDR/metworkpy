@@ -24,7 +24,7 @@ class TestFuzzyReactionSet(unittest.TestCase):
             model=cls.model,
             weighted=False,
             directed=False,
-            nodes_to_remove=None,
+            nodes_to_remove=["biomass"],
         )
 
     def test_simple_gene_density_r0(self):
@@ -212,6 +212,36 @@ class TestFuzzyReactionSet(unittest.TestCase):
         for rxn, value in fuzzy_rxn_set_res.items():
             if rxn in expected_non_zero:
                 self.assertGreater(value, 0.01)
+            else:
+                self.assertEqual(value, 0.0)
+
+    def test_gene_enrichment_r1(self):
+        if self.network is None:
+            raise ValueError("Test requires a metabolic network")
+        fuzzy_rxn_set_res = fuzzy_reaction_set(
+            metabolic_network=self.network,
+            metabolic_model=self.model,
+            gene_set={"g010", "g018"},
+            membership_fn="gene enrichment",
+            scale=None,
+            essential=False,
+            processes=1,
+            radius=1,
+        )
+        expected_non_zero = {
+            "R_exp",
+            "R_E_ex",
+            "R_O_P__R",
+            "R_C_D__J",
+            "R_J__Q",
+            "R_P_Q__S",
+        }
+        for rxn, value in fuzzy_rxn_set_res.items():
+            print(f"Reaction: {rxn}, value: {value}")
+            if rxn in expected_non_zero:
+                self.assertGreater(
+                    value, 0.1
+                )  # All should be higher than this, R_P_Q__S should be 1/6
             else:
                 self.assertEqual(value, 0.0)
 
