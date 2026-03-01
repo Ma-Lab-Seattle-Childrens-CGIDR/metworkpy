@@ -1,7 +1,16 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Callable, Literal, Iterable, Optional, cast
+import itertools
+from typing import (
+    cast,
+    Callable,
+    Hashable,
+    Iterable,
+    Literal,
+    Optional,
+    Union,
+)
 
 # External Imports
 import cobra  # type: ignore
@@ -14,6 +23,7 @@ from metworkpy.information.mutual_information_network import (
     mi_pairwise,
 )
 from metworkpy.network.projection import bipartite_project
+from metworkpy.utils import reaction_to_gene_ids, reaction_to_gene_list
 
 
 # region Main Function
@@ -116,6 +126,98 @@ def create_mutual_information_network(
     return mi_network
 
 
+def create_adjacency_matrix(
+    model: cobra.Model,
+    weighted: bool,
+    directed: bool,
+    weight_by: Literal["stoichiometry", "flux"] = "stoichiometry",
+    threshold: float = 0.0,
+    **kwargs,
+) -> pd.DataFrame:
+    """
+    Create an adjacency matrix representing the metabolic network of a provided
+    cobra Model
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model to create the network from
+    weighted : bool
+        Whether the network should be weighted
+    directed : bool
+        Whether the network should be directed
+    weight_by : 'flux' or 'stoichiometry', default='stoichiometry'
+        String indicating if the network should be weighted by
+        'stoichiometry', or 'flux' (see notes for more information).
+        Ignored if `weighted = False`
+    threshold : float
+        Threshold, below which to consider a (absolute value of a) bound/flux
+        to be 0
+    kwargs
+        Passed to cobra's flux_variability_analysis function if the weight_by
+        is flux
+
+    Returns
+    -------
+    pd.DataFrame
+        The adjacency matrix
+
+    Notes
+    -----
+    When creating a weighted network, the options are to weight the edges based
+    on flux, or stoichiometry. If stoichiometry is chosen the edge weight will
+    correspond to the stoichiometric coefficient of the metabolite, in a given
+    reaction.
+
+    For flux weighting, first flux variability analysis is performed. The edge
+    weight is determined by the maximum flux through a reaction in a particular
+    direction (forward if the metabolite is a product of the reaction,
+    reverse if the metabolite is a substrate) multiplied by the metabolite
+    stoichiometry. If the network is unweighted, the maximum of the absolute
+    value of the forward and the reverse flux is used instead.
+    """
+    if not isinstance(model, cobra.Model):
+        raise ValueError(
+            f"Model must be a cobra.Model, received a {type(model)} instead"
+        )
+    if threshold < 0.0:
+        raise ValueError(
+            f"Threshold must be greater than 0.0, but received {threshold}"
+        )
+    if directed:
+        if weighted:
+            if weight_by == "stoichiometry":
+                return _create_adj_matrix_d_w_stoich(
+                    model=model, threshold=threshold
+                )
+            elif weight_by == "flux":
+                return _create_adj_matrix_d_w_flux(
+                    model=model, threshold=threshold, **kwargs
+                )
+            else:
+                raise ValueError(
+                    f"weight_by must be stoichiometry or flux, but received {weight_by}"
+                )
+        else:
+            return _create_adj_matrix_d_uw(model=model, threshold=threshold)
+    else:
+        if weighted:
+            if weight_by == "stoichiometry":
+                return _create_adj_matrix_ud_w_stoich(
+                    model=model, threshold=threshold
+                )
+            elif weight_by == "flux":
+                return _create_adj_matrix_ud_w_flux(
+                    model=model, threshold=threshold, **kwargs
+                )
+            else:
+                raise ValueError(
+                    f"weight_by must be stoichiometry or flux, but received {weight_by}"
+                )
+        else:
+            return _create_adj_matrix_ud_uw(model=model, threshold=threshold)
+
+
 def create_metabolic_network(
     model: cobra.Model,
     weighted: bool,
@@ -215,7 +317,6 @@ def create_reaction_network(
     reciprocal_weights: bool = False,
     threshold: float = 0.0,
     projection_weight: str | Callable[[float, float], float] | None = None,
-    projection_reciprocal: bool = False,
     **kwargs,
 ):
     """
@@ -255,10 +356,6 @@ def create_reaction_network(
         weighted by the number of shared neighbors. A function can also
         be provided, which takes two float arguments (the weights of two
         edges), and returns a float.
-    projection_reciprocal : bool
-        If converting from a directed graph to an undirected one,
-        whether to only keep edges that appear in both directions in the
-        original directed network.
     kwargs
         Keyword arguments are passed to the cobra flux_variability_analysis method
         when weight_by is flux
@@ -289,7 +386,9 @@ def create_reaction_network(
         directed=directed,
         weight=projection_weight,
         weight_attribute="weight",
-        reciprocal=projection_reciprocal,
+        # reciprocal won't actually impact, since the graph will be
+        # created with the correct directedness
+        reciprocal=False,
     )
 
 
@@ -302,7 +401,6 @@ def create_metabolite_network(
     reciprocal_weights: bool = False,
     threshold: float = 0.0,
     projection_weight: str | Callable[[float, float], float] | None = None,
-    projection_reciprocal: bool = False,
     **kwargs,
 ):
     """
@@ -342,10 +440,6 @@ def create_metabolite_network(
         weighted by the number of shared neighbors. A function can also
         be provided, which takes two float arguments (the weights of two
         edges), and returns a float.
-    projection_reciprocal : bool
-        If converting from a directed graph to an undirected one,
-        whether to only keep edges that appear in both directions in the
-        original directed network.
     kwargs
         Keyword arguments are passed to the cobra flux_variability_analysis method
         when weight_by is flux
@@ -376,100 +470,207 @@ def create_metabolite_network(
         directed=directed,
         weight=projection_weight,
         weight_attribute="weight",
-        reciprocal=projection_reciprocal,
+        # reciprocal won't actually impact, since the graph will be
+        # created with the correct directedness
+        reciprocal=False,
     )
 
 
-def create_adjacency_matrix(
+def create_gene_network(
     model: cobra.Model,
-    weighted: bool,
     directed: bool,
-    weight_by: Literal["stoichiometry", "flux"] = "stoichiometry",
-    threshold: float = 0.0,
-    **kwargs,
-) -> pd.DataFrame:
+    nodes_to_remove: list[str] | None,
+    essential: bool,
+) -> Union[nx.Graph, nx.DiGraph]:
     """
-    Create an adjacency matrix representing the metabolic network of a provided
-    cobra Model
+    Create a gene connectivity network from the metabolic model,
+    see notes for details
 
     Parameters
     ----------
     model : cobra.Model
         Cobra Model to create the network from
-    weighted : bool
-        Whether the network should be weighted
     directed : bool
-        Whether the network should be directed
-    weight_by : 'flux' or 'stoichiometry', default='stoichiometry'
-        String indicating if the network should be weighted by
-        'stoichiometry', or 'flux' (see notes for more information).
-        Ignored if `weighted = False`
-    threshold : float
-        Threshold, below which to consider a (absolute value of a) bound/flux
-        to be 0
-    kwargs
-        Passed to cobra's flux_variability_analysis function if the weight_by
-        is flux
+        Whether the network should be directed. It True,
+        the network's edges direction will be decided by the
+        directionality of the reaction network, and
+        multiple genes associated with a single reaction
+        will have two (reciprocal) edges connecting them.
+    nodes_to_remove : list[str] or None
+        List of any metabolites or reactions to remove
+        from the metabolic network prior to projecting
+        it onto the reactions and constructing the gene network.
+        Each metabolite/reaction to remove should be the string
+        id associated with them in the cobra Model
+    essential : bool
+        Whether a gene should be required for a reaction to function
+        in order for that reaction to be used in assigning the
+        gene edges
 
     Returns
     -------
-    pd.DataFrame
-        The adjacency matrix
+    gene_network : nx.Graph or nx.DiGraph
+        Network connecting genes which are neighboring in the
+        reaction network together
 
     Notes
     -----
-    When creating a weighted network, the options are to weight the edges based
-    on flux, or stoichiometry. If stoichiometry is chosen the edge weight will
-    correspond to the stoichiometric coefficient of the metabolite, in a given
-    reaction.
+    The gene network includes nodes for each gene associated with
+    a reaction in the network (whether or not essential is True).
+    Edges are added by connecting each gene associated with a reaction
+    to genes associated with all the neighboring reactions. If the
+    graph is directed, then gene nodes are connected to genes associated
+    with succcessor reactions. For genes associated with a single reaction
+    they are given edges between them (going both directions in the
+    case of directed graphs).
 
-    For flux weighting, first flux variability analysis is performed. The edge
-    weight is determined by the maximum flux through a reaction in a particular
-    direction (forward if the metabolite is a product of the reaction,
-    reverse if the metabolite is a substrate) multiplied by the metabolite
-    stoichiometry. If the network is unweighted, the maximum of the absolute
-    value of the forward and the reverse flux is used instead.
+    The essential parameter is to decide which genes are associated
+    with which reactions in order to determine which genes are neighbors
+    in the gene network. If True, genes will only be associated with
+    a reaction, when adding edges to the network, if they are required
+    for that reaction to function. All genes associated with reactions
+    in the network will still be added as nodes even if they are not
+    essential for any reactions in the network.
     """
-    if not isinstance(model, cobra.Model):
-        raise ValueError(
-            f"Model must be a cobra.Model, received a {type(model)} instead"
-        )
-    if threshold < 0.0:
-        raise ValueError(
-            f"Threshold must be greater than 0.0, but received {threshold}"
-        )
-    if directed:
-        if weighted:
-            if weight_by == "stoichiometry":
-                return _create_adj_matrix_d_w_stoich(
-                    model=model, threshold=threshold
-                )
-            elif weight_by == "flux":
-                return _create_adj_matrix_d_w_flux(
-                    model=model, threshold=threshold, **kwargs
-                )
-            else:
-                raise ValueError(
-                    f"weight_by must be stoichiometry or flux, but received {weight_by}"
-                )
-        else:
-            return _create_adj_matrix_d_uw(model=model, threshold=threshold)
+    # NOTE: Only unweighted due to ill-defined nature
+    # of connecting multiple genes associated with a reaction,
+    # if there is a good way of handling this it can be added.
+
+    # Construct the reaction network
+    rxn_network = create_reaction_network(
+        model=model,
+        weighted=False,
+        directed=directed,
+        nodes_to_remove=nodes_to_remove,
+    )
+    # Create the new gene network
+    gene_list = reaction_to_gene_list(
+        model=model, reaction_list=rxn_network.nodes, essential=False
+    )
+    # Create the new network
+    if not directed:
+        gene_network: Union[nx.Graph, nx.DiGraph] = nx.DiGraph()
     else:
-        if weighted:
-            if weight_by == "stoichiometry":
-                return _create_adj_matrix_ud_w_stoich(
-                    model=model, threshold=threshold
-                )
-            elif weight_by == "flux":
-                return _create_adj_matrix_ud_w_flux(
-                    model=model, threshold=threshold, **kwargs
-                )
-            else:
-                raise ValueError(
-                    f"weight_by must be stoichiometry or flux, but received {weight_by}"
-                )
+        gene_network = nx.Graph()
+    gene_network.add_nodes_from(gene_list)
+
+    # Add edges
+    for rxn in rxn_network.nodes:
+        rxn_gene_set = reaction_to_gene_ids(
+            model=model, reaction=rxn, essential=essential
+        )
+        # This won't run at all if there are not at least 2 genes
+        for g1, g2 in itertools.combinations(rxn_gene_set, 2):
+            gene_network.add_edge(g1, g2)
+            gene_network.add_edge(g2, g1)
+        # Go through all neighboring reactions (successors for directed)
+        # NOTE: For networkx DiGraphs, neighbors and successors are the same
+        for g1, g2 in itertools.product(
+            rxn_gene_set,
+            reaction_to_gene_list(
+                model=model,
+                reaction_list=rxn_network.neighbors(rxn),
+                essential=essential,
+            ),
+        ):
+            gene_network.add_edge(g1, g2)
+    return gene_network
+
+
+def create_group_connectivity_network(
+    network: Union[nx.Graph, nx.DiGraph],
+    groups: dict[Hashable, Iterable[Hashable]],
+    max_distance: int = 1,
+    weighted: bool = True,
+):
+    """
+    Create a group connectivity network, see notes for details
+
+    Parameters
+    ----------
+    network : nx.Graph or nx.DiGraph
+        Network to use when finding neighbors. Directed
+        graphs will be converted to non-directed graphs. Edge weights
+        will be ignored.
+    groups : dict of Hashable to Iterable of Hashable
+        Group definitions, must be a map between group names (which
+        will be used as nodes in the network), and an iterable of
+        group members (which should be nodes in the network)
+    max_distance : int, default=1
+        Max distance for nodes to be considered neighbors. A value of 0
+        will only connect groups with direct overlaps, while a value of 1
+        will connect groups which have members that are direct neighbors in the
+        network.
+    weighted : bool, default=True
+        Whether to weight the graph based on the number of connections
+        between the groups. If True, the edges in the group connectivity
+        network will be weighted based on the total number of neighboring
+        relationships.
+
+    Returns
+    -------
+    nx.Graph
+        The group connectivity graph, which includes nodes for every group
+        defined in `group`, with edges connecting groups which are connected
+        in `network`, with optional edge weighted.
+
+    Notes
+    -----
+    The group connectivity graph is a graph with a node for each group
+    in `groups`, and edges connecting groups which include neighbors
+    on the `network`.
+
+    For example, take a graph with:
+        Nodes: {a, b, c, d, e, f, g}
+        Edges: {(a, b), (c,d), (e,f), (a,g)}
+    then the group connectivity graph for groups
+    {group1: {a,c}, group2:{d,e}, group3:{b,f}, group4:{g}}
+    will produce the group connectivity graph (with parameter
+    max_distance set to 1):
+        Nodes: {group1, group2, group3, group4}
+        Edges: {(group1, group2), (group1, group3),
+                (group1, group4), (group2, group3)}
+    """
+    # Add the expected nodes
+    connectivity_network = nx.Graph()
+    connectivity_network.add_nodes_from(groups.keys())
+    # Convert the iterables into sets for easier comparison
+    group_sets = {k: set(v) for k, v in groups.items()}
+    # Create a dict to memoize the neighborhood finding
+    neighborhood_dict = {}
+    for g1, g2 in itertools.combinations(connectivity_network.nodes, 2):
+        if g1 in neighborhood_dict:
+            g1_neighborhood = neighborhood_dict[g1]
         else:
-            return _create_adj_matrix_ud_uw(model=model, threshold=threshold)
+            g1_neighborhood = set()
+            for n in groups[g1]:
+                g1_neighborhood.add(n)
+                # g1_neighborhood.update(
+                #     functools.reduce(
+                #         lambda x, y: x | y,
+                #         itertools.chain(
+                #             map(
+                #                 lambda x: set(x[1]),
+                #                 nx.traversal.bfs_successors(
+                #                     network, n, depth_limit=max_distance
+                #                 ),
+                #             ),
+                #             [{n}],
+                #         ),
+                #         set(),
+                #     )
+                # )
+                for _, neighbors in nx.traversal.bfs_successors(
+                    network, n, depth_limit=max_distance
+                ):
+                    g1_neighborhood.update(set(neighbors))
+            neighborhood_dict[g1] = g1_neighborhood
+        if (overlap_size := len(g1_neighborhood & group_sets[g2])) > 0:
+            if weighted:
+                connectivity_network.add_edge(g1, g2, weight=overlap_size)
+            else:
+                connectivity_network.add_edge(g1, g2)
+    return connectivity_network
 
 
 # endregion Main Function

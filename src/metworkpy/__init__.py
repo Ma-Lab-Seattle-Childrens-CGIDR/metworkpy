@@ -22,6 +22,8 @@ __all__ = [
     "create_metabolic_network",
     "create_reaction_network",
     "create_metabolite_network",
+    "create_gene_network",
+    "create_group_connectivity_network",
     "create_mutual_information_network",
     "create_adjacency_matrix",
     "reaction_target_density",

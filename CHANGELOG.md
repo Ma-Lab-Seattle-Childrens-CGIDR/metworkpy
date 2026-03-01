@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version DEV](#version-dev)
   - [Version 0.6.0](#version-060)
   - [Version 0.5.0](#version-050)
   - [Version 0.4.1](#version-041)
@@ -14,6 +15,12 @@
 
 <!--toc:end-->
 
+## Version DEV
+
+- Added method for generating a gene connectivity graph to the networks
+  submodule
+- Added method for creating a group connectivity graph to the networks submodule
+
 ## Version 0.6.0
 
 - Updated GPR parsing to directly use the ASTs rather than reparsing the strings
@@ -23,7 +30,7 @@
   that the genes are required for the reaction or not
 - Added fuzzy module for network with methods for converting sets of genes into
   fuzzy reaction sets with configurable membership functions.
-- Added method for fuzzy-intersection to fuzzy sub-module. Added
+- Added method for fuzzy-intersection to fuzzy submodule. Added
   robustrankaggregpy as a dependency so that RRA can be used as an intersection
   method.
 - Added methods to network construction for creating reaction and metabolic

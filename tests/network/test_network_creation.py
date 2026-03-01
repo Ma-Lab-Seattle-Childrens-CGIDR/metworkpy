@@ -22,6 +22,7 @@ from metworkpy.network.network_construction import (
     create_adjacency_matrix,
     create_metabolic_network,
     create_mutual_information_network,
+    create_group_connectivity_network,
 )
 from metworkpy.information import mi_network_adjacency_matrix
 
@@ -701,6 +702,44 @@ class TestCreateNetwork(unittest.TestCase):
             weight_by="flux",
         )
         self.assertTrue(nx.is_bipartite(textbook_network))
+
+
+class TestCreateGroupConnectivityNetwork(unittest.TestCase):
+    def test_small_group_network(self):
+        # Construct a test network
+        g = nx.Graph()
+        g.add_nodes_from(["a", "b", "c", "d", "e", "f", "g"])
+        g.add_edges_from([("a", "b"), ("c", "d"), ("e", "f"), ("a", "g")])
+        groups = {
+            "group1": {"a", "c"},
+            "group2": {"d", "e"},
+            "group3": {"b", "f"},
+            "group4": {"g"},
+        }
+        connectivity_graph = create_group_connectivity_network(
+            network=g,
+            groups=groups,  # type: ignore
+            max_distance=1,
+            weighted=True,
+        )
+        print(connectivity_graph.edges())
+        # Create the expected graph manually
+        expected_connectivity_graph = nx.Graph()
+        expected_connectivity_graph.add_nodes_from(
+            ["group1", "group2", "group3", "group4"]
+        )
+        expected_connectivity_graph.add_edges_from(
+            [
+                ("group1", "group2"),
+                ("group1", "group3"),
+                ("group1", "group4"),
+                ("group2", "group3"),
+            ]
+        )
+        # Check the graph is as expected
+        self.assertTrue(
+            nx.is_isomorphic(connectivity_graph, expected_connectivity_graph)
+        )
 
 
 # endregion Metabolic Network

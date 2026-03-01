@@ -4,6 +4,8 @@ from .network_construction import (
     create_mutual_information_network,
     create_reaction_network,
     create_metabolite_network,
+    create_gene_network,
+    create_group_connectivity_network,
 )
 from .density import (
     reaction_target_density,
@@ -24,6 +26,8 @@ __all__ = [
     "create_adjacency_matrix",
     "create_reaction_network",
     "create_metabolite_network",
+    "create_gene_network",
+    "create_group_connectivity_network",
     "reaction_target_density",
     "gene_target_density",
     "gene_target_enrichment",
