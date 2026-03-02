@@ -2,7 +2,9 @@
 
 # Standard Library Imports
 from __future__ import annotations
-from typing import cast, Hashable, Iterator
+import functools
+import operator
+from typing import cast, Hashable, Iterator, Union
 
 # External Imports
 import cobra  # type:ignore     # Cobra doesn't have py.typed marker
@@ -96,7 +98,7 @@ def graph_neighborhood_iter(
     for node in network.nodes:
         yield (
             node,
-            _graph_neighborhood(network=network, radius=radius, node=node),
+            get_graph_neighborhood(network=network, radius=radius, node=node),
         )
 
 
@@ -146,16 +148,65 @@ def graph_gene_neighborhood_iter(
 # endregion neighborhood iterator
 
 
-def _graph_neighborhood(
-    network: nx.Graph, radius: int, node: Hashable
+def get_graph_neighborhood(
+    network: Union[nx.Graph, nx.DiGraph], radius: int, node: Hashable
 ) -> set[Hashable]:
-    """Get the neighborhood around a node in the network"""
+    """
+    Get the neighborhood around a node in the network
+
+    Parameters
+    ----------
+    network : nx.Graph or nx.DiGraph
+        The network to find the neighborhood in
+    radius : int
+        The radius of the neighborhood
+    node : Hashable
+        The node to find the neighborhood around
+
+    Returns
+    -------
+    neighborhood : set of Hashable
+        The neighborhood around `node` in `network`
+    """
     neighborhood = {node}
     for _, successors in nx.bfs_successors(
         network, source=node, depth_limit=radius
     ):
         neighborhood.update(successors)
     return neighborhood
+
+
+def get_graph_neighborhood_group(
+    network: Union[nx.Graph, nx.DiGraph], radius: int, nodes: set[Hashable]
+) -> set[Hashable]:
+    """
+    Get the neighborhood of a group of nodes, that is all nodes reachable
+    within a distance of `radius` from a node in `nodes`
+
+    Parameters
+    ----------
+    network : nx.Graph or nx.DiGraph
+        The network to find the neighborhood in
+    radius : int
+        The radius of the neighborhood
+    node : set of Hashable
+        The group of nodes to find the neighborhood for
+
+    Returns
+    -------
+    neighborhood : set of Hashable
+        The neighborhood around the `nodes` in `network`
+    """
+    return functools.reduce(
+        operator.or_,
+        map(
+            lambda n: get_graph_neighborhood(
+                network=network, radius=radius, node=n
+            ),
+            nodes,
+        ),
+        set(),
+    )
 
 
 def _graph_gene_neighborhood(
@@ -166,7 +217,7 @@ def _graph_gene_neighborhood(
 ) -> set[str]:
     """Get the neighborhood of genes around a node in the network"""
     neighborhood = set()
-    for rxn_id in _graph_neighborhood(
+    for rxn_id in get_graph_neighborhood(
         network=network, radius=radius, node=node
     ):
         if rxn_id in rxn_to_gene_set_dict:

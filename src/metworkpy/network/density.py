@@ -17,7 +17,7 @@ from scipy import stats
 # Local Imports
 from metworkpy.network.neighborhoods import (
     _graph_gene_neighborhood,
-    _graph_neighborhood,
+    get_graph_neighborhood,
 )
 from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
 
@@ -359,7 +359,7 @@ def _node_density_worker(
     """
     Calculate the density of labels in a neighborhood
     """
-    neighborhood = _graph_neighborhood(
+    neighborhood = get_graph_neighborhood(
         network=network, radius=radius, node=node
     )
     return node, labels[

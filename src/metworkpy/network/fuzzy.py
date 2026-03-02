@@ -33,7 +33,7 @@ from scipy import stats
 # Local Imports
 from metworkpy.network.neighborhoods import (
     _graph_gene_neighborhood,
-    _graph_neighborhood,
+    get_graph_neighborhood,
 )
 from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
 
@@ -132,7 +132,7 @@ def membership_simple_reaction_density(
     membership : float
         The membership of the reaciton in the reaction set
     """
-    reaction_neighborhood = _graph_neighborhood(
+    reaction_neighborhood = get_graph_neighborhood(
         network=network, radius=radius, node=reaction.id
     )
     if len(reaction_neighborhood) == 0:
