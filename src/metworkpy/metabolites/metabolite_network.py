@@ -5,20 +5,23 @@ from __future__ import annotations
 
 # Standard Library Imports
 import hashlib
-from typing import Literal
+from typing import Literal, Iterable
 import warnings
 
 # External Imports
 import cobra
+import numpy as np
 import pandas as pd
 import sympy
 from cobra.exceptions import OptimizationError
+from scipy import stats
 from tqdm import tqdm
 
 # Local Imports
 from metworkpy.utils import (
     reaction_to_gene_list,
     get_reaction_to_gene_translation_dict,
+    fisher_enrichment,
 )
 
 
@@ -438,6 +441,58 @@ def find_metabolite_consuming_network_genes(
         )
         res_df.loc[gene_list, metabolite] = True
     return res_df
+
+
+def find_metabolite_network_enrichment(
+    metabolite_networks: pd.DataFrame,
+    target_set=Iterable[str],
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
+    fdr: bool = True,
+    **kwargs,
+) -> pd.Series:
+    """
+    Find the enrichment of the target set within the metabolite networks
+
+    Parameters
+    ----------
+    metabolite_networks : pd.DataFrame
+        DataFrame describing the metabolite networks. Columns should
+        be the metabolite ids, and the index should include the values
+        from the target_set
+    target_set : Iterable of str
+        Set to evaluate the enrichment for, if genes the
+        metabolite_networks should be indexed by gene, and
+        if reactions the metabolite_networks should be indexed
+        reaction. This will be filtered to only include elements of the
+        index of the metabolite_networks dataframe prior to
+        enrichment test.
+    alternative : {"two-sided", "less", "greater"}, default="greater"
+        Alternative hypothesis for the enrichment test
+    fdr : bool
+        Whether to perform false discovery rate adjustment on the p-values
+    kwargs
+        Key word arguments are passed to SciPy's false_discovery_control
+        function if fdr is True, ignored otherwise
+
+    Returns
+    -------
+    enrichment_results : pd.Series
+        The p-values for the enrichment of the target set within
+        all of the metabolites
+    """
+    results_series = pd.Series(np.nan, index=metabolite_networks.columns)
+    target_set = set(target_set) & set(metabolite_networks.index)
+    total_count = len(metabolite_networks.index)
+    for metabolite, metabolite_network in metabolite_networks.items():
+        metabolite_net_set = set(metabolite_network[metabolite_network].index)
+        results_series[metabolite] = fisher_enrichment(
+            group1=target_set,
+            group2=metabolite_net_set,
+            total_count=total_count,
+        ).pvalue
+    if fdr:
+        results_series = stats.false_discovery_control(results_series)
+    return results_series
 
 
 # endregion Main Functions
