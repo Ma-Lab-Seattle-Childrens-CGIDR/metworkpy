@@ -24,6 +24,9 @@ from metworkpy.information.mutual_information_network import (
 )
 from metworkpy.network.projection import bipartite_project
 from metworkpy.utils import reaction_to_gene_ids, reaction_to_gene_list
+from metworkpy.network.neighborhoods import (
+    get_graph_neighborhood_group,
+)
 
 
 # region Main Function
@@ -581,16 +584,21 @@ def create_group_connectivity_network(
     network: Union[nx.Graph, nx.DiGraph],
     groups: dict[Hashable, Iterable[Hashable]],
     max_distance: int = 1,
-    weighted: bool = True,
-):
+    weighted: Optional[
+        Literal[
+            "count",
+            "proportion",
+        ]
+    ] = None,
+    directed: bool = False,
+) -> Union[nx.Graph, nx.DiGraph]:
     """
     Create a group connectivity network, see notes for details
 
     Parameters
     ----------
     network : nx.Graph or nx.DiGraph
-        Network to use when finding neighbors. Directed
-        graphs will be converted to non-directed graphs. Edge weights
+        Network to use when finding neighbors. Edge weights
         will be ignored.
     groups : dict of Hashable to Iterable of Hashable
         Group definitions, must be a map between group names (which
@@ -601,18 +609,23 @@ def create_group_connectivity_network(
         will only connect groups with direct overlaps, while a value of 1
         will connect groups which have members that are direct neighbors in the
         network.
-    weighted : bool, default=True
+    weighted : {'count', 'proportion', 'enrichment p-value', 'enrichment significance'}, optional
         Whether to weight the graph based on the number of connections
-        between the groups. If True, the edges in the group connectivity
-        network will be weighted based on the total number of neighboring
-        relationships.
+        between the groups. If None (default) no weights are added. If
+        'count' then the edge weight is the count of connections between
+        the two groups. If 'proportion', the edge weight is normalized
+        by the maximum possible overlap.
+    directed : bool, default=False
+        Whether the resulting connectivity graph should be directed,
+        ignored unless the input network is directed.
 
     Returns
     -------
-    nx.Graph
+    nx.Graph or nx.DiGraph
         The group connectivity graph, which includes nodes for every group
         defined in `group`, with edges connecting groups which are connected
-        in `network`, with optional edge weighted.
+        in `network`, with optional edge weighted. Will be nx.Graph unless
+        the input network is a DiGraph, and `directed` is True.
 
     Notes
     -----
@@ -630,46 +643,70 @@ def create_group_connectivity_network(
         Nodes: {group1, group2, group3, group4}
         Edges: {(group1, group2), (group1, group3),
                 (group1, group4), (group2, group3)}
+
+    When counting the number of connections, it is determined
+    by finding the total neighborhood of one of the groups
+    (that is the total node set within radius of a node
+    in that group), and counting the number of nodes from
+    the other group which are within that neighborhood.
     """
+    # If the input network isn't directed, directed must be False
+    if not isinstance(network, nx.DiGraph):
+        directed = False
+    # If the result shouldn't be directed, get an undirected view
+    # of the input graph
+    if not directed and isinstance(network, nx.DiGraph):
+        network = nx.to_undirected(network)
     # Add the expected nodes
     connectivity_network = nx.Graph()
     connectivity_network.add_nodes_from(groups.keys())
     # Convert the iterables into sets for easier comparison
     group_sets = {k: set(v) for k, v in groups.items()}
-    # Create a dict to memoize the neighborhood finding
-    neighborhood_dict = {}
+    # Find the neighborhoods around the groups
+    neighborhood_dict = {
+        g: get_graph_neighborhood_group(
+            network=network, radius=max_distance, nodes=n
+        )
+        for g, n in group_sets.items()
+    }
     for g1, g2 in itertools.combinations(connectivity_network.nodes, 2):
-        if g1 in neighborhood_dict:
-            g1_neighborhood = neighborhood_dict[g1]
-        else:
-            g1_neighborhood = set()
-            for n in groups[g1]:
-                g1_neighborhood.add(n)
-                # g1_neighborhood.update(
-                #     functools.reduce(
-                #         lambda x, y: x | y,
-                #         itertools.chain(
-                #             map(
-                #                 lambda x: set(x[1]),
-                #                 nx.traversal.bfs_successors(
-                #                     network, n, depth_limit=max_distance
-                #                 ),
-                #             ),
-                #             [{n}],
-                #         ),
-                #         set(),
-                #     )
-                # )
-                for _, neighbors in nx.traversal.bfs_successors(
-                    network, n, depth_limit=max_distance
-                ):
-                    g1_neighborhood.update(set(neighbors))
-            neighborhood_dict[g1] = g1_neighborhood
-        if (overlap_size := len(g1_neighborhood & group_sets[g2])) > 0:
-            if weighted:
-                connectivity_network.add_edge(g1, g2, weight=overlap_size)
+        g1_overlaps_g2 = len(neighborhood_dict[g1] & group_sets[g2])
+        g2_overlaps_g1 = len(neighborhood_dict[g2] & group_sets[g1])
+        if not directed:
+            if g1_overlaps_g2 > 0 or g2_overlaps_g1 > 0:
+                if weighted == "count":
+                    connectivity_network.add_edge(
+                        g1, g2, weight=max(g1_overlaps_g2, g2_overlaps_g1)
+                    )
+                elif weighted == "proportion":
+                    connectivity_network.add_edge(
+                        g1,
+                        g2,
+                        weight=max(g1_overlaps_g2, g2_overlaps_g1)
+                        / max(len(group_sets[g1]), len(group_sets[g2])),
+                    )
+                else:
+                    connectivity_network.add_edge(g1, g2)
+            continue
+        # Directed Case
+        if g1_overlaps_g2 > 0:
+            if weighted and weighted == "count":
+                connectivity_network.add_edge(g1, g2, weight=g1_overlaps_g2)
+            if weighted and weighted == "proportion":
+                connectivity_network.add_edge(
+                    g1, g2, weight=g1_overlaps_g2 / len(group_sets[g2])
+                )
             else:
                 connectivity_network.add_edge(g1, g2)
+        if g2_overlaps_g1 > 0:
+            if weighted and weighted == "count":
+                connectivity_network.add_edge(g2, g1, weight=g2_overlaps_g1)
+            if weighted and weighted == "proportion":
+                connectivity_network.add_edge(
+                    g2, g1, weight=g2_overlaps_g1 / len(group_sets[g1])
+                )
+            else:
+                connectivity_network.add_edge(g2, g1)
     return connectivity_network
 
 
