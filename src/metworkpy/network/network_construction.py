@@ -17,6 +17,7 @@ import cobra  # type: ignore
 import numpy as np
 import pandas as pd
 import networkx as nx
+from scipy import stats
 
 # Local Imports
 from metworkpy.information.mutual_information_network import (
@@ -588,6 +589,7 @@ def create_group_connectivity_network(
         Literal[
             "count",
             "proportion",
+            "enrichment",
         ]
     ] = None,
     directed: bool = False,
@@ -609,12 +611,19 @@ def create_group_connectivity_network(
         will only connect groups with direct overlaps, while a value of 1
         will connect groups which have members that are direct neighbors in the
         network.
-    weighted : {'count', 'proportion', 'enrichment p-value', 'enrichment significance'}, optional
+    weighted : {'count', 'proportion', 'enrichment'}, optional
         Whether to weight the graph based on the number of connections
         between the groups. If None (default) no weights are added. If
         'count' then the edge weight is the count of connections between
         the two groups. If 'proportion', the edge weight is normalized
-        by the maximum possible overlap.
+        by the maximum possible overlap. If enrichment, node attributes are
+        added called pvalue, odds_ratio, and significance. The pvalue and
+        odds ratio are the results of performing a Fisher's exact test on
+        the enrichment of one group in the neighborhood of the other (in the
+        undirected case, it is the minimum p-value/maximum odds_ratio found
+        when finding the enrichment of one group in the neighborhood of the
+        other). The significance is the -log10 of the p-value. Note that the
+        odds_ratio can be infinite.
     directed : bool, default=False
         Whether the resulting connectivity graph should be directed,
         ignored unless the input network is directed.
@@ -685,16 +694,81 @@ def create_group_connectivity_network(
                         weight=max(g1_overlaps_g2, g2_overlaps_g1)
                         / max(len(group_sets[g1]), len(group_sets[g2])),
                     )
+                elif weighted == "enrichment":
+                    g1_neighborhood = neighborhood_dict[g1]
+                    g2_neighborhood = neighborhood_dict[g2]
+                    g1_set = group_sets[g1]
+                    g2_set = group_sets[g2]
+                    fisher_res1 = stats.fisher_exact(
+                        [
+                            [
+                                len(g1_neighborhood & g2_set),
+                                len(g2_set - g1_neighborhood),
+                            ],
+                            [
+                                len(g1_neighborhood - g2_set),
+                                len(network.nodes)
+                                - len(g1_neighborhood | g2_set),
+                            ],
+                        ],
+                        alternative="greater",
+                    )
+                    fisher_res2 = stats.fisher_exact(
+                        [
+                            [
+                                len(g2_neighborhood & g1_set),
+                                len(g1_set - g2_neighborhood),
+                            ],
+                            [
+                                len(g2_neighborhood - g1_set),
+                                len(network.nodes)
+                                - len(g2_neighborhood | g1_set),
+                            ],
+                        ],
+                        alternative="greater",
+                    )
+                    pval = min(fisher_res1.pvalue, fisher_res2.pvalue)
+                    odds = max(fisher_res1.statistic, fisher_res2.statistic)
+                    connectivity_network.add_edge(
+                        g1,
+                        g2,
+                        pvalue=pval,
+                        odds_ratio=odds,
+                        significance=-np.log10(pval),
+                    )
                 else:
                     connectivity_network.add_edge(g1, g2)
             continue
         # Directed Case
         if g1_overlaps_g2 > 0:
-            if weighted and weighted == "count":
+            if weighted == "count":
                 connectivity_network.add_edge(g1, g2, weight=g1_overlaps_g2)
-            if weighted and weighted == "proportion":
+            elif weighted == "proportion":
                 connectivity_network.add_edge(
                     g1, g2, weight=g1_overlaps_g2 / len(group_sets[g2])
+                )
+            if weighted == "enrichment":
+                g1_neighborhood = neighborhood_dict[g1]
+                g2_set = group_sets[g2]
+                fisher_res = stats.fisher_exact(
+                    [
+                        [
+                            len(g1_neighborhood & g2_set),
+                            len(g2_set - g1_neighborhood),
+                        ],
+                        [
+                            len(g1_neighborhood - g2_set),
+                            len(network.nodes) - len(g1_neighborhood | g2_set),
+                        ],
+                    ],
+                    alternative="greater",
+                )
+                connectivity_network.add_edge(
+                    g1,
+                    g2,
+                    pvalue=fisher_res.pvalue,
+                    odds_ratio=fisher_res.statistic,
+                    significance=-np.log10(fisher_res.pvalue),
                 )
             else:
                 connectivity_network.add_edge(g1, g2)
@@ -704,6 +778,29 @@ def create_group_connectivity_network(
             if weighted and weighted == "proportion":
                 connectivity_network.add_edge(
                     g2, g1, weight=g2_overlaps_g1 / len(group_sets[g1])
+                )
+            if weighted == "enrichment":
+                g2_neighborhood = neighborhood_dict[g2]
+                g1_set = group_sets[g1]
+                fisher_res = stats.fisher_exact(
+                    [
+                        [
+                            len(g2_neighborhood & g1_set),
+                            len(g1_set - g2_neighborhood),
+                        ],
+                        [
+                            len(g2_neighborhood - g1_set),
+                            len(network.nodes) - len(g2_neighborhood | g1_set),
+                        ],
+                    ],
+                    alternative="greater",
+                )
+                connectivity_network.add_edge(
+                    g1,
+                    g2,
+                    pvalue=fisher_res.pvalue,
+                    odds_ratio=fisher_res.statistic,
+                    significance=-np.log10(fisher_res.pvalue),
                 )
             else:
                 connectivity_network.add_edge(g2, g1)
