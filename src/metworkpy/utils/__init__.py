@@ -24,6 +24,8 @@ from .connected_components import (
 
 from .permutation import permutation_test
 
+from .statistics import fisher_enrichment, extended_mannwhitneyu_test
+
 __all__ = [
     "read_model",
     "write_model",
@@ -46,4 +48,6 @@ __all__ = [
     "find_connected_components",
     "find_representative_nodes",
     "permutation_test",
+    "fisher_enrichment",
+    "extended_mannwhitneyu_test",
 ]

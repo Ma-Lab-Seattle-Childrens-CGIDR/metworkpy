@@ -51,6 +51,8 @@ __all__ = [
     "crane_gene_set_classification",
     "DiracClassifier",
     "CraneClassifier",
+    "fisher_enrichment",
+    "extended_mannwhitneyu_test",
 ]
 
 from metworkpy import (
@@ -71,6 +73,8 @@ from metworkpy.utils import (
     model_bounds_eq,
     gene_to_reaction_list,
     reaction_to_gene_list,
+    fisher_enrichment,
+    extended_mannwhitneyu_test,
 )
 
 from metworkpy.information import (
