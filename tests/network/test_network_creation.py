@@ -22,7 +22,7 @@ from metworkpy.network.network_construction import (
     create_adjacency_matrix,
     create_metabolic_network,
     create_mutual_information_network,
-    create_group_connectivity_network,
+    create_group_neighborhood_network,
 )
 from metworkpy.information import mi_network_adjacency_matrix
 
@@ -716,7 +716,7 @@ class TestCreateGroupConnectivityNetwork(unittest.TestCase):
             "group3": {"b", "f"},
             "group4": {"g"},
         }
-        connectivity_graph = create_group_connectivity_network(
+        connectivity_graph = create_group_neighborhood_network(
             network=g,
             groups=groups,  # type: ignore
             max_distance=1,

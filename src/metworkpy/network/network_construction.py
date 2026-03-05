@@ -581,7 +581,7 @@ def create_gene_network(
     return gene_network
 
 
-def create_group_connectivity_network(
+def create_group_neighborhood_network(
     network: Union[nx.Graph, nx.DiGraph],
     groups: dict[Hashable, Iterable[Hashable]],
     max_distance: int = 1,
@@ -807,10 +807,179 @@ def create_group_connectivity_network(
     return connectivity_network
 
 
+def create_group_distance_adjacency_matrix(
+    network: Union[nx.Graph, nx.DiGraph],
+    groups: dict[Hashable, Iterable[Hashable]],
+    weight: Optional[str] = None,
+    linkage: Literal["mean", "min", "max"] = "mean",
+    directed: bool = False,
+) -> pd.DataFrame:
+    """
+    Create an adjacency matrix for the distances between the `groups`
+
+    Parameters
+    ----------
+    network : nx.Graph or nx.DiGraph
+        Network to use when finding distances between nodes
+        in the groups. Edge weights are ignored.
+    groups : : dict of Hashable to Iterable of Hashable
+        Group definitions, must be a map between group names (which
+        will be used as index/columns in the matrix), and an iterable of
+        group members (which should be nodes in the network)
+    weight : str, optional
+        Edge attribute to use for weight, if None all edges have weight 1
+    linkage : {'mean', 'min', 'max'}
+        Method to use when combining pairwise distances between groups
+    directed : bool
+        Whether the adjacency matrix should be directed or not, ignored
+        unless the input network is a nx.DiGraph
+
+    Returns
+    -------
+    adjacency_matrix : pd.DataFrame
+        DataFrame representing the adjacency matrix of the distances
+        between the `groups` on the `network`. Index and columns
+        are the keys of the `groups` dict, with values representing the
+        distances between the groups.
+
+    Notes
+    -----
+    Constructs the adjacency matrix using the pairwise distances between
+    groups. For each pair of groups, finds the distances between their
+    nodes and finds the distance between the two groups by aggregating
+    these distances, either using the mean, minimum, or maximum of
+    the set of pairwise distances between two groups of nodes.
+    """
+    # Compute the pairwise distances
+    distance_dict = dict(nx.shortest_path_length(network))
+    # Convert the groups into sets
+    group_sets = {s: set(m) for s, m in groups.items()}
+    # Get the set of all nodes in the network
+    network_node_set = set(network.nodes)
+    # Create the adjacency matrix
+    adj_mat = pd.DataFrame(
+        0.0, index=pd.Index(groups.keys()), columns=pd.Index(groups.keys())
+    )
+    # Fill in the adjacency matrix
+    for g1, g2 in itertools.combinations(group_sets.keys(), 2):
+        g1_nodes = group_sets[g1] & network_node_set
+        g2_nodes = group_sets[g2] & network_node_set
+        if isinstance(network, nx.Graph):
+            # Undirected case
+            adj_mat.loc[g1, g2] = _get_group_distance(
+                distance_dict=distance_dict,
+                group1=g1_nodes,
+                group2=g2_nodes,
+                linkage=linkage,
+            )
+            adj_mat.loc[g2, g1] = adj_mat.loc[g1, g2]
+        if isinstance(network, nx.DiGraph):
+            # Directed Case
+            d1 = _get_group_distance(
+                distance_dict=distance_dict,
+                group1=g1_nodes,
+                group2=g2_nodes,
+                linkage=linkage,
+            )
+            d2 = _get_group_distance(
+                distance_dict=distance_dict,
+                group1=g2_nodes,
+                group2=g1_nodes,
+                linkage=linkage,
+            )
+            if directed:
+                adj_mat.loc[g1, g2] = d1
+                adj_mat.loc[g2, g2] = d2
+            else:
+                adj_mat.loc[g1, g2] = min(d1, d2)
+                adj_mat.loc[g2, g1] = min(d1, d2)
+    return adj_mat
+
+
+def create_group_distance_network(
+    network: Union[nx.Graph, nx.DiGraph],
+    groups: dict[Hashable, Iterable[Hashable]],
+    weight: Optional[str] = None,
+    linkage: Literal["mean", "min", "max"] = "mean",
+    directed: bool = False,
+) -> Union[nx.Graph, nx.DiGraph]:
+    """
+    Create an network for the distances between the `groups`
+
+    Parameters
+    ----------
+    network : nx.Graph or nx.DiGraph
+        Network to use when finding distances between nodes
+        in the groups. Edge weights are ignored.
+    groups : : dict of Hashable to Iterable of Hashable
+        Group definitions, must be a map between group names (which
+        will be used as index/columns in the matrix), and an iterable of
+        group members (which should be nodes in the network)
+    weight : str, optional
+        Edge attribute to use for weight, if None all edges have weight 1
+    linkage : {'mean', 'min', 'max'}
+        Method to use when combining pairwise distances between groups
+    directed : bool
+        Whether the adjacency matrix should be directed or not, ignored
+        unless the input network is a nx.DiGraph
+
+    Returns
+    -------
+    nx.Graph or nx.DiGraph
+        Network with a node for each group, and edges weighted by the distances
+        between the `groups` on the `network`.
+
+    Notes
+    -----
+    Constructs the network using the pairwise distances between
+    groups. For each pair of groups, finds the distances between their
+    nodes and finds the distance between the two groups by aggregating
+    these distances, either using the mean, minimum, or maximum of
+    the set of pairwise distances between two groups of nodes.
+
+    """
+    if directed:
+        group_obj = nx.DiGraph
+    else:
+        group_obj = nx.Graph
+    return group_obj(
+        network=network,
+        groups=groups,
+        weight=weight,
+        linkage=linkage,
+        directed=directed,
+    )
+
+
 # endregion Main Function
 
 
 # region Helpers
+def _get_group_distance(
+    distance_dict,
+    group1: set[Hashable],
+    group2: set[Hashable],
+    linkage: Literal["mean", "min", "max"],
+) -> float:
+    max_ = -np.inf
+    min_ = np.inf
+    count = 0
+    sum = 0.0
+    for g1 in group1:
+        for g2 in group2:
+            dist = distance_dict[g1][g2] if g1 != g2 else 0.0
+            max_ = max(max_, dist)
+            min_ = min(min_, dist)
+            sum += dist
+            count += 1
+    if linkage == "mean":
+        return sum / count
+    elif linkage == "min":
+        return min_
+    elif linkage == "max":
+        return max_
+
+
 def _get_rxn_attr_series(model: cobra.Model, attr: str) -> pd.Series:
     return pd.Series(
         model.reactions.list_attr(attr),

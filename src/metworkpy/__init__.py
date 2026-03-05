@@ -23,8 +23,10 @@ __all__ = [
     "create_reaction_network",
     "create_metabolite_network",
     "create_gene_network",
-    "create_group_connectivity_network",
+    "create_group_neighborhood_network",
     "create_mutual_information_network",
+    "create_group_distance_adjacency_matrix",
+    "create_group_distance_network",
     "create_adjacency_matrix",
     "reaction_target_density",
     "find_dense_clusters",
@@ -95,6 +97,12 @@ from metworkpy.network import (
     bipartite_project,
     fuzzy_reaction_set,
     fuzzy_reaction_intersection,
+    create_reaction_network,
+    create_metabolite_network,
+    create_gene_network,
+    create_group_neighborhood_network,
+    create_group_distance_adjacency_matrix,
+    create_group_distance_network,
 )
 
 from metworkpy.metabolites import (
