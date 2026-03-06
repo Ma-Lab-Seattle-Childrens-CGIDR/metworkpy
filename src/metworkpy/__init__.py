@@ -27,6 +27,7 @@ __all__ = [
     "create_mutual_information_network",
     "create_group_distance_adjacency_matrix",
     "create_group_distance_network",
+    "get_network_group_clustering",
     "create_adjacency_matrix",
     "reaction_target_density",
     "find_dense_clusters",
@@ -103,6 +104,7 @@ from metworkpy.network import (
     create_group_neighborhood_network,
     create_group_distance_adjacency_matrix,
     create_group_distance_network,
+    get_network_group_clustering,
 )
 
 from metworkpy.metabolites import (

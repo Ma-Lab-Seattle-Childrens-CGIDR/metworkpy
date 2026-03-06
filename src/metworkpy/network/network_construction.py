@@ -1,3 +1,7 @@
+"""
+Functions for constructing networks based on genome scale metabolic models
+"""
+
 # Imports
 # Standard Library Imports
 from __future__ import annotations
