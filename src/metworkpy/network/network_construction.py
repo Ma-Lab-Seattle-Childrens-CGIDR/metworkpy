@@ -553,9 +553,9 @@ def create_gene_network(
     )
     # Create the new network
     if not directed:
-        gene_network: Union[nx.Graph, nx.DiGraph] = nx.DiGraph()
+        gene_network: Union[nx.Graph, nx.DiGraph] = nx.Graph()
     else:
-        gene_network = nx.Graph()
+        gene_network = nx.DiGraph()
     gene_network.add_nodes_from(gene_list)
 
     # Add edges
