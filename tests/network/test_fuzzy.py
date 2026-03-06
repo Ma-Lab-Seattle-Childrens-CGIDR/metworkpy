@@ -1,5 +1,4 @@
 # Standard Library Imports
-from metworkpy import fuzzy_reaction_set, fuzzy_reaction_intersection
 import unittest
 from typing import Optional
 
@@ -8,6 +7,7 @@ import networkx as nx
 import pandas as pd
 
 # Local Imports
+from metworkpy import fuzzy_reaction_set, fuzzy_reaction_intersection
 from metworkpy.examples import get_example_model
 from metworkpy.network import create_reaction_network
 
@@ -18,7 +18,6 @@ class TestFuzzyReactionSet(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.model = get_example_model()
         # Convert model into a reaction network
         cls.network = create_reaction_network(
             model=cls.model,

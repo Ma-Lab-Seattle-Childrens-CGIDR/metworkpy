@@ -79,12 +79,16 @@ def get_network_group_clustering(
     # with a focus on correctness rather than speed,
     # significant preference has been given to conceptual simplicity over
     # speed
+
     # If n_clusters is None, merge until only a single cluster remains
     if n_clusters is None:
         n_clusters = 1
     # Convert the network to undirected if needed
     if isinstance(network, nx.DiGraph):
         network = nx.to_undirected(network)
+    # Input network must be connected
+    if not nx.is_connected(network):
+        raise ValueError("Network isn't connected, can't perform clustering")
     # Want dicts of cluster to base clusters, and cluster to nodes
     # indexed by incrememting ints
     if not isinstance(groups, dict):
@@ -132,14 +136,14 @@ def get_network_group_clustering(
     for iter in range(0, n_init_clusters - n_clusters):
         # Find the minimum distance between clusters
         to_merge = (-1, -1)
-        min_dist = -np.inf
+        min_dist = np.inf
         for c1, c2 in itertools.combinations(cluster_to_nodes.keys(), 2):
             d = cast(float, cluster_dist_arr[c1, c2])
             if d < min_dist:
                 if c1 <= c2:
                     to_merge = (c1, c2)
                 else:
-                    to_merge = (c2, c2)
+                    to_merge = (c2, c1)
                 min_dist = d
 
         # Merge the clusters
@@ -148,7 +152,7 @@ def get_network_group_clustering(
         # Update the distance and children arrays
         distances[iter] = min_dist
         children[iter, 0] = c1
-        children[iter, 1] = c1
+        children[iter, 1] = c2
         # Update the cluster_to_node and cluster_to_group_names dicts
         new_cluster_nodes = cluster_to_nodes.pop(c1) | cluster_to_nodes.pop(c2)
         cluster_to_group_names[new_cluster] = cluster_to_group_names.pop(
@@ -245,7 +249,7 @@ def _min_linkage(
     group1: set[Hashable],
     group2: set[Hashable],
 ) -> float:
-    min_ = -np.inf
+    min_ = np.inf
     for n1, n2 in itertools.product(group1, group2):
         min_ = min(min_, distance_dict[n1][n2])
     return min_
