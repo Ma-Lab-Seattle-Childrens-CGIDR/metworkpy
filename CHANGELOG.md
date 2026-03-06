@@ -19,7 +19,10 @@
 
 - Added method for generating a gene connectivity graph to the networks
   submodule
-- Added method for creating a group connectivity graph to the networks submodule
+- Added method for creating a group neighborhood graph to the networks submodule
+- Added method for creating a group distance graph in the networks submodule
+- Added method for performing agglomerative clustering on groups of nodes in a
+  network
 
 ## Version 0.6.0
 
