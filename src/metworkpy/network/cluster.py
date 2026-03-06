@@ -174,6 +174,60 @@ def get_network_group_clustering(
     )
 
 
+def get_network_group_linkage(
+    network: Union[nx.Graph, nx.DiGraph],
+    groups: Union[
+        dict[Hashable, Iterable[Hashable]], Iterable[Iterable[Hashable]]
+    ],
+    linkage: Literal["mean", "min", "max"] = "mean",
+):
+    """
+    Perform agglomerative clustering on groups of nodes in a network, returning a linkage
+    matrix
+
+    Parameters
+    ----------
+    network : nx.Graph or nx.DiGraph
+        Network to use to calculate distances between the groups of nodes,
+        directed graphs will be converted to undirected
+    groups : dict of Hashable to iterable of Hashable
+        Node groups described by a dictionary, keyed by the group name,
+        Iterable of groups, each represented by an iterable of network nodes
+    linkage : {"mean", "min", "max"}
+        Method to use for calculated the distance between node groups
+
+    Returns
+    -------
+    linkage_matrix : np.ndarray
+        Linkage matrix, described in `SciPy's documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html>`_,
+        an n-1 by 4 matrix `Z`, where n is the number of groups to cluster. The
+        clusters for iteration i represented by the `Z[i,0]` and `Z[i,1]` are combined
+        to form the n+i cluster. The distance between the clusters is in `Z[i,2]` and
+        `Z[i,3]` represents the number of original groups in the new cluster.
+
+    Note
+    ----
+    Creates a linkage matrix which can be used by
+    `SciPy's dendrogram function<https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.dendrogram.html>`_
+    """
+    # Perform the clustering
+    _, children, distances = get_network_group_clustering(
+        network=network, groups=groups, n_clusters=None, linkage=linkage
+    )
+    counts = np.zeros(children.shape[0])
+    n_samples = children.shape[0] + 1  # Children should have length n-1
+    # Code based on https://scikit-learn.org/stable/auto_examples/cluster/plot_agglomerative_dendrogram.html
+    for i, merge in enumerate(children):
+        current_count = 0
+        for child_idx in merge:
+            if child_idx < n_samples:
+                current_count += 1
+            else:
+                current_count += counts[child_idx - n_samples]
+        counts[i] = current_count
+    return np.column_stack([children, distances, counts]).astype(float)
+
+
 # Linkage functions
 def _mean_linkage(
     distance_dict: _DistDict,

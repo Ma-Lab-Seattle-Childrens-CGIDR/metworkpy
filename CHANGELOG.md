@@ -23,6 +23,9 @@
 - Added method for creating a group distance graph in the networks submodule
 - Added method for performing agglomerative clustering on groups of nodes in a
   network
+- Added method for creating a linkage matrix using agglomerative group
+  clustering which can be used with SciPy to create a dendrogram and visualize
+  the clustering results
 
 ## Version 0.6.0
 

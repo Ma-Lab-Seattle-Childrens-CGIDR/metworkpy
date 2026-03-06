@@ -23,7 +23,7 @@ from .projection import bipartite_project
 
 from .fuzzy import fuzzy_reaction_set, fuzzy_reaction_intersection
 
-from .cluster import get_network_group_clustering
+from .cluster import get_network_group_clustering, get_network_group_linkage
 
 __all__ = [
     "create_metabolic_network",
@@ -45,4 +45,5 @@ __all__ = [
     "fuzzy_reaction_set",
     "fuzzy_reaction_intersection",
     "get_network_group_clustering",
+    "get_network_group_linkage",
 ]
