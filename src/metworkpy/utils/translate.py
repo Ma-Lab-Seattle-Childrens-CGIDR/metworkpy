@@ -180,6 +180,7 @@ def gene_to_reaction_list(
                 ),
                 gene_list,
             ),
+            set(),
         )
     )
 
@@ -218,6 +219,7 @@ def reaction_to_gene_list(
                 ),
                 reaction_list,
             ),
+            set(),
         )
     )
 
