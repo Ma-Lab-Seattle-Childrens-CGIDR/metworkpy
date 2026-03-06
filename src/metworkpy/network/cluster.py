@@ -176,9 +176,7 @@ def get_network_group_clustering(
 
 def get_network_group_linkage(
     network: Union[nx.Graph, nx.DiGraph],
-    groups: Union[
-        dict[Hashable, Iterable[Hashable]], Iterable[Iterable[Hashable]]
-    ],
+    groups: Iterable[Iterable[Hashable]],
     linkage: Literal["mean", "min", "max"] = "mean",
 ):
     """
@@ -190,9 +188,9 @@ def get_network_group_linkage(
     network : nx.Graph or nx.DiGraph
         Network to use to calculate distances between the groups of nodes,
         directed graphs will be converted to undirected
-    groups : dict of Hashable to iterable of Hashable
-        Node groups described by a dictionary, keyed by the group name,
-        Iterable of groups, each represented by an iterable of network nodes
+    groups : Iterable to iterable of Hashable
+        Node groups described by an iterable, with each entry representing a group.
+        Each group should be an iterable of nodes in the network.
     linkage : {"mean", "min", "max"}
         Method to use for calculated the distance between node groups
 
