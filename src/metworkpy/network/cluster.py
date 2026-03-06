@@ -100,7 +100,7 @@ def get_network_group_clustering(
     n_init_clusters = len(cluster_to_nodes)
     # Get the distances between all node pairs
     distance_dict: dict[Hashable, dict[Hashable, float]] = cast(
-        _DistDict, dict(nx.shortest_path(network))
+        _DistDict, dict(nx.shortest_path_length(network))
     )
     # Get the correct linkage function
     if linkage == "mean":
