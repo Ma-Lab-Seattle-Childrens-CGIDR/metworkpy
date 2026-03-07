@@ -242,3 +242,4 @@ fabric.properties
 .tool-versions
 create_tiny_model.py
 .vscode/
+tags
