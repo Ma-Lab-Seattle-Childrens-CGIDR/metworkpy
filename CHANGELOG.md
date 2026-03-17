@@ -26,6 +26,15 @@
 - Added method for creating a linkage matrix using agglomerative group
   clustering which can be used with SciPy to create a dendrogram and visualize
   the clustering results
+- Changed naming of parameters/functions in the network/density submodule to
+  make it more consistent between the different types of methods.
+- Added a node_filter parameter to the node_target_density function to allow for
+  finding the density within only a certain type of nodes (for example, finding
+  the density of targeted reactions around genes). The gene_target_density
+  method already inherently filters out non-reactions (since non-reactions don't
+  have gene associations)
+- Updated the find_dense_clusters function to allow for using
+  gene_target_density as well as node_target_density.
 
 ## Version 0.6.0
 
