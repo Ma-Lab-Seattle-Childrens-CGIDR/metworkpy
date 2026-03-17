@@ -489,6 +489,7 @@ def find_metabolite_network_enrichment(
             group1=target_set,
             group2=metabolite_net_set,
             total_count=total_count,
+            alternative=alternative,
         ).pvalue
     if fdr:
         results_series = stats.false_discovery_control(results_series)
