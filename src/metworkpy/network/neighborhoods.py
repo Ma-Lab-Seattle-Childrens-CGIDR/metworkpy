@@ -7,7 +7,7 @@ import operator
 from typing import cast, Hashable, Iterator, Union
 
 # External Imports
-import cobra  # type:ignore     # Cobra doesn't have py.typed marker
+import cobra
 import networkx as nx
 
 # Local Imports
@@ -221,7 +221,8 @@ def _graph_gene_neighborhood(
         network=network, radius=radius, node=node
     ):
         if rxn_id in rxn_to_gene_set_dict:
-            neighborhood |= rxn_to_gene_set_dict[rxn_id]  # type:ignore
+            rxn_id = cast(str, rxn_id)
+            neighborhood |= rxn_to_gene_set_dict[rxn_id]
     return neighborhood
 
 
