@@ -1,5 +1,7 @@
 # Welcome to MetworkPy
 
+![Metworkpy Logo](metworkpy_logo.png "Metworkpy Logo")
+
 <!--toc:start-->
 
 - [Welcome to MetworkPy](#welcome-to-metworkpy)
@@ -12,8 +14,6 @@
     - [Permutation Testing](#permutation-testing)
 
 <!--toc:end-->
-
-![Metworkpy Logo](metworkpy_logo.png "Metworkpy Logo")
 
 MetworkPy is a Python library containing tools for working with and analyzing
 metabolic networks. This functionality includes:
