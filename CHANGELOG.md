@@ -35,6 +35,10 @@
   have gene associations)
 - Updated the find_dense_clusters function to allow for using
   gene_target_density as well as node_target_density.
+- Added method to the networks submodule for finding the distance matrix of a
+  networkx Graph/DiGraph which can be used for various clustering algorithms
+  (many scikit-learn clustering methods can use precomputed distances with a
+  distance matrix).
 
 ## Version 0.6.0
 

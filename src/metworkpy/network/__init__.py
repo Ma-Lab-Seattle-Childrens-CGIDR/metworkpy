@@ -10,7 +10,7 @@ from .network_construction import (
     create_group_distance_network,
 )
 from .density import (
-    reaction_target_density,
+    node_target_density,
     find_dense_clusters,
     gene_target_density,
     gene_target_enrichment,
@@ -23,7 +23,11 @@ from .projection import bipartite_project
 
 from .fuzzy import fuzzy_reaction_set, fuzzy_reaction_intersection
 
-from .cluster import get_network_group_clustering, get_network_group_linkage
+from .cluster import (
+    get_network_group_clustering,
+    get_network_group_linkage,
+    get_distance_matrix,
+)
 
 __all__ = [
     "create_metabolic_network",
@@ -39,6 +43,7 @@ __all__ = [
     "gene_target_enrichment",
     "graph_neighborhood_iter",
     "graph_gene_neighborhood_iter",
+    "node_target_density",
     "find_dense_clusters",
     "bipartite_project",
     "create_mutual_information_network",
@@ -46,4 +51,5 @@ __all__ = [
     "fuzzy_reaction_intersection",
     "get_network_group_clustering",
     "get_network_group_linkage",
+    "get_distance_matrix",
 ]

@@ -17,6 +17,7 @@ from typing import (
 # External imports
 import networkx as nx
 import numpy as np
+import pandas as pd
 
 # Local imports
 
@@ -264,3 +265,32 @@ def _max_linkage(
     for n1, n2 in itertools.product(group1, group2):
         max_ = max(max_, distance_dict[n1][n2])
     return max_
+
+
+def get_distance_matrix(
+    network: Union[nx.Graph, nx.DiGraph], **kwargs
+) -> pd.DataFrame:
+    """
+    Get a matrix of the shortest path distances between each pair of
+    nodes in a network
+
+    Parameters
+    ----------
+    network : nx.Graph or nx.DiGraph
+        The network to find the distance matrix for
+    kwargs
+        Keyword arguments passed to the
+        `nx.shortest_path_length function <https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.shortest_paths.generic.shortest_path_length.html>`_
+
+    Returns
+    -------
+    distance_matrix : pd.DataFrame
+        A pandas DataFrame with the nodes of the network as the index and columns, with
+        each i,j entry being the shortest-path distance from node i to node j
+    """
+    node_index = pd.Index(network.nodes)
+    distance_matrix = pd.DataFrame(0.0, index=node_index, columns=node_index)
+    for source, target_dict in nx.shortest_path_length(network, **kwargs):
+        for target, dist in target_dict.items():
+            distance_matrix.loc[source, target] = dist
+    return distance_matrix
