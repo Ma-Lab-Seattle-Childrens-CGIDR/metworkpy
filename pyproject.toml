@@ -49,6 +49,8 @@ dev = [
   "pre-commit<4.0.0,>=3.7.1",
   "pandas-stubs>=2.2.2.240807",
   "types-networkx>=3.4.2.20250509",
+  "tox>=4.30.3",
+  "tox-uv>=1.28.1",
 ]
 test = ["highspy>=1.10.0", "osqp>=1.0.3", "pytest>=8.0.1"]
 docs = [

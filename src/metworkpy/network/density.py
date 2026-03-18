@@ -1,4 +1,4 @@
-"""Module for finding the density of labels on a graph."""
+"""Module for finding the density of targets on a graph."""
 
 # Standard Library Imports
 from __future__ import annotations
@@ -35,26 +35,26 @@ def node_target_density(
     processes: Optional[int] = None,
 ) -> pd.Series:
     """
-    Find the label density for different nodes in the graph. See note for
+    Find the target density for different nodes in the graph. See note for
     details.
 
     Parameters
     ----------
     network : nx.DiGraph | nx.Graph
-        Networkx network (directed or undirected) to find the label
+        Networkx network (directed or undirected) to find the target
         density of. Directed graphs are converted to undirected, and
         edge weights are currently ignored.
-    labels : list | dict | pd.Series
-        Labels to find density of. Can be a list of nodes in the network
-        where are labeled nodes will be treated equally, or a dict or
-        Series keyed by nodes in the network which can specify a label
-        weight (such as multiple labels for a single node). If a dict or
+    targets : list | dict | pd.Series
+        Targets to find density of. Can be a list of nodes in the network
+        where are targeted nodes will be treated equally, or a dict or
+        Series keyed by nodes in the network which can specify a target
+        weight (such as multiple targets for a single node). If a dict or
         Series, values should be ints or floats.
     radius : int
         Radius to use for finding density. Specifies how far out from a
-        given node labels are counted towards density. A radius of 0
+        given node targets are counted towards density. A radius of 0
         only counts the single node, and so will just return the
-        `labels` values back unchanged. Default value of 3.
+        `targets` values back unchanged. Default value of 3.
     node_filter : Callable of node id to bool or set of node id, optional
         Filter nodes in the network to consider when calculating density.
         If a Callable, should take node ids as the only argument and return
@@ -70,14 +70,13 @@ def node_target_density(
     Returns
     -------
     pd.Series
-        The label density for the nodes in the network
+        The target density for the nodes in the network
 
     Notes
     -----
     For each node in a network, neighboring nodes up to a distance of `radius`
-    away are checked for labels. The total number of labels, or the sum of the
-    labels
-    found (in the case of dict or Series input) divided by the number of nodes
+    away are checked for targets. The total number of targets, or the sum of the
+    targets found (in the case of dict or Series input) divided by the number of nodes
     within that radius is the density for a particular node.
     """
     if isinstance(network, nx.DiGraph):
@@ -107,7 +106,7 @@ def node_target_density(
         delayed(_node_density_worker)(
             node,
             network=network,
-            labels=targets,
+            targets=targets,
             node_filter=filter_fn,
             radius=radius,
         )
@@ -265,7 +264,7 @@ def gene_target_enrichment(
     # Filter the gene targets for only those in the model
     gene_targets &= set(metabolic_model.genes.list_attr("id"))
     if len(gene_targets) < 1:
-        warn("No labeled genes, p-values all 1.0, odds-ratio all 0.0")
+        warn("No targeted genes, p-values all 1.0, odds-ratio all 0.0")
         if metric == "p-value":
             return pd.Series(1.0, index=pd.Index(metabolic_network.nodes))
         elif metric == "odds-ratio":
@@ -302,18 +301,18 @@ def find_dense_clusters(
     target_type: Literal["genes", "nodes"] = "nodes",
     **kwargs,
 ) -> pd.DataFrame:
-    """Find the clusters within a network with high label density
+    """Find the clusters within a network with high target density
 
     Parameters
     ----------
     network : nx.Graph | nx.DiGraph
         Network to find clusters from
     targets : list | dict | pd.Series
-        Targets to find density of. Can be a list of nodes in the network
-        where are labeled nodes will be treated equally, or a dict or
-        Series keyed by nodes in the network which can specify a label
-        weight (such as multiple targets for a single node). If a dict or
-        Series, values should be ints or floats.
+        Targets to find density of. Can be a list of nodes or genes, in
+        which case all targets will have equal weight, or a dict or
+        Series keyed by nodes/genes in the network which can specify
+        a target weight. If a dict or Series, values should be ints
+        or floats.
     radius : int
         Radius to use for finding density. Specifies how far out from a
         given node targets are counted towards density. A radius of 0

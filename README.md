@@ -1,8 +1,21 @@
-# Welcome to Metworkpy
+# Welcome to MetworkPy
+
+<!--toc:start-->
+
+- [Welcome to MetworkPy](#welcome-to-metworkpy)
+  - [Issues and Pull Requests](#issues-and-pull-requests)
+  - [Licensing](#licensing)
+  - [References](#references)
+    - [iMAT References](#imat-references)
+    - [Kullback-Leibler Divergence](#kullback-leibler-divergence)
+    - [Mutual Information](#mutual-information)
+    - [Permutation Testing](#permutation-testing)
+
+<!--toc:end-->
 
 ![Metworkpy Logo](metworkpy_logo.png "Metworkpy Logo")
 
-Metworkpy is a Python library containing tools for working with and analyzing
+MetworkPy is a Python library containing tools for working with and analyzing
 metabolic networks. This functionality includes:
 
 - Generating network representations of Genome Scale Metabolic Networks (GSMMs)
@@ -11,11 +24,11 @@ metabolic networks. This functionality includes:
 
 ## Issues and Pull Requests
 
-If you experience any problems while using Metworkpy (including the
+If you experience any problems while using MetworkPy (including the
 documentation), please create a GitHub issue in this repository. When creating
 an issue, a minimal reproducible example of the issue will make getting you help
 much easier. You can also create issues for any enhancements you would like to
-see in Metworkpy. Contributions are welcome! Please see the CONTRIBUTING.md for
+see in MetworkPy. Contributions are welcome! Please see the CONTRIBUTING.md for
 more information.
 
 ## Licensing
@@ -28,7 +41,7 @@ This project makes use of the following external libraries:
   [BSD-3-Clause](https://github.com/networkx/networkx/blob/main/LICENSE.txt)
 - [NumPy](https://numpy.org/) licensed under the
   [BSD-3-Clause](https://numpy.org/doc/stable/license.html)
-- [optlang](https://github.com/opencobra/optlang) licensed under
+- [Optlang](https://github.com/opencobra/optlang) licensed under
   [Apace-2.0](https://github.com/opencobra/optlang/blob/master/LICENSE)
 - [Pandas](https://pandas.pydata.org/) licensed under the
   [BSD-3-Clause](https://github.com/pandas-dev/pandas/?tab=BSD-3-Clause-1-ov-file#readme)
@@ -43,7 +56,7 @@ the `feature_selection` module of
 and the tests for those methods were adapted from those in scikit-learn, which
 is licensed under the
 [BSD-3-Clause](https://github.com/scikit-learn/scikit-learn?tab=BSD-3-Clause-1-ov-file).
-Additionally the implementation of the iMAT functionality was inspired by
+Additionally, the implementation of the iMAT functionality was inspired by
 [gembox](https://github.com/ruppinlab/gembox) (which uses a
 [GPL-3.0-only](https://github.com/ruppinlab/gembox?tab=GPL-3.0-1-ov-file)
 license), and [dexom-python](https://github.com/MetExplore/dexom-python) (which
@@ -51,17 +64,22 @@ uses the
 [GPL-3.0-only](https://github.com/MetExplore/dexom-python?tab=GPL-3.0-1-ov-file)
 license).
 
-The permutation test implementation uses modified code from Scipy's stats module
+The permutation test implementation uses modified code from SciPy's stats module
 (licensed under the BSD-3-Clause, see above) for estimating the empirical
-p-value in line with []
+p-value in line with
+[Phipson, B., & Smyth, G. K. (2010)](https://arxiv.org/abs/1603.05766).
 
 ## References
 
-### IMAT References
+### iMAT References
 
 1. [Shlomi T, et al. Network-based prediction of human tissue-specific metabolism, Nat. Biotechnol., 2008, vol. 26 (pg. 1003-1010)](https://www.nature.com/articles/nbt.1487)
+1. Hadas Zur, Eytan Ruppin, Tomer Shlomi, iMAT: an integrative metabolic
+   analysis tool, Bioinformatics, Volume 26, Issue 24, December 2010, Pages
+   3140–3142,
+   [https://doi.org/10.1093/bioinformatics/btq602](https://academic.oup.com/bioinformatics/article/26/24/3140/290045?login=true)
 
-### Kulback-Leibler Divergence
+### Kullback-Leibler Divergence
 
 1. [Q. Wang, S. R. Kulkarni and S. Verdu, "Divergence Estimation for Multidimensional Densities Via k-Nearest-Neighbor Distances," in IEEE Transactions on Information Theory, vol. 55, no. 5, pp. 2392-2405, May 2009, doi: 10.1109/TIT.2009.2016060.](https://ieeexplore.ieee.org/document/4839047)
 
