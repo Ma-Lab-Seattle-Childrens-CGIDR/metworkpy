@@ -10,6 +10,7 @@ Welcome to Metworkpy's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   tutorial/tutorial_index
    api_reference/api_index
 
 Indices and tables

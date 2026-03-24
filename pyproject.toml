@@ -51,6 +51,7 @@ dev = [
   "types-networkx>=3.4.2.20250509",
   "tox>=4.30.3",
   "tox-uv>=1.28.1",
+  "jupyter>=1.1.1",
 ]
 test = ["highspy>=1.10.0", "osqp>=1.0.3", "pytest>=8.0.1"]
 docs = [
@@ -58,6 +59,9 @@ docs = [
   "sphinx-exec-code<1.0,>=0.12",
   "sphinx-rtd-theme<3.0.0,>=2.0.0",
   "jupyter<2.0.0,>=1.0.0",
+  "nbsphinx>=0.9.8",
+  "matplotlib>=3.9.4",
+  "iplotx>=0.0.1",
 ]
 
 [build-system]
