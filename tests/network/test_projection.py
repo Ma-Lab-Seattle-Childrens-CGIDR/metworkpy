@@ -51,6 +51,8 @@ class TestBipartiteProject(unittest.TestCase):
         cls.node_set = ["A", "B", "C"]
 
     def test_unweighted_undirected(self):
+        if self.test_graph is None:
+            raise ValueError("Test requires a graph")
         projected_graph = bipartite_project(
             self.test_graph, node_set=self.node_set
         )
@@ -62,6 +64,8 @@ class TestBipartiteProject(unittest.TestCase):
         self.assertFalse(projected_graph.has_edge("B", "C"))
 
     def test_unweighted_directed(self):
+        if self.test_digraph is None:
+            raise ValueError("Test requires a graph")
         directed_projection = bipartite_project(
             self.test_digraph, node_set=self.node_set, directed=True
         )
@@ -93,6 +97,8 @@ class TestBipartiteProject(unittest.TestCase):
         )
 
     def test_weighted_directed(self):
+        if self.test_weighted_graph is None:
+            raise ValueError("Test requires a graph")
         weighted_projection = bipartite_project(
             self.test_weighted_graph,
             node_set=self.node_set,
@@ -107,6 +113,8 @@ class TestBipartiteProject(unittest.TestCase):
         )
 
     def test_weighted_undirected(self):
+        if self.test_weighted_graph is None:
+            raise ValueError("Test requires a graph")
         weighted_projection = bipartite_project(
             self.test_weighted_graph,
             node_set=self.node_set,

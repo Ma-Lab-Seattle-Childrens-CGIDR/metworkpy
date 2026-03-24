@@ -3,8 +3,8 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Iterable, Optional
-from typing import Callable
+import itertools
+from typing import Callable, Iterable, Optional, Union
 
 # External Imports
 import networkx as nx
@@ -23,6 +23,7 @@ def bipartite_project(
     node_set: Iterable,
     directed: Optional[bool] = None,
     weight: str | Callable[[float, float], float] | None = None,
+    weight_combine: str | Callable[[float, float], float] | None = None,
     weight_attribute: str = "weight",
     reciprocal: bool = False,
 ) -> nx.Graph | nx.DiGraph:
@@ -39,7 +40,7 @@ def bipartite_project(
         argument is not directed this is ignored. A value of None will
         have the directedness of the output match the directedness of
         the input network.
-    weight : str | Callable[[float, float], float] | None
+    weight : str | Callable[[float, float], float], optional
         How to weight the projected graph. If None, the projected graph
         will not be weighted. If "ratio", the edges will be weighted
         based on the ratio between actual shared neighbors and maximum
@@ -47,10 +48,17 @@ def bipartite_project(
         weighted by the number of shared neighbors. A function can also
         be provided, which takes two float arguments (the weights of two
         edges), and returns a float.
+    weight_combine : Callable[[list[float]], float], optional
+        How to combine multiple projected edges. If two nodes in the set
+        being projected onto, share multiple neighbors in the other node set,
+        they can have multiple possible edge weights. This function takes in
+        a list of possible weights, and returns a single final weight. Python
+        builtin `max` and `min` can be used for this. If not provided,
+        `max` is used.
     weight_attribute : str
         Which edge attribute in the original network to use for
         weighting. Default is 'weight'.
-    reciprocal : bool
+    reciprocal : bool, default=False
         If converting from a directed graph to an undirected one,
         whether to only keep edges that appear in both directions in the
         original directed network.
@@ -65,6 +73,8 @@ def bipartite_project(
             network = network.to_undirected(reciprocal=reciprocal)
     if weight is None:
         return projected_graph(network, nodes=node_set)
+    if weight_combine is None:
+        weight_combine = max
     if isinstance(weight, str):
         weight = _parse_str_args_dict(
             weight,
@@ -82,12 +92,14 @@ def bipartite_project(
             network=network,
             node_set=node_set,
             weight=weight,
+            weight_combine=weight_combine,  # type: ignore
             attr=weight_attribute,
         )
     return _unirected_projection(
         network=network,
         node_set=node_set,
         weight=weight,
+        weight_combine=weight_combine,  # type: ignore
         attr=weight_attribute,
     )
 
@@ -100,9 +112,12 @@ def _directed_projection(
     network: nx.DiGraph,
     node_set: Iterable,
     weight: Callable[[float, float], float],
+    weight_combine: Callable[[list[float]], float],
     attr: str = "weight",
 ) -> nx.DiGraph:
-    res_graph = network.subgraph(nodes=node_set).copy()
+    res_graph = nx.DiGraph()
+    res_graph.add_nodes_from(node_set)
+    edge_weights = {}
     for node in network.nodes():
         if node in res_graph:
             continue
@@ -114,11 +129,21 @@ def _directed_projection(
                     network.get_edge_data(pred, node)[attr],
                     network.get_edge_data(node, suc)[attr],
                 )
-                if res_graph.has_edge(pred, suc):
-                    new_weight = weight(
-                        new_weight, res_graph.get_edge_data(pred, suc)[attr]
-                    )
-                res_graph.add_edge(pred, suc, **{attr: new_weight})
+                if pred in edge_weights:
+                    if suc in edge_weights[pred]:
+                        edge_weights[pred][suc].append(new_weight)
+                    else:
+                        edge_weights[pred][suc] = [new_weight]
+                else:
+                    edge_weights[pred] = {}
+                    edge_weights[pred][suc] = [new_weight]
+    # Edge weights dict created, add edges to graph
+    for pred, suc_dict in edge_weights.items():
+        for suc, weight_list in suc_dict.items():
+            res_graph.add_edge(
+                pred, suc, **{attr: weight_combine(weight_list)}
+            )
+
     return res_graph
 
 
@@ -127,28 +152,42 @@ def _directed_projection(
 
 # region Undirected Projection
 def _unirected_projection(
-    network: nx.Graph,
+    network: Union[nx.Graph, nx.DiGraph],
     node_set: Iterable,
     weight: Callable[[float, float], float],
+    weight_combine: Callable[[list[float]], float],
     attr: str = "weight",
 ) -> nx.Graph:
-    res_graph = network.subgraph(nodes=node_set).copy()
+    res_graph = nx.Graph()
+    res_graph.add_nodes_from(node_set)
+    edge_weights = {}
     for node in network.nodes():
         if node in res_graph:
             continue
-        for pred in network.neighbors(node):
-            for suc in network.neighbors(node):
-                if pred == suc:
-                    continue
-                new_weight = weight(
-                    network.get_edge_data(pred, node)[attr],
-                    network.get_edge_data(node, suc)[attr],
-                )
-                if res_graph.has_edge(pred, suc):
-                    new_weight = weight(
-                        new_weight, res_graph.get_edge_data(pred, suc)[attr]
-                    )
-                res_graph.add_edge(pred, suc, **{attr: new_weight})
+        if isinstance(network, nx.Graph):
+            node_pair_iter = itertools.combinations(network.neighbors(node), 2)
+        elif isinstance(network, nx.DiGraph):
+            node_pair_iter = itertools.product(
+                network.predecessors(node), network.successors(node)
+            )
+        for n1, n2 in node_pair_iter:
+            new_weight = weight(
+                network.get_edge_data(n1, node)[attr],
+                network.get_edge_data(node, n2)[attr],
+            )
+            n1, n2 = min(n1, n2), max(n1, n2)
+            if n1 in edge_weights:
+                if n2 in edge_weights[n1]:
+                    edge_weights[n1][n2].append(new_weight)
+                else:
+                    edge_weights[n1][n2] = [new_weight]
+            else:
+                edge_weights[n1] = {}
+                edge_weights[n1][n2] = [new_weight]
+    # Now add the edges to the graph
+    for n1, n2_dict in edge_weights.items():
+        for n2, weight_list in n2_dict.items():
+            res_graph.add_edge(n1, n2, **{attr: weight_combine(weight_list)})
     return res_graph
 
 

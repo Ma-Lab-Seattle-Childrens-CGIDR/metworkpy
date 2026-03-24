@@ -39,6 +39,11 @@
   networkx Graph/DiGraph which can be used for various clustering algorithms
   (many scikit-learn clustering methods can use precomputed distances with a
   distance matrix).
+- In network submodule, updated handling of weights in bipartite projection. Now
+  the functions to combine edge weights (of edges between node sets), and to
+  combine weights of projected edges (when there are multiple neighbors in the
+  other node set that each produce a seperate weight) are now split, allowing
+  for more flexibility in handling.
 - Split rank entropy methods into their own separate package (gnatpy)
 
 ## Version 0.6.0
