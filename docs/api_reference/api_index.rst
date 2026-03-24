@@ -13,6 +13,5 @@ API Reference for Metworkpy
    network
    imat
    information
-   rank_entropy
    synleth
    utils
