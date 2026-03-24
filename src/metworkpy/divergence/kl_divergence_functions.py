@@ -55,7 +55,8 @@ def kl_divergence(
     calculate_pvalue : bool, default=False
         Whether the p-value should be calculated using a permutation test
     alternative : 'less', 'greater', or 'two-sided', default='greater'
-        The alternative to use, passed to SciPy's `permutation_test<https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html>`_
+        The alternative to use, see
+        `metworkpy.utils.permutation.permutation_test`
     permutations : int, default=9999
          The number of permuatations to use when calculating the p-value
     permutation_rng : np.random.Generator or int, Optional

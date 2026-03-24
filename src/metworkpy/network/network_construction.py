@@ -634,7 +634,7 @@ def create_group_neighborhood_network(
 
     Returns
     -------
-    nx.Graph or nx.DiGraph
+    group_neighborhood_network : nx.Graph or nx.DiGraph
         The group connectivity graph, which includes nodes for every group
         defined in `group`, with edges connecting groups which are connected
         in `network`, with optional edge weighted. Will be nx.Graph unless
@@ -647,15 +647,17 @@ def create_group_neighborhood_network(
     on the `network`.
 
     For example, take a graph with:
-        Nodes: {a, b, c, d, e, f, g}
-        Edges: {(a, b), (c,d), (e,f), (a,g)}
+
+        * Nodes: {a, b, c, d, e, f, g}
+        * Edges: {(a, b), (c,d), (e,f), (a,g)}
+
     then the group connectivity graph for groups
     {group1: {a,c}, group2:{d,e}, group3:{b,f}, group4:{g}}
     will produce the group connectivity graph (with parameter
     max_distance set to 1):
-        Nodes: {group1, group2, group3, group4}
-        Edges: {(group1, group2), (group1, group3),
-                (group1, group4), (group2, group3)}
+
+        * Nodes: {group1, group2, group3, group4}
+        * Edges: {(group1, group2), (group1, group3), (group1, group4), (group2, group3)}
 
     When counting the number of connections, it is determined
     by finding the total neighborhood of one of the groups
