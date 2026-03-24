@@ -325,6 +325,9 @@ def create_reaction_network(
     reciprocal_weights: bool = False,
     threshold: float = 0.0,
     projection_weight: str | Callable[[float, float], float] | None = None,
+    projection_weight_combine: str
+    | Callable[[float, float], float]
+    | None = None,
     **kwargs,
 ):
     """
@@ -364,6 +367,13 @@ def create_reaction_network(
         weighted by the number of shared neighbors. A function can also
         be provided, which takes two float arguments (the weights of two
         edges), and returns a float.
+    projection_weight_combine : Callable[[list[float]], float], optional
+        How to combine multiple projected edges. If two nodes in the set
+        being projected onto, share multiple neighbors in the other node set,
+        they can have multiple possible edge weights. This function takes in
+        a list of possible weights, and returns a single final weight. Python
+        builtin `max` and `min` can be used for this. If not provided,
+        `max` is used.
     kwargs
         Keyword arguments are passed to the cobra flux_variability_analysis method
         when weight_by is flux
@@ -393,6 +403,7 @@ def create_reaction_network(
         node_set=reaction_ids,
         directed=directed,
         weight=projection_weight,
+        weight_combine=projection_weight_combine,
         weight_attribute="weight",
         # reciprocal won't actually impact, since the graph will be
         # created with the correct directedness
@@ -409,6 +420,9 @@ def create_metabolite_network(
     reciprocal_weights: bool = False,
     threshold: float = 0.0,
     projection_weight: str | Callable[[float, float], float] | None = None,
+    projection_weight_combine: str
+    | Callable[[float, float], float]
+    | None = None,
     **kwargs,
 ):
     """
@@ -448,6 +462,13 @@ def create_metabolite_network(
         weighted by the number of shared neighbors. A function can also
         be provided, which takes two float arguments (the weights of two
         edges), and returns a float.
+    projection_weight_combine : Callable[[list[float]], float], optional
+        How to combine multiple projected edges. If two nodes in the set
+        being projected onto, share multiple neighbors in the other node set,
+        they can have multiple possible edge weights. This function takes in
+        a list of possible weights, and returns a single final weight. Python
+        builtin `max` and `min` can be used for this. If not provided,
+        `max` is used.
     kwargs
         Keyword arguments are passed to the cobra flux_variability_analysis method
         when weight_by is flux
@@ -477,6 +498,7 @@ def create_metabolite_network(
         node_set=met_ids,
         directed=directed,
         weight=projection_weight,
+        weight_combine=projection_weight_combine,
         weight_attribute="weight",
         # reciprocal won't actually impact, since the graph will be
         # created with the correct directedness
