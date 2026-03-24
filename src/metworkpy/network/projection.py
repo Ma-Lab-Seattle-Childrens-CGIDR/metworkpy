@@ -23,7 +23,7 @@ def bipartite_project(
     node_set: Iterable,
     directed: Optional[bool] = None,
     weight: str | Callable[[float, float], float] | None = None,
-    weight_combine: str | Callable[[float, float], float] | None = None,
+    weight_combine: Optional[Callable[[list[float]], float]] = None,
     weight_attribute: str = "weight",
     reciprocal: bool = False,
 ) -> nx.Graph | nx.DiGraph:

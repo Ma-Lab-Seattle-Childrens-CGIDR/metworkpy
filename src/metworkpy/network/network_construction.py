@@ -325,9 +325,7 @@ def create_reaction_network(
     reciprocal_weights: bool = False,
     threshold: float = 0.0,
     projection_weight: str | Callable[[float, float], float] | None = None,
-    projection_weight_combine: str
-    | Callable[[float, float], float]
-    | None = None,
+    projection_weight_combine: Optional[Callable[[list[float]], float]] = None,
     **kwargs,
 ):
     """
@@ -398,6 +396,11 @@ def create_reaction_network(
         r.id for r in model.reactions if r.id not in rxns_to_remove_set
     }
     # Project onto only reactions
+    if weighted:
+        if projection_weight is None:
+            projection_weight = max
+        if projection_weight_combine is None:
+            projection_weight_combine = max
     return bipartite_project(
         network=metabolic_network,
         node_set=reaction_ids,
@@ -419,10 +422,10 @@ def create_metabolite_network(
     nodes_to_remove: list[str] | None = None,
     reciprocal_weights: bool = False,
     threshold: float = 0.0,
-    projection_weight: str | Callable[[float, float], float] | None = None,
-    projection_weight_combine: str
-    | Callable[[float, float], float]
-    | None = None,
+    projection_weight: Optional[
+        Union[str, Callable[[float, float], float]]
+    ] = None,
+    projection_weight_combine: Optional[Callable[[list[float]], float]] = None,
     **kwargs,
 ):
     """
@@ -492,6 +495,11 @@ def create_metabolite_network(
     met_ids = {
         m.id for m in model.metabolites if m.id not in mets_to_remove_set
     }
+    if weighted:
+        if projection_weight is None:
+            projection_weight = max
+        if projection_weight_combine is None:
+            projection_weight_combine = max
     # Project onto only reactions
     return bipartite_project(
         network=metabolic_network,
