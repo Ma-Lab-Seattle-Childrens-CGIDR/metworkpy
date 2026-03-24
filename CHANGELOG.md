@@ -39,6 +39,7 @@
   networkx Graph/DiGraph which can be used for various clustering algorithms
   (many scikit-learn clustering methods can use precomputed distances with a
   distance matrix).
+- Split rank entropy methods into their own separate package (gnatpy)
 
 ## Version 0.6.0
 

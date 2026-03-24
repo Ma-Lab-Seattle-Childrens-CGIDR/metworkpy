@@ -48,14 +48,6 @@ __all__ = [
     "metabolites",
     "eval_gpr",
     "gene_to_rxn_weights",
-    "race_gene_set_entropy",
-    "infer_gene_set_entropy",
-    "crane_gene_set_entropy",
-    "dirac_gene_set_entropy",
-    "dirac_gene_set_classification",
-    "crane_gene_set_classification",
-    "DiracClassifier",
-    "CraneClassifier",
     "fisher_enrichment",
     "extended_mannwhitneyu_test",
 ]
@@ -118,14 +110,3 @@ from metworkpy.metabolites import (
 )
 
 from metworkpy.gpr import eval_gpr, gene_to_rxn_weights
-
-from metworkpy.rank_entropy import (
-    race_gene_set_entropy,
-    infer_gene_set_entropy,
-    crane_gene_set_entropy,
-    dirac_gene_set_entropy,
-    dirac_gene_set_classification,
-    crane_gene_set_classification,
-    DiracClassifier,
-    CraneClassifier,
-)
