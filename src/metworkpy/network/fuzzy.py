@@ -792,6 +792,7 @@ def fuzzy_reaction_intersection(
     Notes
     -----
     The possible methods for the intersection are:
+
     * mean: Take the arithmetic mean of the membership values
     * min: Take the minimum of the membership values
     * max: Take the max of the membership values

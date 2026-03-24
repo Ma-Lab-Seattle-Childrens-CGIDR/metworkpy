@@ -3,23 +3,24 @@ IMAT Reference
 
 API Documentation for the IMAT submodule
 
-imat\_functions
----------------
+iMAT
+----
 
 .. automodule:: metworkpy.imat.imat_functions
    :members:
    :undoc-members:
    :show-inheritance:
 
-imat\_iter
-----------
+iMAT Iterator
+-------------
+
 .. automodule:: metworkpy.imat.imat_iter
    :members:
    :undoc-members:
    :show-inheritance:
 
-model\_creation
----------------
+iMAT Model Creation
+-------------------
 
 .. automodule:: metworkpy.imat.model_creation
    :members:

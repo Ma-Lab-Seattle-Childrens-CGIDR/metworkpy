@@ -46,7 +46,7 @@ def fisher_enrichment(
         The size of the set from which group1 and group2 are subsets
     alternative : {'two-sided', 'less', 'greater'}
         The alternative hypothesis, see
-        `SciPy's fisher_exact<https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.fisher_exact.html>`_
+        `SciPy's fisher_exact <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.fisher_exact.html>`_
         for details.
 
     Results

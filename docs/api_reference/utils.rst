@@ -3,7 +3,23 @@ Utils Reference
 
 API Documentation for the utils submodule
 
-models
+Connected Components
+--------------------
+
+.. automodule:: metworkpy.utils.connected_components
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Expression
+----------
+
+.. automodule:: metworkpy.utils.expression_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Models
 ------
 
 .. automodule:: metworkpy.utils.models
@@ -11,16 +27,26 @@ models
    :undoc-members:
    :show-inheritance:
 
-expression\_utils
------------------
 
-.. automodule:: metworkpy.utils.expression_utils
+Permutation Testing
+-------------------
+
+.. automodule:: metworkpy.utils.permutation
    :members:
    :undoc-members:
    :show-inheritance:
 
-translate
----------
+
+Statistics
+----------
+
+.. automodule:: metworkpy.utils.statistics
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Translation
+-----------
 
 .. automodule:: metworkpy.utils.translate
    :members:

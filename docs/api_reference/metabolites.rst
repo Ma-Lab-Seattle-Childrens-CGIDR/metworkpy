@@ -3,15 +3,15 @@ Metabolites Reference
 
 API Documentation for the metabolites submodule
 
-metchange\_functions
---------------------
+Metchange Functions
+-------------------
 
 .. automodule:: metworkpy.metabolites.metchange_functions
    :members:
    :undoc-members:
    :show-inheritance:
 
-metabolite\_network
+Metabolite Networks
 -------------------
 
 .. automodule:: metworkpy.metabolites.metabolite_network

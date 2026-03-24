@@ -3,8 +3,8 @@ Synleth Reference
 
 API Documentation for the synleth submodule
 
-fastsl
-------
+Fast Synthetic Lethality
+------------------------
 
 .. automodule:: metworkpy.synleth.fastsl
    :members:

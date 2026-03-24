@@ -36,9 +36,11 @@ def permutation_test(
         The sample axis for the two datsets
     permutation_type : {'independent', 'pairings'}, default='independent'
         The type of permutation to perform,
-        - pairings: Shuffles which observations are paired,
+
+        * pairings: Shuffles which observations are paired,
           but the assignment of observation to sample isn't changed
-        - independent: Shuffles which samples observations are assigned to
+        * independent: Shuffles which samples observations are assigned to
+
     n_resamples : int, default=500
         The number of permutations to perform
     alternative : {"less", "greater", "two-sided"}, default='two-sided'
@@ -57,8 +59,8 @@ def permutation_test(
     tuple of float,float
         Tuple of the sample statistic and the calculated p-value
 
-    Notes
-    -----
+    References
+    ----------
 
     .. [1] Phipson, B., & Smyth, G. K. (2010). Permutation p-values
        should never be zero: Calculating exact p-values when

@@ -3,8 +3,8 @@ GPR Reference
 
 API Documentation for the gpr submodule
 
-gpr_functions
--------------
+Gene-Protein-Reaction Rules
+---------------------------
 
 .. automodule:: metworkpy.gpr.gpr_functions
    :members:
