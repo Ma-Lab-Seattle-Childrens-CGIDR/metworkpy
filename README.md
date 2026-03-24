@@ -1,10 +1,11 @@
 # Welcome to MetworkPy
 
-![Metworkpy Logo](metworkpy_logo.png "Metworkpy Logo")
+![Metworkpy Logo](metworkpy_logo.png "MetworkPy Logo")
 
 <!--toc:start-->
 
 - [Welcome to MetworkPy](#welcome-to-metworkpy)
+  - [Usage](#usage)
   - [Issues and Pull Requests](#issues-and-pull-requests)
   - [Licensing](#licensing)
   - [References](#references)
@@ -21,6 +22,18 @@ metabolic networks. This functionality includes:
 - Generating network representations of Genome Scale Metabolic Networks (GSMMs)
 - Integrating gene expression data with GSMMs
 - Evaluating where the metabolism is most perturbed using divergence metrics
+
+## Usage
+
+MetworkPy can be installed with pip:
+
+```{bash}
+pip install metworkpy
+
+```
+
+For an example of usage (including some test data) see
+[https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy_application_note](https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy_application_note).
 
 ## Issues and Pull Requests
 
