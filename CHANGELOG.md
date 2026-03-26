@@ -3,7 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
-  - [Version DEV](#version-dev)
+  - [Version 0.7.0](#version-070)
   - [Version 0.6.0](#version-060)
   - [Version 0.5.0](#version-050)
   - [Version 0.4.1](#version-041)
@@ -16,6 +16,13 @@
 <!--toc:end-->
 
 ## Version DEV
+
+- Added parameter to network density/enrichment functions to allow for
+  evaluating the density/enrichment for a subset of nodes (useful if working
+  with the full metabolic network and you only care about the density of
+  metabolites or reactions)
+
+## Version 0.7.0
 
 - Added method for generating a gene connectivity graph to the networks
   submodule
