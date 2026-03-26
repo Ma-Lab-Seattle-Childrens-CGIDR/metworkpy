@@ -1,0 +1,23 @@
+name: metworkpy-examples
+channels:
+  - conda-forge
+dependencies:
+  - python=3.13
+  - cobra
+  - scipy
+  - pandas
+  - osqp
+  - pyarrow
+  - matplotlib
+  - joblib
+  - openpyxl
+  - tqdm
+  - highspy
+  - networkx
+  - optlang
+  - sympy
+  - pip
+  - pip:
+    - iplotx
+    - escher
+    - "git+https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy.git"

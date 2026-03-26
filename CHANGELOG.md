@@ -42,9 +42,12 @@
 - In network submodule, updated handling of weights in bipartite projection. Now
   the functions to combine edge weights (of edges between node sets), and to
   combine weights of projected edges (when there are multiple neighbors in the
-  other node set that each produce a seperate weight) are now split, allowing
-  for more flexibility in handling.
+  other node set that each produce a seperate weight) are split, allowing for
+  more flexibility in handling.
 - Split rank entropy methods into their own separate package (gnatpy)
+- Allowed for specifying a subset of metabolites in the metabolite network
+  functions
+- Added more documentation, and examples to the GitHub repository
 
 ## Version 0.6.0
 

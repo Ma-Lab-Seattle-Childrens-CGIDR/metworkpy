@@ -23,6 +23,11 @@ metabolic networks. This functionality includes:
 - Integrating gene expression data with GSMMs
 - Evaluating where the metabolism is most perturbed using divergence metrics
 
+## Documentation
+
+Documentation can be found at
+[https://metworkpy.readthedocs.io](https://metworkpy.readthedocs.io)
+
 ## Usage
 
 MetworkPy can be installed with pip:
@@ -32,7 +37,11 @@ pip install metworkpy
 
 ```
 
-For an example of usage (including some test data) see
+The [documentation](https://metworkpy.readthedocs.io) includes some instructions
+for getting started. For an example of the usage of MetworkPy see the
+[examples directory](https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/tree/main/examples)
+. For a more advanced example associated associated with the application note
+for MetworkPy (including some test data) see
 [https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy_application_note](https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy_application_note).
 
 ## Issues and Pull Requests

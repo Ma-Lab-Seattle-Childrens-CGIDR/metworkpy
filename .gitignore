@@ -243,3 +243,4 @@ fabric.properties
 create_tiny_model.py
 .vscode/
 tags
+.envrc
