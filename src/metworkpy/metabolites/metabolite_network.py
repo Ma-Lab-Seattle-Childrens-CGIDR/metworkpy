@@ -5,15 +5,15 @@ from __future__ import annotations
 
 # Standard Library Imports
 import hashlib
-from typing import Literal, Iterable
+from typing import Literal, Iterable, Optional
 import warnings
 
 # External Imports
 import cobra
+from cobra.exceptions import OptimizationError
 import numpy as np
 import pandas as pd
 import sympy
-from cobra.exceptions import OptimizationError
 from scipy import stats
 from tqdm import tqdm
 
@@ -29,6 +29,7 @@ from metworkpy.utils import (
 def find_metabolite_synthesis_network_reactions(
     model: cobra.Model,
     method: Literal["pfba", "essential"] = "pfba",
+    metabolites: Optional[Iterable[str]] = None,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
@@ -54,6 +55,9 @@ def find_metabolite_synthesis_network_reactions(
             Use essentiality to find reaction-metabolite associations.
             Find which reactions are essential for each metabolite.
 
+    metabolites : iterable of str, optional
+        Which metabolites to find the synthesis networks for, if not provided will
+        find the networks for all the metabolites in the model
     pfba_proportion : float
         Proportion to use for pfba analysis. This represents the
         fraction of optimum constraint applied before minimizing the sum
@@ -95,9 +99,11 @@ def find_metabolite_synthesis_network_reactions(
         raise ValueError(
             f"Method must be 'pfba' or 'essential' but received{method}"
         )
+    if metabolites is None:
+        metabolites = model.metabolites.list_attr("id")
     res_df = pd.DataFrame(
         None,
-        columns=model.metabolites.list_attr("id"),
+        columns=pd.Index(metabolites),
         index=model.reactions.list_attr("id"),
         dtype=res_dtype,
     )
@@ -141,6 +147,7 @@ def find_metabolite_synthesis_network_reactions(
 def find_metabolite_synthesis_network_genes(
     model: cobra.Model,
     method: Literal["pfba", "essential"] = "pfba",
+    metabolites: Optional[Iterable[str]] = None,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
@@ -169,6 +176,9 @@ def find_metabolite_synthesis_network_genes(
             Use essentiality to find gene-metabolite associations.
             Find which genes are essential for each metabolite.
 
+    metabolites : iterable of str, optional
+        Which metabolites to find the synthesis networks for, if not provided will
+        find the networks for all the metabolites in the model
     pfba_proportion : float
         Proportion to use for pfba analysis. This represents the
         fraction of optimum constraint applied before minimizing the sum
@@ -223,9 +233,11 @@ def find_metabolite_synthesis_network_genes(
         raise ValueError(
             f"Method must be 'pfba' or 'essential' but received {method}"
         )
+    if metabolites is None:
+        metabolites = model.metabolites.list_attr("id")
     res_df = pd.DataFrame(
         None,
-        columns=model.metabolites.list_attr("id"),
+        columns=pd.Index(metabolites),
         index=model.genes.list_attr("id"),
         dtype=res_dtype,
     )
@@ -292,6 +304,7 @@ def find_metabolite_synthesis_network_genes(
 
 def find_metabolite_consuming_network_reactions(
     model: cobra.Model,
+    metabolites: Optional[Iterable[str]] = None,
     reaction_proportion: float = 0.05,
     check_reverse: bool = True,
     progress_bar: bool = False,
@@ -303,6 +316,9 @@ def find_metabolite_consuming_network_reactions(
     ----------
     model : cobra.Model
         Cobra Model used to find which reactions are associated with which metabolites
+    metabolites : iterable of str, optional
+        Which metabolites to find the consuming networks for, if not provided will
+        find the networks for all the metabolites in the model
     reaction_proportion : float
         Proportion used to judge if a reaction consumes a metabolite or its derivatives,
         if the maximum flux for a reaction drops below reaction_proportion * maximum flux
@@ -325,9 +341,11 @@ def find_metabolite_consuming_network_reactions(
         a True value indicates that a particular reaction consumes a metabolite
         or one of its derivatives
     """
+    if metabolites is None:
+        metabolites = model.metabolites.list_attr("id")
     res_df = pd.DataFrame(
         False,
-        columns=model.metabolites.list_attr("id"),
+        columns=pd.Index(metabolites),
         index=model.reactions.list_attr("id"),
         dtype=bool,
     )
@@ -384,6 +402,7 @@ def find_metabolite_consuming_network_reactions(
 
 def find_metabolite_consuming_network_genes(
     model: cobra.Model,
+    metabolites: Optional[Iterable[str]] = None,
     reaction_proportion: float = 0.05,
     essential: bool = False,
     progress_bar: bool = False,
@@ -396,6 +415,9 @@ def find_metabolite_consuming_network_genes(
     ----------
     model : cobra.Model
         Cobra model used to find which reactions are association with which metabolites
+    metabolites : iterable of str, optional
+        Which metabolites to find the consuming networks for, if not provided will
+        find the networks for all the metabolites in the model
     reaction_proportion: float
         Proportion used to judge if a reaction consumes a metabolite or its derivatives,
         if the maximum flux for a reaction drops below reaction_proportion * maximum flux
@@ -417,9 +439,11 @@ def find_metabolite_consuming_network_genes(
         a True value indicates that a particular gene is associated with a reaction
         that consumes a metabolite or one of its derivatives
     """
+    if metabolites is None:
+        metabolites = model.metabolites.list_attr("id")
     res_df = pd.DataFrame(
         False,
-        columns=model.metabolites.list_attr("id"),
+        columns=pd.Index(metabolites),
         index=model.genes.list_attr("id"),
         dtype=bool,
     )
