@@ -56,7 +56,6 @@ dev = [
 test = ["highspy>=1.10.0", "osqp>=1.0.3", "pytest>=8.0.1"]
 docs = [
   "sphinx<8.0.0,>=7.2.6",
-  "sphinx-exec-code<1.0,>=0.12",
   "sphinx-rtd-theme<3.0.0,>=2.0.0",
   "jupyter<2.0.0,>=1.0.0",
   "nbsphinx>=0.9.8",
