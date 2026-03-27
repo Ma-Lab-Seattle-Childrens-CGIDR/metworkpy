@@ -1249,7 +1249,6 @@ docs = [
     { name = "matplotlib", specifier = ">=3.9.4" },
     { name = "nbsphinx", specifier = ">=0.9.8" },
     { name = "sphinx", specifier = ">=7.2.6,<8.0.0" },
-    { name = "sphinx-exec-code", specifier = ">=0.12,<1.0" },
     { name = "sphinx-rtd-theme", specifier = ">=2.0.0,<3.0.0" },
 ]
 test = [

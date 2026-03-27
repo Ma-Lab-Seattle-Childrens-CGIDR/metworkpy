@@ -81,7 +81,7 @@ conda create --file environment.yml
 and then activated with
 
 ```{bash}
-conda activate metworkpy-examples
+conda activate metworkpy
 ```
 
 finally the jupyter notebook can be opened

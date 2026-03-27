@@ -1,4 +1,4 @@
-name: metworkpy-examples
+name: metworkpy
 channels:
   - conda-forge
 dependencies:
