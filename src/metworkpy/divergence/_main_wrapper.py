@@ -34,6 +34,7 @@ class ContinuousDivergenceFunction(Protocol):
         q: NDArray[float],
         n_neighbors: int,
         metric: float,
+        clip: bool,
     ) -> float: ...
 
 
@@ -57,6 +58,7 @@ def _wrap_divergence_functions(
     jitter: Optional[float] = None,
     jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
+    clip: bool = False,
 ) -> Union[float, DivergenceResult]:
     """Calculate the divergence between two distributions represented by samples p and q
 
@@ -110,6 +112,8 @@ def _wrap_divergence_functions(
         Metric to use for computing distance between points in p and q,
         can be "Euclidean", "Manhattan", or "Chebyshev". Can also be a
         float representing the Minkowski p-norm.
+    clip : bool, default=False
+        Whether or not to clip the divergence values at 0.0
 
     Returns
     -------
@@ -127,9 +131,9 @@ def _wrap_divergence_functions(
     distance_metric = _parse_metric(distance_metric)
     p, q = _validate_samples(p, q)
     if jitter and not discrete:
-        generator = np.random.default_rng(jitter_seed)
-        p = _jitter_single(p, jitter=jitter, generator=generator)
-        q = _jitter_single(q, jitter=jitter, generator=generator)
+        rng = np.random.default_rng(jitter_seed)
+        p = _jitter_single(p, jitter=jitter, generator=rng)
+        q = _jitter_single(q, jitter=jitter, generator=rng)
     permutation_test_kwargs = {
         "permutation_type": "independent",
         "n_resamples": permutations,
@@ -149,19 +153,26 @@ def _wrap_divergence_functions(
             return discrete_method(p, q)
         else:
             divergence, pvalue = permutation_test(
-                p, q, discrete_method, **permutation_test_kwargs
+                p,
+                q,
+                discrete_method,
+                **permutation_test_kwargs,  # type:ignore
             )
             return DivergenceResult(divergence=divergence, pvalue=pvalue)
+    # Continuous
     if not calculate_pvalue:
         return continuous_method(
-            p, q, n_neighbors=n_neighbors, metric=distance_metric
+            p, q, n_neighbors=n_neighbors, metric=distance_metric, clip=clip
         )
     divergence, pvalue = permutation_test(
         p,
         q,
         partial(
-            continuous_method, n_neighbors=n_neighbors, metric=distance_metric
+            continuous_method,
+            n_neighbors=n_neighbors,
+            metric=distance_metric,
+            clip=clip,
         ),
-        **permutation_test_kwargs,
+        **permutation_test_kwargs,  # type:ignore
     )
     return DivergenceResult(divergence=divergence, pvalue=pvalue)

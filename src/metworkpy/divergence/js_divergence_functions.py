@@ -38,6 +38,7 @@ def js_divergence(
     jitter: Optional[float] = None,
     jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
+    clip: bool = False,
 ) -> Union[float, DivergenceResult]:
     """Calculate the Jensen-Shannon divergence between two distributions represented by samples p and q
 
@@ -84,6 +85,8 @@ def js_divergence(
         Metric to use for computing distance between points in p and q,
         can be \"Euclidean\", \"Manhattan\", or \"Chebyshev\". Can also
         be a float representing the Minkowski p-norm.
+    clip : bool, default=False
+        Whether or not to clip the divergence values at 0.0
 
     Returns
     -------
@@ -110,6 +113,7 @@ def js_divergence(
         jitter=jitter,
         jitter_seed=jitter_seed,
         distance_metric=distance_metric,
+        clip=clip,
     )
 
 
@@ -185,6 +189,7 @@ def _js_cont(
     q: np.ndarray,
     n_neighbors: int = 5,
     metric: float = 2.0,
+    clip: bool = False,
     **kwargs,
 ) -> float:
     """Calculate the Jensen-Shannon divergence between samples from two continuous distributions using the
@@ -205,6 +210,8 @@ def _js_cont(
     metric : float
         Metric to use for computing distance between points in y (must
         be `float>=1` representing Minkowski p-norm)
+    clip : bool, default=False
+        Whether or not to clip the divergence values at 0.0
     **kwargs
         Arguments passed to KDTree constructor
 
@@ -215,11 +222,10 @@ def _js_cont(
 
     See Also
     --------
-
-    Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
-         Paper from which this method was obtained
     :func: `_js_disc`
          Function for calculating Jensen-Shannon divergence when the distributions are discrete
+    Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
+         Paper from which this method was obtained
     """
     combined = np.vstack([p, q])
     n_data_points = combined.shape[0]
@@ -252,7 +258,7 @@ def _js_cont(
     )
 
     # Use formula 9 from Ross, 2014
-    return (
+    div = (
         digamma(n_data_points)
         + digamma(n_neighbors)
         - np.sum(
@@ -263,6 +269,10 @@ def _js_cont(
         )
         / len(discrete_classes)
     )
+
+    if not clip:
+        return div
+    return max(div, 0.0)
 
 
 # endregion Continuous Case

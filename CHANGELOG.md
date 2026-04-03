@@ -21,6 +21,7 @@
   evaluating the density/enrichment for a subset of nodes (useful if working
   with the full metabolic network and you only care about the density of
   metabolites or reactions)
+- Added parameter to divergence functions for clipping them to 0.0
 
 ## Version 0.7.0
 

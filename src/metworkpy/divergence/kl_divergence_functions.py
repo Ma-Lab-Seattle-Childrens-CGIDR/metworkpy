@@ -37,6 +37,7 @@ def kl_divergence(
     jitter: Optional[float] = None,
     jitter_seed: Optional[int] = None,
     distance_metric: Union[float, str] = "euclidean",
+    clip: bool = False,
 ) -> Union[float, DivergenceResult]:
     """Calculate the Kulback-Leibler divergence between two distributions represented by samples p and q
 
@@ -83,6 +84,8 @@ def kl_divergence(
         Metric to use for computing distance between points in p and q,
         can be \"Euclidean\", \"Manhattan\", or \"Chebyshev\". Can also
         be a float representing the Minkowski p-norm.
+    clip : bool, default=False
+        Whether or not to clip the divergence values at 0.0
 
     Returns
     -------
@@ -121,6 +124,7 @@ def kl_divergence(
         jitter=jitter,
         jitter_seed=jitter_seed,
         distance_metric=distance_metric,
+        clip=clip,
     )
 
 
@@ -223,7 +227,11 @@ def _kl_disc(p: np.ndarray, q: np.ndarray):
 
 # region Continuous Divergence
 def _kl_cont(
-    p: np.ndarray, q: np.ndarray, n_neighbors: int = 5, metric: float = 2.0
+    p: np.ndarray,
+    q: np.ndarray,
+    n_neighbors: int = 5,
+    metric: float = 2.0,
+    clip=False,
 ):
     """Calculate the Kullback-Leibler divergence for two samples from two continuous distributions
 
@@ -240,6 +248,9 @@ def _kl_cont(
     metric : float
         Minkowski p-norm to use for calculating distances, must be at
         least 1
+    clip : bool, default=False
+        Whether or not to clip the divergence values at 0.0
+
 
     Returns
     -------
@@ -265,10 +276,14 @@ def _kl_cont(
     q_dist = q_dist.squeeze()
 
     # Find the KL-divergence estimate using equation (5) from Wang and Kulkarni, 2009
-    return (
+
+    div = (
         (p.shape[1] / p.shape[0]) * np.sum(np.log(np.divide(q_dist, p_dist)))
         + np.log(q.shape[0] / (p.shape[0] - 1))
     ).item()
+    if not clip:
+        return div
+    return max(div, 0.0)
 
 
 # endregion Continuous Divergence
