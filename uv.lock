@@ -2183,7 +2183,7 @@ wheels = [
 
 [[package]]
 name = "metworkpy"
-version = "0.6.0"
+version = "0.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "cobra" },
@@ -2243,7 +2243,6 @@ docs = [
     { name = "matplotlib", version = "3.10.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "nbsphinx" },
     { name = "sphinx" },
-    { name = "sphinx-exec-code" },
     { name = "sphinx-rtd-theme" },
 ]
 test = [
@@ -2291,7 +2290,6 @@ docs = [
     { name = "matplotlib", specifier = ">=3.9.4" },
     { name = "nbsphinx", specifier = ">=0.9.8" },
     { name = "sphinx", specifier = ">=7.2.6,<8.0.0" },
-    { name = "sphinx-exec-code", specifier = ">=0.12,<1.0" },
     { name = "sphinx-rtd-theme", specifier = ">=2.0.0,<3.0.0" },
 ]
 test = [
@@ -4071,15 +4069,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5b/be/50e50cb4f2eff47df05673d361095cafd95521d2a22521b920c67a372dcb/sphinx-7.4.7.tar.gz", hash = "sha256:242f92a7ea7e6c5b406fdc2615413890ba9f699114a9c09192d7dfead2ee9cfe", size = 8067911, upload-time = "2024-07-20T14:46:56.059Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0d/ef/153f6803c5d5f8917dbb7f7fcf6d34a871ede3296fa89c2c703f5f8a6c8e/sphinx-7.4.7-py3-none-any.whl", hash = "sha256:c2419e2135d11f1951cd994d6eb18a1835bd8fdd8429f9ca375dc1f3281bd239", size = 3401624, upload-time = "2024-07-20T14:46:52.142Z" },
-]
-
-[[package]]
-name = "sphinx-exec-code"
-version = "0.16"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/45/0d/a94b374aef31918bf88af058c10ebf556a199818e30a8fa0df6f952eabc7/sphinx_exec_code-0.16.tar.gz", hash = "sha256:51458982dc7a152802dfac9786af656c7fe35206203452d9f6322cac45534b32", size = 16274, upload-time = "2025-04-01T07:49:32.622Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8c/5c/a9d7d2407124512be434044e4504b2e62a7a1a0e5863ca384b37241c0ddf/sphinx_exec_code-0.16-py3-none-any.whl", hash = "sha256:b5cd4f8d2d4b929d522e14ccf30ac569f8864a9c241e91cb93fc8324abdd9c52", size = 16936, upload-time = "2025-04-01T07:49:31.312Z" },
 ]
 
 [[package]]

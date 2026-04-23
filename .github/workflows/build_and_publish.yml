@@ -21,13 +21,14 @@ jobs:
         os:
           - ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8
       - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv --with tox-gh
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with
+          tox-uv --with tox-gh
       - name: Install Python
         if: matrix.env != '3.13'
         run: uv python install --python-preference only-managed ${{ matrix.env }}
@@ -46,11 +47,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8
       - name: Build dist
         run: uv build
       - name: Upload dist
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: ci-dist
           path: dist/*
@@ -61,7 +62,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: ci-*
           path: dist
