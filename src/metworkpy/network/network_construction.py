@@ -138,7 +138,7 @@ def create_adjacency_matrix(
     model: cobra.Model,
     weighted: bool,
     directed: bool,
-    weight_by: Literal["stoichiometry", "flux"] = "stoichiometry",
+    weight_by: Literal["stoichiometry", "fva", "pfba"] = "stoichiometry",
     threshold: float = 0.0,
     **kwargs,
 ) -> pd.DataFrame:
@@ -154,9 +154,9 @@ def create_adjacency_matrix(
         Whether the network should be weighted
     directed : bool
         Whether the network should be directed
-    weight_by : 'flux' or 'stoichiometry', default='stoichiometry'
+    weight_by : {'fva', 'pfba', 'stoichiometry'}, default='stoichiometry'
         String indicating if the network should be weighted by
-        'stoichiometry', or 'flux' (see notes for more information).
+        'stoichiometry', 'fva', 'pfba' (see notes for more information).
         Ignored if `weighted = False`
     threshold : float
         Threshold, below which to consider a (absolute value of a) bound/flux
@@ -177,12 +177,17 @@ def create_adjacency_matrix(
     correspond to the stoichiometric coefficient of the metabolite, in a given
     reaction.
 
-    For flux weighting, first flux variability analysis is performed. The edge
+    For 'fva' weighting, first flux variability analysis is performed. The edge
     weight is determined by the maximum flux through a reaction in a particular
     direction (forward if the metabolite is a product of the reaction,
     reverse if the metabolite is a substrate) multiplied by the metabolite
     stoichiometry. If the network is unweighted, the maximum of the absolute
     value of the forward and the reverse flux is used instead.
+
+    For 'pfba' weighting, first parsimonious flux analysis is performed. The
+    edge weight between a reaction and metabolite is determined by the
+    stoichiometric coefficient of the metabolite multiplied by flux of the
+    reaction in the pFBA solution.
     """
     if not isinstance(model, cobra.Model):
         raise ValueError(
@@ -198,13 +203,17 @@ def create_adjacency_matrix(
                 return _create_adj_matrix_d_w_stoich(
                     model=model, threshold=threshold
                 )
-            elif weight_by == "flux":
-                return _create_adj_matrix_d_w_flux(
+            elif weight_by == "fva":
+                return _create_adj_matrix_d_w_fva(
+                    model=model, threshold=threshold, **kwargs
+                )
+            elif weight_by == "pfba":
+                return _create_adj_matrix_d_w_pfba(
                     model=model, threshold=threshold, **kwargs
                 )
             else:
                 raise ValueError(
-                    f"weight_by must be stoichiometry or flux, but received {weight_by}"
+                    f"weight_by must be stoichiometry, fva, or pfba but received {weight_by}"
                 )
         else:
             return _create_adj_matrix_d_uw(model=model, threshold=threshold)
@@ -214,13 +223,17 @@ def create_adjacency_matrix(
                 return _create_adj_matrix_ud_w_stoich(
                     model=model, threshold=threshold
                 )
-            elif weight_by == "flux":
-                return _create_adj_matrix_ud_w_flux(
+            elif weight_by == "fva":
+                return _create_adj_matrix_ud_w_fva(
+                    model=model, threshold=threshold, **kwargs
+                )
+            elif weight_by == "pfba":
+                return _create_adj_matrix_ud_w_pfba(
                     model=model, threshold=threshold, **kwargs
                 )
             else:
                 raise ValueError(
-                    f"weight_by must be stoichiometry or flux, but received {weight_by}"
+                    f"weight_by must be stoichiometry, fva, or pfba but received {weight_by}"
                 )
         else:
             return _create_adj_matrix_ud_uw(model=model, threshold=threshold)
@@ -230,7 +243,7 @@ def create_metabolic_network(
     model: cobra.Model,
     weighted: bool,
     directed: bool,
-    weight_by: Literal["stoichiometry", "flux"] = "stoichiometry",
+    weight_by: Literal["stoichiometry", "fva", "pfba"] = "stoichiometry",
     nodes_to_remove: list[str] | None = None,
     reciprocal_weights: bool = False,
     threshold: float = 0.0,
@@ -246,9 +259,9 @@ def create_metabolic_network(
         Whether the network should be weighted
     directed : bool
         Whether the network should be directed
-    weight_by : 'stoichiometry' or 'flux', default='stoichiometry'
+    weight_by : {'fva', 'pfba', 'stoichiometry'}, default='stoichiometry'
         String indicating if the network should be weighted by
-        'stoichiometry', or 'flux' (see notes for more information).
+        'stoichiometry', 'fva', 'pfba' (see notes for more information).
         Ignored if `weighted = False`
     nodes_to_remove : list[str] | None
         List of any metabolites or reactions that should be removed from
@@ -280,12 +293,17 @@ def create_metabolic_network(
     correspond to the stoichiometric coefficient of the metabolite, in a given
     reaction.
 
-    For flux weighting, first flux variability analysis is performed. The edge
+    For 'fva' weighting, first flux variability analysis is performed. The edge
     weight is determined by the maximum flux through a reaction in a particular
     direction (forward if the metabolite is a product of the reaction,
     reverse if the metabolite is a substrate) multiplied by the metabolite
-    stoichiometry. If the network is unweighted, the maximum of the forward
-    and the reverse flux is used instead.
+    stoichiometry. If the network is unweighted, the maximum of the absolute
+    value of the forward and the reverse flux is used instead.
+
+    For 'pfba' weighting, first parsimonious flux analysis is performed. The
+    edge weight between a reaction and metabolite is determined by the
+    stoichiometric coefficient of the metabolite multiplied by flux of the
+    reaction in the pFBA solution.
     """
     adjacency_frame = create_adjacency_matrix(
         model=model,
@@ -320,7 +338,7 @@ def create_reaction_network(
     model: cobra.Model,
     weighted: bool,
     directed: bool,
-    weight_by: Literal["stoichiometry", "flux"] = "stoichiometry",
+    weight_by: Literal["stoichiometry", "fva", "pfba"] = "stoichiometry",
     nodes_to_remove: list[str] | None = None,
     reciprocal_weights: bool = False,
     threshold: float = 0.0,
@@ -340,9 +358,9 @@ def create_reaction_network(
         Whether the network should be weighted
     directed : bool
         Whether the network should be directed
-    weight_by : 'stoichiometry' or 'flux', default='stoichiometry'
+    weight_by : {'fva', 'pfba', 'stoichiometry'}, default='stoichiometry'
         String indicating if the network should be weighted by
-        'stoichiometry', or 'flux' (see notes for more information).
+        'stoichiometry', 'fva', 'pfba' (see notes for more information).
         Ignored if `weighted = False`
     nodes_to_remove : list[str] | None
         List of any metabolites or reactions that should be removed from
@@ -418,7 +436,7 @@ def create_metabolite_network(
     model: cobra.Model,
     weighted: bool,
     directed: bool,
-    weight_by: Literal["stoichiometry", "flux"] = "stoichiometry",
+    weight_by: Literal["stoichiometry", "fva", "pfba"] = "stoichiometry",
     nodes_to_remove: list[str] | None = None,
     reciprocal_weights: bool = False,
     threshold: float = 0.0,
@@ -440,9 +458,9 @@ def create_metabolite_network(
         Whether the network should be weighted
     directed : bool
         Whether the network should be directed
-    weight_by : 'stoichiometry' or 'flux', default='stoichiometry'
+    weight_by : {'fva', 'pfba', 'stoichiometry'}, default='stoichiometry'
         String indicating if the network should be weighted by
-        'stoichiometry', or 'flux' (see notes for more information).
+        'stoichiometry', 'fva', 'pfba' (see notes for more information).
         Ignored if `weighted = False`
     nodes_to_remove : list[str] | None
         List of any metabolites or reactions that should be removed from
@@ -991,6 +1009,14 @@ def create_group_distance_network(
 
 
 # region Helpers
+def _enforce_threshold(
+    data: Union[pd.DataFrame, pd.Series], threshold: float
+) -> Union[pd.DataFrame, pd.Series]:
+    """ """
+    data[(data >= -threshold) & (data <= threshold)] = 0.0
+    return data
+
+
 def _get_group_distance(
     distance_dict,
     group1: set[Hashable],
@@ -1032,6 +1058,16 @@ def _get_upper_bounds(model: cobra.Model) -> pd.Series:
 
 
 def _get_stoichiometric_matrix(model: cobra.Model) -> pd.DataFrame:
+    """
+    Get the stoichiometric matrix from the cobra Model
+
+    Notes
+    -----
+    The columns represent the reactions, and the rows represent the
+    metabolites
+
+    Basically just a typing wrapper
+    """
     return cast(
         pd.DataFrame,
         cobra.util.create_stoichiometric_matrix(
@@ -1145,25 +1181,24 @@ def _create_adj_matrix_d_w_stoich(
     )
 
 
-def _create_adj_matrix_d_w_flux(
+def _create_adj_matrix_d_w_fva(
     model: cobra.Model, threshold: float, **kwargs
 ) -> pd.DataFrame:
     stoich_mat = _get_stoichiometric_matrix(model=model)
-    fva_res = cobra.flux_analysis.flux_variability_analysis(
-        model=model, **kwargs
+    fva_res = _enforce_threshold(
+        cobra.flux_analysis.flux_variability_analysis(model=model, **kwargs),
+        threshold=threshold,
     )
-    min_series = fva_res["minimum"]
-    max_series = fva_res["maximum"]
-    product_mat = stoich_mat.copy().clip(lower=0.0)
-    substrate_mat = stoich_mat.copy().clip(upper=0.0).abs()
+    min_series = fva_res["minimum"].clip(upper=0.0)
+    max_series = fva_res["maximum"].clip(lower=0.0)
+    product_mat = stoich_mat.clip(lower=0.0)
+    substrate_mat = stoich_mat.clip(upper=0.0).abs()
     # Multiply the stoich matrices by the fva series
     # Split into reaction gen/consum matrices
-    rxn_gen_forward = product_mat.mul(max_series).clip(lower=threshold)
-    rxn_cons_forward = substrate_mat.mul(max_series).clip(lower=threshold)
-    rxn_gen_reverse = (
-        substrate_mat.mul(min_series).clip(upper=-threshold).abs()
-    )
-    rxn_cons_reverse = product_mat.mul(min_series).clip(upper=-threshold).abs()
+    rxn_gen_forward = product_mat.mul(max_series)
+    rxn_cons_forward = substrate_mat.mul(max_series)
+    rxn_gen_reverse = substrate_mat.mul(min_series).abs()
+    rxn_cons_reverse = product_mat.mul(min_series).abs()
     # Build up the block matrix
     rxn_rxn_block = pd.DataFrame(
         0.0, columns=stoich_mat.columns, index=stoich_mat.columns
@@ -1174,6 +1209,37 @@ def _create_adj_matrix_d_w_flux(
     rxn_met_block = np.maximum(rxn_gen_forward, rxn_gen_reverse).T
     met_rxn_block = np.maximum(rxn_cons_forward, rxn_cons_reverse)
     # Combine the blocks
+    return pd.concat(
+        [
+            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),
+            pd.concat([met_rxn_block, met_met_block], axis=1),
+        ],
+        axis=0,
+    )
+
+
+def _create_adj_matrix_d_w_pfba(
+    model: cobra.Model, threshold: float, **kwargs
+) -> pd.DataFrame:
+    # Get the stoichiometric matrix
+    stoich_mat = _get_stoichiometric_matrix(model=model)
+    # Perform pFBA
+    pfba_res = cobra.flux_analysis.pfba(model=model, **kwargs)
+    # Get the fluxes
+    pfba_fluxes = _enforce_threshold(pfba_res.fluxes, threshold=threshold)
+    assert isinstance(pfba_fluxes, pd.Series), "Unable to get pFBA solution"
+    # Multiply the pFBA by the stoichiometric matrix to get weights
+    weights = stoich_mat.mul(pfba_fluxes)
+    # Build the block matrix
+    rxn_rxn_block = pd.DataFrame(
+        0.0, columns=stoich_mat.columns, index=stoich_mat.columns
+    )
+    met_met_block = pd.DataFrame(
+        0.0, columns=stoich_mat.index, index=stoich_mat.index
+    )
+    rxn_met_block = weights.clip(lower=0.0).T
+    met_rxn_block = weights.clip(upper=0.0).abs()
+    # COmbine the blocks
     return pd.concat(
         [
             pd.concat([rxn_rxn_block, rxn_met_block], axis=1),
@@ -1218,25 +1284,24 @@ def _create_adj_matrix_ud_w_stoich(
     )
 
 
-def _create_adj_matrix_ud_w_flux(
+def _create_adj_matrix_ud_w_fva(
     model: cobra.Model, threshold: float, **kwargs
 ) -> pd.DataFrame:
     stoich_mat = _get_stoichiometric_matrix(model=model)
-    fva_res = cobra.flux_analysis.flux_variability_analysis(
-        model=model, **kwargs
+    fva_res = _enforce_threshold(
+        cobra.flux_analysis.flux_variability_analysis(model=model, **kwargs),
+        threshold=threshold,
     )
-    min_series = fva_res["minimum"]
-    max_series = fva_res["maximum"]
+    min_series = fva_res["minimum"].clip(upper=0.0)
+    max_series = fva_res["maximum"].clip(lower=0.0)
     product_mat = stoich_mat.copy().clip(lower=0.0)
     substrate_mat = stoich_mat.copy().clip(upper=0.0).abs()
     # Multiply the stoich matrices by the fva series
     # Split into reaction gen/consum matrices
-    rxn_gen_forward = product_mat.mul(max_series).clip(lower=threshold)
-    rxn_cons_forward = substrate_mat.mul(max_series).clip(lower=threshold)
-    rxn_gen_reverse = (
-        substrate_mat.mul(min_series).clip(upper=-threshold).abs()
-    )
-    rxn_cons_reverse = product_mat.mul(min_series).clip(upper=-threshold).abs()
+    rxn_gen_forward = product_mat.mul(max_series)
+    rxn_cons_forward = substrate_mat.mul(max_series)
+    rxn_gen_reverse = substrate_mat.mul(min_series).abs()
+    rxn_cons_reverse = product_mat.mul(min_series).abs()
     # Build up the block matrix
     rxn_rxn_block = pd.DataFrame(
         0.0, columns=stoich_mat.columns, index=stoich_mat.columns
@@ -1250,6 +1315,34 @@ def _create_adj_matrix_ud_w_flux(
     )
     rxn_met_block = met_rxn_block.T
     # Combine the blocks
+    return pd.concat(
+        [
+            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),
+            pd.concat([met_rxn_block, met_met_block], axis=1),
+        ],
+        axis=0,
+    )
+
+
+def _create_adj_matrix_ud_w_pfba(
+    model: cobra.Model, threshold: float, **kwargs
+) -> pd.DataFrame:
+    # Get the stoichiometric matrix
+    stoich_mat = _get_stoichiometric_matrix(model=model)
+    # Perform pFBA
+    pfba_res = cobra.flux_analysis.pfba(model=model, **kwargs)
+    # Get the fluxes
+    pfba_fluxes = _enforce_threshold(pfba_res.fluxes, threshold=threshold)
+    assert isinstance(pfba_fluxes, pd.Series), "Unable to get pFBA solution"
+    # Build the block matrix
+    rxn_rxn_block = pd.DataFrame(
+        0.0, columns=stoich_mat.columns, index=stoich_mat.columns
+    )
+    met_met_block = pd.DataFrame(
+        0.0, columns=stoich_mat.index, index=stoich_mat.index
+    )
+    met_rxn_block = stoich_mat.abs().mul(pfba_fluxes.abs())
+    rxn_met_block = met_rxn_block.T
     return pd.concat(
         [
             pd.concat([rxn_rxn_block, rxn_met_block], axis=1),

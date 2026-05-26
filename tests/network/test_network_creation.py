@@ -2,6 +2,7 @@
 # Standard library imports
 import itertools
 import pathlib
+from typing import Optional
 import unittest
 
 # External Imports
@@ -15,8 +16,10 @@ from metworkpy.utils.models import read_model
 from metworkpy.network.network_construction import (
     _create_adj_matrix_d_uw,
     _create_adj_matrix_ud_uw,
-    _create_adj_matrix_d_w_flux,
-    _create_adj_matrix_ud_w_flux,
+    _create_adj_matrix_d_w_fva,
+    _create_adj_matrix_ud_w_fva,
+    _create_adj_matrix_d_w_pfba,
+    _create_adj_matrix_ud_w_pfba,
     _create_adj_matrix_d_w_stoich,
     _create_adj_matrix_ud_w_stoich,
     create_adjacency_matrix,
@@ -36,13 +39,15 @@ def setup(cls):
 
 
 class TestAdjMatUdUw(unittest.TestCase):
-    test_model = None
-    tiny_model = None
-    data_path = None
+    test_model: Optional[cobra.Model] = None
+    tiny_model: Optional[cobra.Model] = None
+    data_path: Optional[pathlib.Path] = None
 
     @classmethod
     def setUpClass(cls):
         setup(cls)
+        assert isinstance(cls.test_model, cobra.Model)
+        assert isinstance(cls.tiny_model, cobra.Model)
         cls.adj_mat = _create_adj_matrix_ud_uw(cls.test_model, threshold=0.0)
         cls.tiny_adj_mat = _create_adj_matrix_ud_uw(
             cls.tiny_model, threshold=0.0
@@ -84,6 +89,7 @@ class TestAdjMatUdUw(unittest.TestCase):
         )
 
     def test_shape(self):
+        assert self.test_model is not None
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
@@ -107,6 +113,8 @@ class TestAdjMatDUw(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
+        assert cls.test_model is not None
+        assert cls.tiny_model is not None
         cls.adj_mat = _create_adj_matrix_d_uw(cls.test_model, threshold=0)
         cls.tiny_adj_mat = _create_adj_matrix_d_uw(cls.tiny_model, threshold=0)
         cls.tiny_known = pd.DataFrame(
@@ -146,6 +154,7 @@ class TestAdjMatDUw(unittest.TestCase):
         )
 
     def test_shape(self):
+        assert self.test_model is not None
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
@@ -157,10 +166,11 @@ class TestAdjMatDUw(unittest.TestCase):
         self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
+        assert self.tiny_adj_mat is not None
         pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
-class TestAdjMatDWFlux(unittest.TestCase):
+class TestAdjMatDWFVA(unittest.TestCase):
     test_model = None
     data_path = None
     tiny_model = None
@@ -168,12 +178,12 @@ class TestAdjMatDWFlux(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
+        assert cls.test_model is not None
+        assert cls.tiny_model is not None
 
-        cls.adj_mat = _create_adj_matrix_d_w_flux(
-            cls.test_model, threshold=0.0
-        )
+        cls.adj_mat = _create_adj_matrix_d_w_fva(cls.test_model, threshold=0.0)
 
-        cls.tiny_adj_mat = _create_adj_matrix_d_w_flux(
+        cls.tiny_adj_mat = _create_adj_matrix_d_w_fva(
             cls.tiny_model, threshold=0.0
         )
 
@@ -214,6 +224,78 @@ class TestAdjMatDWFlux(unittest.TestCase):
         )
 
     def test_shape(self):
+        assert self.test_model is not None
+        num_metabolites = len(self.test_model.metabolites)
+        num_rxns = len(self.test_model.reactions)
+        self.assertTupleEqual(
+            self.adj_mat.shape,
+            (num_rxns + num_metabolites, num_rxns + num_metabolites),
+        )
+
+    def test_type(self):
+        self.assertIsInstance(self.adj_mat, pd.DataFrame)
+
+    def test_known(self):
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
+
+
+class TestAdjMatDWpFBA(unittest.TestCase):
+    test_model = None
+    data_path = None
+    tiny_model = None
+
+    @classmethod
+    def setUpClass(cls):
+        setup(cls)
+        assert cls.test_model is not None
+        assert cls.tiny_model is not None
+
+        cls.adj_mat = _create_adj_matrix_d_w_pfba(
+            cls.test_model, threshold=0.0
+        )
+
+        cls.tiny_adj_mat = _create_adj_matrix_d_w_pfba(
+            cls.tiny_model, threshold=0.0
+        )
+
+        cls.tiny_known = pd.DataFrame(
+            [
+                #  R_A_B_C R_A_ex R_B_ex R_C_ex A B C
+                [0, 0, 0, 0, 0, 0, 50],  # R_A_B_C
+                [0, 0, 0, 0, 50, 0, 0],  # R_A_ex
+                [0, 0, 0, 0, 0, 50, 0],  # R_B_ex
+                [0, 0, 0, 0, 0, 0, 0],  # R_C_ex
+                [50, 0, 0, 0, 0, 0, 0],  # A
+                [50, 0, 0, 0, 0, 0, 0],  # B
+                [0, 0, 0, 50, 0, 0, 0],  # C
+            ],
+            index=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            columns=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            dtype=float,
+        )
+
+    def test_shape(self):
+        assert self.test_model is not None
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
@@ -237,6 +319,8 @@ class TestAdjMatDWStoichiometry(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
+        assert cls.test_model is not None
+        assert cls.tiny_model is not None
         cls.adj_mat = _create_adj_matrix_d_w_stoich(
             cls.test_model, threshold=0.0
         )
@@ -280,6 +364,7 @@ class TestAdjMatDWStoichiometry(unittest.TestCase):
         )
 
     def test_shape(self):
+        assert self.test_model is not None
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
@@ -291,74 +376,7 @@ class TestAdjMatDWStoichiometry(unittest.TestCase):
         self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
-        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
-
-
-class TestAdjMatUdWFlux(unittest.TestCase):
-    test_model = None
-    data_path = None
-    tiny_model = None
-
-    @classmethod
-    def setUpClass(cls):
-        setup(cls)
-
-        cls.adj_mat = _create_adj_matrix_ud_w_flux(
-            cls.test_model, threshold=0.0
-        )
-
-        cls.tiny_adj_mat = _create_adj_matrix_ud_w_flux(
-            cls.tiny_model, threshold=0.0
-        )
-
-        cls.tiny_known = pd.DataFrame(
-            [
-                #  R_A_B_C R_A_ex R_B_ex R_C_ex A B C
-                [0, 0, 0, 0, 50, 50, 50],  # R_A_B_C
-                [0, 0, 0, 0, 50, 0, 0],  # R_A_ex
-                [0, 0, 0, 0, 0, 50, 0],  # R_B_ex
-                [0, 0, 0, 0, 0, 0, 50],  # R_C_ex
-                [50, 50, 0, 0, 0, 0, 0],  # A
-                [50, 0, 50, 0, 0, 0, 0],  # B
-                [50, 0, 0, 50, 0, 0, 0],  # C
-            ],
-            index=pd.Index(
-                [
-                    "R_A_B_C",
-                    "R_A_ex",
-                    "R_B_ex",
-                    "R_C_ex",
-                    "A",
-                    "B",
-                    "C",
-                ]
-            ),
-            columns=pd.Index(
-                [
-                    "R_A_B_C",
-                    "R_A_ex",
-                    "R_B_ex",
-                    "R_C_ex",
-                    "A",
-                    "B",
-                    "C",
-                ]
-            ),
-            dtype=float,
-        )
-
-    def test_shape(self):
-        num_metabolites = len(self.test_model.metabolites)
-        num_rxns = len(self.test_model.reactions)
-        self.assertTupleEqual(
-            self.adj_mat.shape,
-            (num_rxns + num_metabolites, num_rxns + num_metabolites),
-        )
-
-    def test_type(self):
-        self.assertIsInstance(self.adj_mat, pd.DataFrame)
-
-    def test_known(self):
+        assert self.tiny_adj_mat is not None
         pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
@@ -370,6 +388,8 @@ class TestAdjMatUdWStoichiometry(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
+        assert cls.test_model is not None
+        assert cls.tiny_model is not None
         cls.adj_mat = _create_adj_matrix_ud_w_stoich(
             cls.test_model, threshold=0.0
         )
@@ -413,6 +433,78 @@ class TestAdjMatUdWStoichiometry(unittest.TestCase):
         )
 
     def test_shape(self):
+        assert self.test_model is not None
+        num_metabolites = len(self.test_model.metabolites)
+        num_rxns = len(self.test_model.reactions)
+        self.assertTupleEqual(
+            self.adj_mat.shape,
+            (num_rxns + num_metabolites, num_rxns + num_metabolites),
+        )
+
+    def test_type(self):
+        self.assertIsInstance(self.adj_mat, pd.DataFrame)
+
+    def test_known(self):
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
+
+
+class TestAdjMatUdWpFBA(unittest.TestCase):
+    test_model = None
+    data_path = None
+    tiny_model = None
+
+    @classmethod
+    def setUpClass(cls):
+        setup(cls)
+        assert cls.test_model is not None
+        assert cls.tiny_model is not None
+
+        cls.adj_mat = _create_adj_matrix_ud_w_pfba(
+            cls.test_model, threshold=0.0
+        )
+
+        cls.tiny_adj_mat = _create_adj_matrix_ud_w_pfba(
+            cls.tiny_model, threshold=0.0
+        )
+
+        cls.tiny_known = pd.DataFrame(
+            [
+                #  R_A_B_C R_A_ex R_B_ex R_C_ex A B C
+                [0, 0, 0, 0, 50, 50, 50],  # R_A_B_C
+                [0, 0, 0, 0, 50, 0, 0],  # R_A_ex
+                [0, 0, 0, 0, 0, 50, 0],  # R_B_ex
+                [0, 0, 0, 0, 0, 0, 50],  # R_C_ex
+                [50, 50, 0, 0, 0, 0, 0],  # A
+                [50, 0, 50, 0, 0, 0, 0],  # B
+                [50, 0, 0, 50, 0, 0, 0],  # C
+            ],
+            index=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            columns=pd.Index(
+                [
+                    "R_A_B_C",
+                    "R_A_ex",
+                    "R_B_ex",
+                    "R_C_ex",
+                    "A",
+                    "B",
+                    "C",
+                ]
+            ),
+            dtype=float,
+        )
+
+    def test_shape(self):
+        assert self.test_model is not None
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
@@ -437,6 +529,7 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
         setup(cls)
 
     def test_undirected_unweighted(self):
+        assert self.test_model is not None
         adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=False,
@@ -448,6 +541,7 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
         pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
 
     def test_directed_unweighted(self):
+        assert self.test_model is not None
         adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=True,
@@ -459,19 +553,21 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
         pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
 
     def test_directed_weighted_flux(self):
+        assert self.test_model is not None
         adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=True,
             weighted=True,
-            weight_by="flux",
+            weight_by="fva",
             threshold=0.0,
         )
-        adj_mat_known = _create_adj_matrix_d_w_flux(
+        adj_mat_known = _create_adj_matrix_d_w_fva(
             model=self.test_model, threshold=0.0
         )
         pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
 
     def test_directed_weighted_stoichiometry(self):
+        assert self.test_model is not None
         adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=True,
@@ -485,19 +581,21 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
         pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
 
     def test_undirected_weighted_flux(self):
+        assert self.test_model is not None
         adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=False,
             weighted=True,
-            weight_by="flux",
+            weight_by="fva",
             threshold=0.0,
         )
-        adj_mat_known = _create_adj_matrix_ud_w_flux(
+        adj_mat_known = _create_adj_matrix_ud_w_fva(
             model=self.test_model, threshold=0.0
         )
         pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
 
     def test_undirected_weighted_stoichiometry(self):
+        assert self.test_model is not None
         adj_mat = create_adjacency_matrix(
             model=self.test_model,
             directed=False,
@@ -521,6 +619,8 @@ class TestCreateNetwork(unittest.TestCase):
         setup(cls)
 
     def test_directed_unweighted(self):
+        assert self.test_model is not None
+        assert self.tiny_model is not None
         test_network = create_metabolic_network(
             model=self.test_model, weighted=False, directed=True
         )
@@ -535,6 +635,8 @@ class TestCreateNetwork(unittest.TestCase):
             _ = tiny_network["R_C_ex"]["C"]
 
     def test_undirected_unweighted(self):
+        assert self.test_model is not None
+        assert self.tiny_model is not None
         test_network = create_metabolic_network(
             model=self.test_model, weighted=False, directed=False
         )
@@ -548,6 +650,8 @@ class TestCreateNetwork(unittest.TestCase):
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 1)
 
     def test_directed_weighted_stoichiometry(self):
+        assert self.test_model is not None
+        assert self.tiny_model is not None
         test_network = create_metabolic_network(
             model=self.test_model,
             weighted=True,
@@ -568,6 +672,8 @@ class TestCreateNetwork(unittest.TestCase):
             _ = tiny_network["R_C_ex"]["C"]
 
     def test_undirected_weighted_stoichiometry(self):
+        assert self.test_model is not None
+        assert self.tiny_model is not None
         test_network = create_metabolic_network(
             model=self.test_model,
             weighted=True,
@@ -587,11 +693,13 @@ class TestCreateNetwork(unittest.TestCase):
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 1)
 
     def test_directed_weighted_flux(self):
+        assert self.test_model is not None
+        assert self.tiny_model is not None
         test_network = create_metabolic_network(
             model=self.test_model,
             weighted=True,
             directed=True,
-            weight_by="flux",
+            weight_by="fva",
         )
         self.assertIsInstance(test_network, nx.DiGraph)
         for start, stop, data in test_network.edges(data=True):
@@ -600,18 +708,20 @@ class TestCreateNetwork(unittest.TestCase):
             model=self.tiny_model,
             weighted=True,
             directed=True,
-            weight_by="flux",
+            weight_by="fva",
         )
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 50)
         with self.assertRaises(KeyError):
             _ = tiny_network["R_C_ex"]["C"]
 
     def test_undirected_weighted_flux(self):
+        assert self.test_model is not None
+        assert self.tiny_model is not None
         test_network = create_metabolic_network(
             model=self.test_model,
             weighted=True,
             directed=False,
-            weight_by="flux",
+            weight_by="fva",
         )
         self.assertIsInstance(test_network, nx.Graph)
         for start, stop, data in test_network.edges(data=True):
@@ -620,7 +730,7 @@ class TestCreateNetwork(unittest.TestCase):
             model=self.tiny_model,
             weighted=True,
             directed=False,
-            weight_by="flux",
+            weight_by="fva",
         )
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 50)
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 50)
@@ -668,12 +778,30 @@ class TestCreateNetwork(unittest.TestCase):
                 textbook_network, textbook_model.metabolites.list_attr("id")
             )
         )
-        # Test for not directed, weighted by flux
+        # Test for not directed, weighted by fva
         textbook_network = create_metabolic_network(
             model=textbook_model,
             weighted=True,
             directed=False,
-            weight_by="flux",
+            weight_by="fva",
+        )
+        self.assertTrue(nx.is_bipartite(textbook_network))
+        self.assertTrue(
+            nx.algorithms.bipartite.is_bipartite_node_set(
+                textbook_network, textbook_model.reactions.list_attr("id")
+            )
+        )
+        self.assertTrue(
+            nx.algorithms.bipartite.is_bipartite_node_set(
+                textbook_network, textbook_model.metabolites.list_attr("id")
+            )
+        )
+        # Test for not directed, weighted by pfba
+        textbook_network = create_metabolic_network(
+            model=textbook_model,
+            weighted=True,
+            directed=False,
+            weight_by="pfba",
         )
         self.assertTrue(nx.is_bipartite(textbook_network))
         self.assertTrue(
@@ -699,7 +827,7 @@ class TestCreateNetwork(unittest.TestCase):
             model=textbook_model,
             weighted=True,
             directed=True,
-            weight_by="flux",
+            weight_by="fva",
         )
         self.assertTrue(nx.is_bipartite(textbook_network))
 
@@ -720,9 +848,7 @@ class TestCreateGroupConnectivityNetwork(unittest.TestCase):
             network=g,
             groups=groups,  # type: ignore
             max_distance=1,
-            weighted=True,
         )
-        print(connectivity_graph.edges())
         # Create the expected graph manually
         expected_connectivity_graph = nx.Graph()
         expected_connectivity_graph.add_nodes_from(
@@ -769,6 +895,7 @@ class TestMutualInformationNetwork(unittest.TestCase):
             test_network.has_node(rxn.id)
         test_samples = cobra.sampling.sample(self.test_model, n=1000)
         mi_adj_mat = mi_network_adjacency_matrix(test_samples, n_neighbors=3)
+        assert isinstance(mi_adj_mat, pd.DataFrame)
         test_network = create_mutual_information_network(
             flux_samples=test_samples, n_neighbors=3
         )

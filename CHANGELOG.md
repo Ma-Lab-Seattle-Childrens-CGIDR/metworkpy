@@ -22,6 +22,10 @@
   with the full metabolic network and you only care about the density of
   metabolites or reactions)
 - Added parameter to divergence functions for clipping them to 0.0
+- BUGFIX: Fixed handling of non-zero thresholds in network creation
+- BREAKING: Added ability to weight graphs by pFBA results in network submodule,
+  updated method parameter to network generation functions to allow for
+  weighting by stoichiometry, fva, and pfba (splitting flux into pFBA and fva).
 
 ## Version 0.7.0
 
