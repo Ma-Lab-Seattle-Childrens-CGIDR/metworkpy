@@ -26,6 +26,10 @@
 - BREAKING: Added ability to weight graphs by pFBA results in network submodule,
   updated method parameter to network generation functions to allow for
   weighting by stoichiometry, fva, and pfba (splitting flux into pFBA and fva).
+- Added a function for finding the top n metabolites (counted by number of
+  reactions they are involved in) to utils module
+- Added a wrapper function for calculating the divergence of reaction
+  neighborhoods in the reaction network
 
 ## Version 0.7.0
 
