@@ -3,6 +3,7 @@
 # Standard Library Imports
 from __future__ import annotations
 import pathlib
+from typing import Literal
 
 # External Imports
 import cobra
@@ -141,6 +142,52 @@ def _parse_file_type(file_type):
 
 
 # endregion: Model IO
+
+# region: Model Properties
+
+
+def get_top_metabolites(
+    model: cobra.Model,
+    n: int,
+    type: Literal["substrate", "reactant", "product"] = "substrate",
+) -> list[str]:
+    """
+    Get a list of the top `n` metabolites involved in the
+    most reactions in the `model`
+
+    Parameters
+    ----------
+    model : cobra.Model
+        The model to find the top metabolites for
+    n : int
+        The number of top metabolites to find
+
+    Returns
+    -------
+    list of str
+        A list of the ids of the top `n` metabolites in the `model`
+    """
+    # Get a count of the reactions each metabolite is involved in
+    stoich_mat = cobra.util.create_stoichiometric_matrix(
+        model=model, array_type="DataFrame"
+    )
+    assert isinstance(stoich_mat, pd.DataFrame), (
+        "Cobra returned incorrect stoichiometric matrix type"
+    )
+    if type == "substrate":
+        counts = (stoich_mat.abs() > 0).sum(axis=1)
+    elif type == "reactant":
+        counts = (stoich_mat.clip(upper=0.0) < 0.0).sum(axis=1)
+    elif type == "product":
+        counts = (stoich_mat.clip(lower=0.0) > 0.0).sum(axis=1)
+    else:
+        raise ValueError(
+            f"Type must be 'substrate', 'reactant', or 'product', but received {type}"
+        )
+    return list(counts.sort_values(ascending=False).iloc[:n].index)
+
+
+# endregion: Model Properties
 
 
 # region Model Comparison
