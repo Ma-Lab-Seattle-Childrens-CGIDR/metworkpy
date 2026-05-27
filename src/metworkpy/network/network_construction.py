@@ -163,7 +163,7 @@ def create_adjacency_matrix(
         to be 0
     kwargs
         Passed to cobra's flux_variability_analysis function if the weight_by
-        is flux
+        is 'fva', or cobra's pfba function if the weight_by is 'pfba'
 
     Returns
     -------
