@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version 0.8.0](#version-080)
   - [Version 0.7.0](#version-070)
   - [Version 0.6.0](#version-060)
   - [Version 0.5.0](#version-050)
@@ -15,7 +16,7 @@
 
 <!--toc:end-->
 
-## Version DEV
+## Version 0.8.0
 
 - Added parameter to network density/enrichment functions to allow for
   evaluating the density/enrichment for a subset of nodes (useful if working
