@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version DEV](#version-dev)
   - [Version 0.8.0](#version-080)
   - [Version 0.7.0](#version-070)
   - [Version 0.6.0](#version-060)
@@ -15,6 +16,10 @@
   - [Version 0.2.7](#version-027)
 
 <!--toc:end-->
+
+## Version DEV
+
+- Added a function for calculating the closeness centrality to a subset of nodes
 
 ## Version 0.8.0
 

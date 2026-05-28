@@ -3,6 +3,14 @@ Network Reference
 
 API Documentation for the network submodule
 
+Centrality
+----------
+
+.. automodule:: metworkpy.network.centrality
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Density
 -------
 

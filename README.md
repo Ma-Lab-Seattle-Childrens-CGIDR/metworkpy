@@ -91,6 +91,11 @@ The permutation test implementation uses modified code from SciPy's stats module
 p-value in line with
 [Phipson, B., & Smyth, G. K. (2010)](https://arxiv.org/abs/1603.05766).
 
+The code for subset closeness centrality
+(metworkpy.networks.centrality.closeness_centrality_subset) is a modified
+version of the NetworkX (licensed under the BSD-3-Clause, see above) function
+closeness_centrality.
+
 ## References
 
 ### iMAT References

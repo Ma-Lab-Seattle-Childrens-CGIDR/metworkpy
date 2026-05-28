@@ -20,7 +20,7 @@ from metworkpy.network.density import (
 )
 
 
-class TestLabelDensity(unittest.TestCase):
+class TestTargetDensity(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         g = nx.Graph()
@@ -40,11 +40,11 @@ class TestLabelDensity(unittest.TestCase):
         cls.test_graph = g
         cls.test_labels = {0: 2, 5: 3, 7: 2}
 
-    def test_label_density(self):
-        label_density_calc = node_target_density(
+    def test_target_density(self):
+        target_density_calc = node_target_density(
             self.test_graph, targets=self.test_labels, radius=1, processes=1
         )
-        label_density_exp = pd.Series(
+        target_density_exp = pd.Series(
             {
                 0: 0.5,
                 1: (5 / 3),
@@ -57,7 +57,7 @@ class TestLabelDensity(unittest.TestCase):
                 8: (2 / 2),
             }
         ).sort_index()
-        np.testing.assert_allclose(label_density_calc, label_density_exp)
+        np.testing.assert_allclose(target_density_calc, target_density_exp)
 
 
 class TestFindDenseClusters(unittest.TestCase):
