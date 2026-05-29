@@ -28,7 +28,10 @@ from .cluster import (
     get_network_group_linkage,
     get_distance_matrix,
 )
-from .centrality import closeness_centrality_subset
+from .centrality import (
+    closeness_centrality_subset,
+    betweenness_centrality_subset,
+)
 
 __all__ = [
     "create_metabolic_network",
@@ -54,4 +57,5 @@ __all__ = [
     "get_network_group_linkage",
     "get_distance_matrix",
     "closeness_centrality_subset",
+    "betweenness_centrality_subset",
 ]

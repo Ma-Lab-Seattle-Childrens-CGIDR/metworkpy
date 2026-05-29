@@ -91,10 +91,22 @@ The permutation test implementation uses modified code from SciPy's stats module
 p-value in line with
 [Phipson, B., & Smyth, G. K. (2010)](https://arxiv.org/abs/1603.05766).
 
-The code for subset closeness centrality
-(metworkpy.networks.centrality.closeness_centrality_subset) is a modified
-version of the NetworkX (licensed under the BSD-3-Clause, see above) function
-closeness_centrality.
+The code for the centrality submodule is based on code from NetworkX (licensed
+under the BSD-3-Clause, see above) function closeness_centrality. Specifically,
+
+- closeness_centrality_subset is based on
+  networkx.algorithms.centrality.closeness_centrality, modified to calculate the
+  closeness only to a susbet of nodes
+- betweenness_centrality_subset is based on
+  networkx.algorithms.centrality.betweenness_centrality_subset, modified to
+  change the rescaling of the nodes to only be relative to the number of paths
+  between the subset of nodes, not all nodes in the graph.
+- \_rescale is modified from
+  network.algorithms.centrality.betweenness_centrality_subset.\_rescale,
+  modified for the changed rescaling of the betweenness_centrality_subset
+- \_accumulate_subset is essentially unmodified from
+  network.algorithms.centrality.betweenness_centrality_subset.\_accumulate_subset
+  (included to avoid issues with later implementation changes in NetworkX).
 
 ## References
 

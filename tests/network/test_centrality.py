@@ -7,10 +7,13 @@ import numpy as np
 import pandas as pd
 
 # Local Imports
-from metworkpy.network.centrality import closeness_centrality_subset
+from metworkpy.network.centrality import (
+    closeness_centrality_subset,
+    betweenness_centrality_subset,
+)
 
 
-class TestClosenessCentralitySubset(unittest.TestCase):
+class TestCentralitySubset(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.random_graph = nx.connected_watts_strogatz_graph(
@@ -20,6 +23,9 @@ class TestClosenessCentralitySubset(unittest.TestCase):
         cls.random_targets = list(rng.choice(cls.random_graph.nodes, 10))
         cls.random_graph_closeness = pd.Series(
             nx.closeness_centrality(cls.random_graph)
+        )
+        cls.random_graph_betweenness = pd.Series(
+            nx.betweenness_centrality(cls.random_graph)
         )
 
         small_graph = nx.Graph()
@@ -57,6 +63,9 @@ class TestClosenessCentralitySubset(unittest.TestCase):
         cls.small_graph_closeness = pd.Series(
             nx.closeness_centrality(cls.small_graph)
         )
+        cls.small_graph_betweenness = pd.Series(
+            nx.betweenness_centrality(cls.small_graph)
+        )
 
     def test_all_targeted(self):
         calculated_closeness = pd.Series(
@@ -68,15 +77,36 @@ class TestClosenessCentralitySubset(unittest.TestCase):
             calculated_closeness, self.random_graph_closeness
         )
 
+        calculated_betweenness = pd.Series(
+            betweenness_centrality_subset(
+                self.random_graph, self.random_graph.nodes
+            )
+        )
+        pd.testing.assert_series_equal(
+            calculated_betweenness, self.random_graph_betweenness
+        )
+
     def test_random_subset(self):
         sub_close = pd.Series(
             closeness_centrality_subset(self.random_graph, self.random_targets)
         )
         self.assertTrue(len(sub_close) == len(self.random_graph.nodes))
 
+        sub_between = pd.Series(
+            betweenness_centrality_subset(
+                self.random_graph, self.random_targets
+            )
+        )
+        self.assertTrue(len(sub_between) == len(self.random_graph.nodes))
+
     def test_small_graph(self):
         sub_close = pd.Series(
             closeness_centrality_subset(
+                self.small_graph, self.small_graph_targets
+            )
+        )
+        sub_btwn = pd.Series(
+            betweenness_centrality_subset(
                 self.small_graph, self.small_graph_targets
             )
         )
@@ -87,6 +117,8 @@ class TestClosenessCentralitySubset(unittest.TestCase):
             "E",
         ]:
             self.assertGreater(sub_close[n], self.small_graph_closeness[n])
+        for n in ["A", "C"]:
+            self.assertGreater(sub_btwn[n], self.small_graph_betweenness[n])
 
 
 if __name__ == "__main__":

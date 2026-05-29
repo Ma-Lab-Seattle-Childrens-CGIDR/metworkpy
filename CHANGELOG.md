@@ -20,6 +20,8 @@
 ## Version DEV
 
 - Added a function for calculating the closeness centrality to a subset of nodes
+- Added a function for calculating the betweenness centrality where the shortest
+  paths are only between a subset of nodes.
 
 ## Version 0.8.0
 
