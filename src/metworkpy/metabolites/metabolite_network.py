@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 # Standard Library Imports
+from collections.abc import Iterable
 import hashlib
-from typing import Literal, Iterable, Optional
+from typing import Literal, Optional
 import warnings
 
 # External Imports
@@ -28,13 +29,18 @@ from metworkpy.utils import (
 # region Main Functions
 def find_metabolite_synthesis_network_reactions(
     model: cobra.Model,
-    method: Literal["pfba", "essential"] = "pfba",
+    method: Literal["pfba", "gfba", "essential"] = "pfba",
+    return_type: Literal["dict", "DataFrame"] = "DataFrame",
     metabolites: Optional[Iterable[str]] = None,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
     **kwargs,
-) -> pd.DataFrame[bool | float]:
+) -> (
+    pd.DataFrame[bool | float]
+    | dict[str, list[str]]
+    | dict[str, dict[str, float]]
+):
     """Find which reactions are used to generate each metabolite in the model
 
     Parameters
@@ -51,10 +57,18 @@ def find_metabolite_synthesis_network_reactions(
             objective to find reaction-metabolite associations.
             Each reaction is associated with a flux for generating a particular
             metabolite.
+        1. 'gfba'(default):
+            Use geometric flux analysis with the metabolite as the
+            objective to find reaction-metabolite associations.
+            Each reaction is associated with a flux for generating a particular
+            metabolite.
         2. 'essential':
             Use essentiality to find reaction-metabolite associations.
             Find which reactions are essential for each metabolite.
 
+    return_type : {'DataFrame', 'dict'}, default='DataFrame'
+        How to return the networks, either a dataframe or dict
+        (see returns for more information).
     metabolites : iterable of str, optional
         Which metabolites to find the synthesis networks for, if not provided will
         find the networks for all the metabolites in the model
@@ -70,16 +84,18 @@ def find_metabolite_synthesis_network_reactions(
         Whether a progress bar should be displayed
     **kwargs : dict
         Keyword arguments passed to
-        `cobra.flux_analysis.variability.find_essential_genes`, or to
+        `cobra.flux_analysis.variability.find_essential_genes`,
+        `cobra.flux_analysis.geometric_fba`, or to
         `cobra.flux_analysis.pfba` depending on the chosen method.
 
     Returns
     -------
-    pd.DataFrame[bool|float]
-        A dataframe with reactions as the index and metabolites as the
+    pd.DataFrame[bool|float] or dict
+        If `return_type` is 'DataFrame' (the default), returns
+        a dataframe with reactions as the index and metabolites as the
         columns, containing either
 
-        1. Flux values if pfba is used.
+        1. Flux values if pfba or gfba are used.
            For a given reaction and metabolite,
            this represents the reaction flux found during pFBA required to maximally
            produce the metabolite.
@@ -87,17 +103,24 @@ def find_metabolite_synthesis_network_reactions(
            this represents whether the reaction is essential for producing the
            metabolite.
 
+        If `return_type` is 'dict', returns a dict keyed by metabolite. If
+        method is 'essential', then the values are lists of reaction ids which
+        are required to produce the metabolite. If method is 'pfba', or 'gfba',
+        the the values are another dict, keyed by reaction id, with values corresponding
+        to the flux associated with that reaction in the parsimonious/geometric
+        FBA solution when optimizing for the production of the metabolite.
+
     See Also
     --------
     find_metabolite_synthesis_network_genes : Equivalent method with genes
     """
-    if method == "pfba":
+    if method == "pfba" or method == "gfba":
         res_dtype = "float"
     elif method == "essential":
         res_dtype = "bool"
     else:
         raise ValueError(
-            f"Method must be 'pfba' or 'essential' but received{method}"
+            f"Method must be 'pfba', 'gfba', or 'essential' but received{method}"
         )
     if metabolites is None:
         metabolites = model.metabolites.list_attr("id")
@@ -126,27 +149,61 @@ def find_metabolite_synthesis_network_reactions(
                 ]
                 res_df.loc[ess_rxns, metabolite] = True
                 res_df.loc[~res_df.index.isin(ess_rxns), metabolite] = False
-            elif method == "pfba":
-                pfba_sol = (
-                    cobra.flux_analysis.pfba(
-                        model=m,
-                        objective=m.objective,
-                        fraction_of_optimum=pfba_proportion,
-                        **kwargs,
-                    )
-                ).fluxes
-                pfba_sol.drop(metabolite_sink_reaction_id, inplace=True)
-                res_df.loc[pfba_sol.index, metabolite] = pfba_sol
+            elif method == "pfba" or method == "gfba":
+                if method == "pfba":
+                    flux_series = (
+                        cobra.flux_analysis.pfba(
+                            model=m,
+                            objective=m.objective,
+                            fraction_of_optimum=pfba_proportion,
+                            **kwargs,
+                        )
+                    ).fluxes
+                elif method == "gfba":
+                    try:
+                        flux_series = (
+                            cobra.flux_analysis.geometric.geometric_fba(
+                                model=m, **kwargs
+                            ).fluxes
+                        )
+                    except RuntimeError:
+                        flux_series = pd.Series(np.nan, res_df.index)
+
+                assert isinstance(flux_series, pd.Series), (
+                    "Invalid return from COBRApy pfba or geometric_fba function"
+                )
+                flux_series.drop(metabolite_sink_reaction_id, inplace=True)
+                res_df.loc[flux_series.index, metabolite] = flux_series
             else:
                 raise ValueError(
-                    f"Method must be 'pfba' or 'essential' but received {method}"
+                    f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
                 )
-    return res_df
+    if return_type == "DataFrame":
+        return res_df
+    elif return_type == "dict":
+        if method == "essential":
+            return_dict = {}
+            for metabolite, rxn_id_series in res_df.items():
+                return_dict[metabolite] = list(
+                    rxn_id_series[rxn_id_series].index
+                )
+            return return_dict
+        elif method == "pfba" or method == "gfba":
+            return res_df.to_dict()
+        else:
+            raise ValueError(
+                f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
+            )
+    else:
+        raise ValueError(
+            f"Expected return type to be 'DataFrame', or 'dict' but received {return_type}"
+        )
 
 
 def find_metabolite_synthesis_network_genes(
     model: cobra.Model,
-    method: Literal["pfba", "essential"] = "pfba",
+    method: Literal["pfba", "gfba", "essential"] = "pfba",
+    return_type: Literal["DataFrame", "dict"] = "DataFrame",
     metabolites: Optional[Iterable[str]] = None,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
@@ -172,10 +229,20 @@ def find_metabolite_synthesis_network_genes(
             metabolite. This is then translated to genes by finding the maximal
             (in terms of absolute value)
             flux for a reaction associated with a particular gene.
+        1. 'gfba'(default):
+            Use geometric flux analysis with the metabolite as the
+            objective to find genes-metabolite associations.
+            Each reaction is associated with a flux for generating a particular
+            metabolite. This is then translated to genes by finding the maximal
+            (in terms of absolute value)
+            flux for a reaction associated with a particular gene.
         2. 'essential':
             Use essentiality to find gene-metabolite associations.
             Find which genes are essential for each metabolite.
 
+    return_type : {'DataFrame', 'dict'}, default='DataFrame'
+        How to return the networks, either a dataframe or dict
+        (see returns for more information).
     metabolites : iterable of str, optional
         Which metabolites to find the synthesis networks for, if not provided will
         find the networks for all the metabolites in the model
@@ -196,21 +263,36 @@ def find_metabolite_synthesis_network_genes(
         in the genes associated with said reaction.
     **kwargs : dict
         Keyword arguments passed to
-        `cobra.flux_analysis.variability.find_essential_genes`, or to
+        `cobra.flux_analysis.variability.find_essential_genes`,
+        `cobra.flux_analysis.geometric_fba` or to
         `cobra.flux_analysis.pfba` depending on the chosen method.
 
     Returns
     -------
-    pd.DataFrame[bool|float]
-        A dataframe with genes as the index and metabolites as the
+    pd.DataFrame[bool|float] or dict
+        If `return_type` is 'DataFrame' (the default), returns
+        a dataframe with genes as the index and metabolites as the
         columns, containing either
 
-        1. Flux values if pfba is used. For a given gene and metabolite,
+        1. Flux values if pfba or gfba is used. For a given gene and metabolite,
            this represents the maximum of reaction fluxes associated with a gene,
-           found during pFBA required to maximally produce the metabolite.
+           found during parsimoniou/geometric FBA required to maximally produce the
+           metabolite.
         2. Boolean values if essentiality is used. For a given reaction and metabolite,
            this represents whether the reaction is essential for producing the
            metabolite.
+
+        If `return_type` is 'dict', returns a dict keyed by metabolite. If
+        method is 'essential', then the values are lists of gene ids which
+        are required to produce the metabolite. If method is 'pfba', or 'gfba',
+        the the values are another dict, keyed by gene id, with values
+        representing the maximum of reaction fluxes associated with a gene,
+        found during parsimonious/geometric FBA required to maximally
+        produce the metabolite.
+
+        with values corresponding
+        to the flux associated with that reaction in the parsimonious/geometric
+        FBA solution when optimizing for the production of the metabolite.
 
     Notes
     -----
@@ -225,7 +307,7 @@ def find_metabolite_synthesis_network_genes(
     --------
     find_metabolite_synthesis_network_reactions : Equivalent method with reactions
     """
-    if method == "pfba":
+    if method == "pfba" or method == "gfba":
         res_dtype = "float"
     elif method == "essential":
         res_dtype = "bool"
@@ -257,13 +339,20 @@ def find_metabolite_synthesis_network_genes(
                 ]
                 res_df.loc[ess_genes, metabolite] = True
                 res_df.loc[~res_df.index.isin(ess_genes), metabolite] = False
-            elif method == "pfba":
-                pfba_sol = (
-                    cobra.flux_analysis.pfba(
-                        model=m, fraction_of_optimum=pfba_proportion, **kwargs
-                    )
-                ).fluxes
-                pfba_sol.name = "fluxes"
+            elif method == "pfba" or method == "gfba":
+                if method == "pfba":
+                    flux_series = (
+                        cobra.flux_analysis.pfba(
+                            model=m,
+                            fraction_of_optimum=pfba_proportion,
+                            **kwargs,
+                        )
+                    ).fluxes
+                elif method == "gfba":
+                    flux_series = cobra.flux_analysis.geometric_fba(
+                        model=m, **kwargs
+                    ).fluxes
+                flux_series.name = "fluxes"
                 # Create a dataframe indexed by reaction, with a column for genes
                 rxn_to_gene_frame = (
                     pd.Series(
@@ -274,7 +363,7 @@ def find_metabolite_synthesis_network_genes(
                     .explode()
                     .to_frame(name="gene")
                 )
-                pfba_frame = pfba_sol.to_frame(name="fluxes")
+                pfba_frame = flux_series.to_frame(name="fluxes")
                 gene_fluxes = pfba_frame.merge(
                     rxn_to_gene_frame,
                     how="left",
@@ -297,9 +386,28 @@ def find_metabolite_synthesis_network_genes(
                 ]
             else:
                 raise ValueError(
-                    f"Method must be 'pfba' or 'essential' but received {method}"
+                    f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
                 )
-    return res_df
+    if return_type == "DataFrame":
+        return res_df
+    elif return_type == "dict":
+        if method == "essential":
+            return_dict = {}
+            for metabolite, gene_id_series in res_df.items():
+                return_dict[metabolite] = list(
+                    gene_id_series[gene_id_series].index
+                )
+            return return_dict
+        elif method == "pfba" or method == "gfba":
+            return res_df.to_dict()
+        else:
+            raise ValueError(
+                f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
+            )
+    else:
+        raise ValueError(
+            f"Expected return type to be 'DataFrame', or 'dict' but received {return_type}"
+        )
 
 
 def find_metabolite_consuming_network_reactions(
@@ -505,6 +613,7 @@ def find_metabolite_network_enrichment(
         all of the metabolites
     """
     results_series = pd.Series(np.nan, index=metabolite_networks.columns)
+    assert isinstance(target_set, Iterable)
     target_set = set(target_set) & set(metabolite_networks.index)
     total_count = len(metabolite_networks.index)
     for metabolite, metabolite_network in metabolite_networks.items():
@@ -553,9 +662,9 @@ def add_metabolite_objective_(model: cobra.Model, metabolite: str) -> str:
         name=f"{metabolite} sink reaction",
         lower_bound=0.0,
     )
-    metabolite_sink_rxn.add_metabolites(
-        {model.metabolites.get_by_id(metabolite): -1.0}
-    )
+    met_obj = model.metabolites.get_by_id(metabolite)
+    assert isinstance(met_obj, cobra.Metabolite)
+    metabolite_sink_rxn.add_metabolites({met_obj: -1.0})
     model.add_reactions([metabolite_sink_rxn])
     model.objective = metabolite_sink_rxn_id
     model.objective_direction = "max"
@@ -583,6 +692,7 @@ def add_metabolite_absorb_reaction_(
     """
     # Start by adding the sink reaction for the metabolite to the model
     met_to_absorb = model.metabolites.get_by_id(metabolite)
+    assert isinstance(met_to_absorb, cobra.Metabolite)
     # Create a name for the reaction (<metabolite>_absorb_<partial hash>)
     metabolite_hash = hashlib.md5(
         met_to_absorb.id.encode("utf-8")
@@ -634,7 +744,8 @@ def add_metabolite_absorb_reaction_(
     )
     absorbing_constraint = model.problem.Constraint(
         sympy.Add(
-            *metabolite_gen_exprs, (-1) * absorbing_reaction.forward_variable
+            *metabolite_gen_exprs,
+            (-1) * absorbing_reaction.forward_variable,  # type:ignore
         ),
         name=absorbing_constraint_name,
         lb=0.0,
