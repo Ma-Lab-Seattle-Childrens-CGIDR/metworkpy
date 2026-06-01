@@ -5,10 +5,20 @@ Functions for computing the Mutual Information Network for a Metabolic Model"""
 from __future__ import annotations
 
 import itertools
-from typing import cast, Literal, Optional, Tuple, TypeVar, Union
+from typing import (
+    cast,
+    Hashable,
+    Iterable,
+    Literal,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 # External Imports
 import joblib  # type: ignore
+import networkx as nx
 import numpy as np
 import pandas as pd
 import scipy  # type: ignore
@@ -166,10 +176,13 @@ def mi_pairwise(
             mi_result.loc[pvalue_result > cutoff_significance] = 0.0
         # Apply the cutoff if it exists
         if cutoff_quantile is not None:
-            cutoff = np.quantile(
-                mi_result,
-                cutoff_quantile,
-                overwrite_input=False,
+            cutoff = cast(
+                float,
+                np.quantile(
+                    mi_result,
+                    cutoff_quantile,
+                    overwrite_input=False,
+                ),
             )
         if cutoff is not None:
             mi_result.loc[pvalue_result < cutoff] = 0.0
@@ -177,7 +190,7 @@ def mi_pairwise(
         dataset = np.array(dataset)  # Coerce arraylike into array
         mi_result = np.zeros((dataset.shape[1], dataset.shape[1]))
         if calculate_pvalue:
-            pvalue_result = np.ones((dataset.shape[1], dataset.shape[1]))
+            pvalue_result: T = np.ones((dataset.shape[1], dataset.shape[1]))
         num_combinations = scipy.special.comb(dataset.shape[1], 2)
         for idx1, idx2, ret_value in tqdm.tqdm(
             joblib.Parallel(n_jobs=processes, return_as="generator")(
@@ -204,17 +217,20 @@ def mi_pairwise(
             mi_result[pvalue_result > cutoff_significance] = 0.0
         # Apply cutoff if necessary
         if cutoff_quantile is not None:
-            cutoff = np.quantile(
-                mi_result,
-                cutoff_quantile,
-                overwrite_input=False,
+            cutoff = cast(
+                float,
+                np.quantile(
+                    mi_result,
+                    cutoff_quantile,
+                    overwrite_input=False,
+                ),
             )
         if cutoff is not None:
             mi_result[mi_result < cutoff] = 0.0
     mi_result = cast(T, mi_result)
     if not calculate_pvalue:
         return mi_result
-    return mi_result, pvalue_result
+    return mi_result, pvalue_result  # type: ignore
 
 
 U = TypeVar("U", int, str)
@@ -246,3 +262,204 @@ def _mi_single_pair(
 
 
 # endregion Pairwise Mutual Information
+
+# region Grouped Mutual Information
+
+IndexArray = np.ndarray[Tuple[int], np.dtype[np.intp]]
+ResultIndex = Union[Hashable, np.intp]
+
+
+def mi_pairwise_grouped(
+    dataset: T,
+    groups: Union[
+        Iterable[Union[Hashable, np.intp]],
+        dict[Hashable, Iterable[Union[Hashable, np.intp]]],
+    ],
+    calculate_pvalue: bool = False,
+    alternative: Literal["less", "greater", "two-sided"] = "greater",
+    permutations: int = 500,
+    cutoff: Optional[float] = None,
+    cutoff_quantile: Optional[float] = None,
+    cutoff_significance: Optional[float] = None,
+    processes: int = -1,
+    progress_bar: bool = False,
+    **kwargs,
+) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame]]:
+    """
+    Calculate all pairwise values of mutual information between groups of columns
+    in a dataset
+
+    Parameters
+    ----------
+    dataset : ArrayLike or DataFrame or NDArray
+        The dataset to calculate grouped pairwise mutual information values for,
+        should be a 2-dimensional array or Dataframe
+    groups : Iterable of indices or dict of Hashable to Iterable of indices
+        The groups of columns in the dataset to calculate the mutual information between.
+        Can be an iterable, in which case the groups will be named in order
+        '0', '1', etc., or a dict in which case the groups will be named
+        by the dict key. The definition of the groups themselves should be
+        the indices of the columns in the `dataset`. If `dataset` is
+        a numpy array, these should be ints, and if `dataset` is
+        a pandas DataFrame, these will be passed to
+        `pandas.Index.get_indexer <https://pandas.pydata.org/docs/reference/api/pandas.Index.get_indexer.html>`_
+        of the columns Index.
+    calculate_pvalue : bool
+         Whether to calculate a p-value for the mutual information using
+         a permutation test
+    alternative : 'less', 'greater', or 'two-sided'
+         The alternative to use
+    permutations : int
+         The number of permuatations to use when calculating the p-value
+    cutoff : float, optional
+        Lower bound for mutual information, all values smaller than this are
+        set to 0
+    cutoff_quantile : float, optional
+        Lower bound for mutual information as a quantile, must be a value
+        between 0 and 1 representing the quantile to use as a cutoff.
+        Any values below this quantile will be set to 0.
+    cutoff_significance : float, optional
+        Upper bound for the significance of the mutual information,
+        any mutual information values with p-values above this
+        cutoff will have their mutual information set to 0.
+        Requires that calculate_pvalue is True.
+    processes : int, default=-1
+        The number of processes to use for calculating the pairwise mutual information
+    progress_bar : bool, default=False
+        Whether a progress bar is desired
+    kwargs
+        Keyword arguments passed into the mutual_information function
+
+    Returns
+    -------
+    DataFrame or Tuple of DataFrame
+        The mutual information between each pair of groups. If
+        `calculate_pvalue` is False, will be a single pd.DataFrame with a column and
+        row for each group. If `calculate_pvalue` is True, will instead return a
+        tuple pd.DataFrame, with the first element being the mutual
+        information array, and the second being the p-values.
+
+    Notes
+    -----
+    The parallelization uses joblib, and so can be configured with joblib's
+    parallel_config context manager
+    """
+    # Check that if cutoff_significance is not None, calculate_pvalue is True
+    if cutoff_significance is not None and calculate_pvalue:
+        raise ValueError(
+            "If cutoff_significance is not None, calculate_pvalue must be True"
+        )
+    # Add the keywords related to the p-value to the kwargs dict
+    kwargs["calculate_pvalue"] = calculate_pvalue
+    kwargs["alternative"] = alternative
+    kwargs["permutations"] = permutations
+    # If the groups are not already in dict form, convert them
+    if not isinstance(groups, dict):
+        groups = {f"{i}": g for i, g in enumerate(groups)}
+    # Track whether a dataframe should be returned
+    # If the dataset is a dataframe, convert it and the groups
+    # to be numpy array compatible
+    if isinstance(dataset, pd.DataFrame):
+        # Convert the group indices
+        col_index = dataset.columns
+        groups = {g: col_index.get_indexer(cols) for g, cols in groups.items()}  # type: ignore
+        # Convert the dataset
+        dataset: np.ndarray = dataset.to_numpy()
+    else:
+        # Convert ArrayLike (no-op if already array)
+        dataset = np.array(dataset)
+    assert isinstance(dataset, np.ndarray)
+    # Create the results dataframe (this is easier to track than a numpy array)
+    # and shouldn't introduce significant overhead
+    mi_result = pd.DataFrame(
+        0.0, index=pd.Index(groups.keys()), columns=pd.Index(groups.keys())
+    )
+    if calculate_pvalue:
+        pvalue_result = pd.DataFrame(
+            0.0, index=pd.Index(groups.keys()), columns=pd.Index(groups.keys())
+        )
+    # Now actually calculate the mutual information values
+    num_combinations = scipy.special.comb(dataset.shape[1], 2)
+    for idx1, idx2, ret_value in tqdm.tqdm(
+        joblib.Parallel(n_jobs=processes, return_as="generator")(
+            joblib.delayed(_mi_grouped_single_pair)(
+                dataset, g1=groups[i], g2=groups[j], idx1=i, idx2=j, **kwargs
+            )
+            for i, j in itertools.combinations(groups.keys(), 2)
+        ),
+        disable=not progress_bar,
+        total=num_combinations,
+    ):
+        if not calculate_pvalue:
+            assert isinstance(ret_value, float)
+            mi_result.loc[idx1, idx2] = ret_value
+            mi_result.loc[idx2, idx1] = ret_value
+        else:
+            assert isinstance(ret_value, tuple)
+            mi, pvalue = ret_value
+            mi_result.loc[idx1, idx2] = mi
+            mi_result.loc[idx2, idx1] = mi
+            pvalue_result.loc[idx1, idx2] = pvalue
+            pvalue_result.loc[idx2, idx1] = pvalue
+    # Apply the significance cutoff if it exists
+    if cutoff_significance is not None:
+        mi_result[pvalue_result > cutoff_significance] = 0.0
+    # Apply quantile cutoff
+    if cutoff_quantile is not None:
+        cutoff = cast(
+            float,
+            np.quantile(mi_result, cutoff_quantile, overwrite_input=False),
+        )
+    # Apply the cutoff
+    if cutoff is not None:
+        mi_result[mi_result < cutoff] = 0.0
+    if not calculate_pvalue:
+        return mi_result
+    else:
+        return mi_result, pvalue_result
+
+
+def create_grouped_mi_network(
+    dataset: T,
+    groups: Union[
+        Iterable[Union[Hashable, np.intp]],
+        dict[Hashable, Iterable[Union[Hashable, np.intp]]],
+    ],
+    calculate_pvalue: bool = False,
+    alternative: Literal["less", "greater", "two-sided"] = "greater",
+    permutations: int = 500,
+    cutoff: Optional[float] = None,
+    cutoff_quantile: Optional[float] = None,
+    cutoff_significance: Optional[float] = None,
+    processes: int = -1,
+    progress_bar: bool = False,
+    **kwargs,
+) -> nx.Graph:
+    adj_mat = mi_pairwise_grouped(
+        dataset=dataset,
+        groups=groups,
+        calculate_pvalue=calculate_pvalue,
+        alternative=alternative,
+        permutations=permutations,
+        cutoff=cutoff,
+        cutoff_quantile=cutoff_quantile,
+        cutoff_significance=cutoff_significance,
+        processes=processes,
+        progress_bar=progress_bar,
+        **kwargs,
+    )
+    return nx.from_pandas_adjacency(adj_mat)
+
+
+def _mi_grouped_single_pair(
+    data: np.ndarray,
+    g1: IndexArray,
+    g2: IndexArray,
+    idx1: ResultIndex,
+    idx2: ResultIndex,
+    **kwargs,
+) -> tuple[ResultIndex, ResultIndex, Union[float, tuple[float, float]]]:
+    return idx1, idx2, mutual_information(data[:, g1], data[:, g2], **kwargs)
+
+
+# endregion Grouped Mutual Information

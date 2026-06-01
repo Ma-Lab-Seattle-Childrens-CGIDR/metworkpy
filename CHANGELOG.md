@@ -22,6 +22,11 @@
 - Added a function for calculating the closeness centrality to a subset of nodes
 - Added a function for calculating the betweenness centrality where the shortest
   paths are only between a subset of nodes.
+- Updated metabolite network code to allow for gFBA weighting of edges, and
+  allow for dictionary return types from the synthesis networks.
+- Added dict return option to metabolite consumption network functions
+- Added function for finding all the pairwise mutual information values between
+  groups of columns in a dataset.
 
 ## Version 0.8.0
 

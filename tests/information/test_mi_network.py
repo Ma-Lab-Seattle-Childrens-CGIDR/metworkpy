@@ -4,11 +4,13 @@ import unittest
 
 # External Imports
 import numpy as np
+import pandas as pd
 import scipy
 
 # Local Imports
 from metworkpy.information.mutual_information_network import (
     mi_network_adjacency_matrix,
+    mi_pairwise_grouped,
 )
 import metworkpy.information.mutual_information_functions as mi
 
@@ -51,6 +53,7 @@ class TestMiNetwork(unittest.TestCase):
         mi_network = mi_network_adjacency_matrix(
             self.samples, n_neighbors=3, processes=1
         )
+        assert isinstance(mi_network, np.ndarray)
         # Note, in the samples matrix the columns are arranged such that:
         # - 0,1 Have no covariance
         # - 2,3 Have a covariance of 0.3
@@ -118,7 +121,7 @@ class TestMiNetwork(unittest.TestCase):
             )
         )
 
-    def test_my_network_parallel(self):
+    def test_mi_network_parallel(self):
         mi_network_serial = mi_network_adjacency_matrix(
             self.samples, n_neighbors=3, processes=1
         )
@@ -128,6 +131,101 @@ class TestMiNetwork(unittest.TestCase):
         self.assertTrue(
             (np.isclose(mi_network_parallel, mi_network_serial)).all()
         )
+
+
+class TestMINetworkGrouped(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Create a multivariate gaussian sample for testing
+        rng = np.random.default_rng(910248102498)
+        means = np.array([20, 15, 20, 10, 5, 20, 20])
+        cov = np.array(
+            [
+                [5.0, 2.0, 3.0, 1.0, 0.5, 10.0, 1.0],
+                [0.0, 5.0, 4.0, 1.0, 2.0, 5.0, 8.0],
+                [0.0, 0.0, 5.0, 1.0, 9.0, 8.0, 2.0],
+                [0.0, 0.0, 0.0, 5.0, 3.0, 7.0, 1.0],
+                [0.0, 0.0, 0.0, 0.0, 5.0, 2.0, 9.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0, 5.0, 1.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0],
+            ]
+        )
+        cls.cov = cov @ np.transpose(cov)
+
+        cls.dataset_arr = rng.multivariate_normal(means, cls.cov, 1_000)
+        cls.dataset_df = pd.DataFrame(cls.dataset_arr)
+
+    def test_numpy_input(self):
+        groups = [[0, 3, 5], [1, 6], [2, 4]]
+        result = mi_pairwise_grouped(
+            self.dataset_arr,
+            groups=groups,
+            calculate_pvalue=False,
+            cutoff=0.0,
+            processes=1,
+        )
+        assert isinstance(result, pd.DataFrame)
+        self.assertTupleEqual(result.shape, (3, 3))
+        self.assertTrue(result.ge(0.0).all().all())
+
+    def test_df_input(self):
+        groups = [[0, 3, 5], [1, 6], [2, 4]]
+        result = mi_pairwise_grouped(
+            self.dataset_df,
+            groups=groups,
+            calculate_pvalue=False,
+            cutoff=0.0,
+            processes=1,
+        )
+        assert isinstance(result, pd.DataFrame)
+        self.assertTupleEqual(result.shape, (3, 3))
+        self.assertTrue(result.ge(0.0).all().all())
+
+    def test_dict_groups(self):
+        groups = {
+            "A": [0, 3, 5],
+            "B": [1, 6],
+            "C": [2, 4],
+        }
+        expected_index = pd.Index(groups.keys())
+        result = mi_pairwise_grouped(
+            self.dataset_df,
+            groups=groups,
+            calculate_pvalue=False,
+            cutoff=0.0,
+            processes=1,
+        )
+        assert isinstance(result, pd.DataFrame)
+        pd.testing.assert_index_equal(expected_index, result.index)
+        pd.testing.assert_index_equal(expected_index, result.columns)
+        self.assertTupleEqual(result.shape, (3, 3))
+        self.assertTrue(result.ge(0.0).all().all())
+
+    def test_pvalues(self):
+        groups = {
+            "A": [0, 3, 5],
+            "B": [1, 6],
+            "C": [2, 4],
+        }
+        expected_index = pd.Index(groups.keys())
+        result = mi_pairwise_grouped(
+            self.dataset_df,
+            groups=groups,
+            calculate_pvalue=True,
+            permutations=100,
+            cutoff=0.0,
+            processes=1,
+        )
+        assert isinstance(result, tuple)
+        mi_result, pval_result = result
+        assert isinstance(mi_result, pd.DataFrame)
+        assert isinstance(pval_result, pd.DataFrame)
+        for df in [mi_result, pval_result]:
+            pd.testing.assert_index_equal(expected_index, df.index)
+            pd.testing.assert_index_equal(expected_index, df.columns)
+        # All the values in the p-value matrix should be between 0 and 1 (though small errors may still occur)
+        self.assertLessEqual(pval_result.max().max(), 1.0)
+        self.assertGreaterEqual(pval_result.min().min(), 0.0)
 
 
 if __name__ == "__main__":
