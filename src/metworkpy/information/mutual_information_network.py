@@ -134,7 +134,7 @@ def mi_pairwise(
     The parallelization uses joblib, and so can be configured with joblib's parallel_config context manager
     """
     # Check that if cutoff_significance is not None, calculate_pvalue is True
-    if cutoff_significance is not None and calculate_pvalue:
+    if cutoff_significance is not None and not calculate_pvalue:
         raise ValueError(
             "If cutoff_significance is not None, calculate_pvalue must be True"
         )
@@ -345,7 +345,7 @@ def mi_pairwise_grouped(
     parallel_config context manager
     """
     # Check that if cutoff_significance is not None, calculate_pvalue is True
-    if cutoff_significance is not None and calculate_pvalue:
+    if cutoff_significance is not None and not calculate_pvalue:
         raise ValueError(
             "If cutoff_significance is not None, calculate_pvalue must be True"
         )
