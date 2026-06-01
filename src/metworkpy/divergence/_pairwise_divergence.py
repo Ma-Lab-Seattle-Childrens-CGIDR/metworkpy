@@ -112,7 +112,7 @@ def _divergence_array_worker(
     divergence_function: DivergenceFunction,
     **kwargs,
 ) -> Union[Tuple[int, float], Tuple[int, float, float]]:
-    return index, divergence_function(
+    return index, divergence_function(  # type: ignore
         p=p.take(indices=index, axis=axis),
         q=q.take(indices=index, axis=axis),
         **kwargs,

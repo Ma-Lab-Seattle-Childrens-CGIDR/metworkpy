@@ -218,7 +218,7 @@ def find_metabolite_synthesis_network_genes(
     model : cobra.Model
         Cobra Model used to find which genes are associated with which
         metabolite
-    method : Literal["pfba", "essential"]
+    method : Literal["pfba", "gfba", "essential"]
         Which method to use to associate genes with metabolites.
         Either
 
@@ -413,6 +413,7 @@ def find_metabolite_synthesis_network_genes(
 def find_metabolite_consuming_network_reactions(
     model: cobra.Model,
     metabolites: Optional[Iterable[str]] = None,
+    return_type: Literal["DataFrame", "dict"] = "DataFrame",
     reaction_proportion: float = 0.05,
     check_reverse: bool = True,
     progress_bar: bool = False,
@@ -427,6 +428,9 @@ def find_metabolite_consuming_network_reactions(
     metabolites : iterable of str, optional
         Which metabolites to find the consuming networks for, if not provided will
         find the networks for all the metabolites in the model
+    return_type : {'DataFrame', 'dict'}, default='DataFrame'
+        How to return the networks, either a dataframe or dict
+        (see returns for more information).
     reaction_proportion : float
         Proportion used to judge if a reaction consumes a metabolite or its derivatives,
         if the maximum flux for a reaction drops below reaction_proportion * maximum flux
@@ -444,10 +448,15 @@ def find_metabolite_consuming_network_reactions(
 
     Returns
     -------
-    metabolite_network : pd.DataFrame[bool]
-        A dataframe with reactions as the index and metabolites as the columns,
-        a True value indicates that a particular reaction consumes a metabolite
-        or one of its derivatives
+    metabolite_network : pd.DataFrame[bool] or dict
+        If `return_type` is 'DataFrame' (the default), returns a dataframe with
+        reactions as the index and metabolites as the columns, a True value
+        indicates that a particular reaction consumes a metabolite or one
+        of its derivatives.
+
+        If `return_type` is 'dict', returns the network as a dict instead. The
+        dictionary keyed by metabolite id, with values that are lists of
+        the ids of reactions which consume a metabolite or its derivatives.
     """
     if metabolites is None:
         metabolites = model.metabolites.list_attr("id")
@@ -505,12 +514,20 @@ def find_metabolite_consuming_network_reactions(
                     and (rxn_min_no_met > rxn_min * reaction_proportion)
                 ):
                     res_df.loc[rxn, metabolite] = True
-    return res_df
+    if return_type == "DataFrame":
+        return res_df
+    elif return_type == "dict":
+        return {m: list(rs[rs].index) for m, rs in res_df.items()}
+    else:
+        raise ValueError(
+            f"Expected 'DataFrame' or 'dict' as 'return_type', received {return_type}"
+        )
 
 
 def find_metabolite_consuming_network_genes(
     model: cobra.Model,
     metabolites: Optional[Iterable[str]] = None,
+    return_type: Literal["DataFrame", "dict"] = "DataFrame",
     reaction_proportion: float = 0.05,
     essential: bool = False,
     progress_bar: bool = False,
@@ -526,6 +543,9 @@ def find_metabolite_consuming_network_genes(
     metabolites : iterable of str, optional
         Which metabolites to find the consuming networks for, if not provided will
         find the networks for all the metabolites in the model
+    return_type : {'DataFrame', 'dict'}, default='DataFrame'
+        How to return the networks, either a dataframe or dict
+        (see returns for more information).
     reaction_proportion: float
         Proportion used to judge if a reaction consumes a metabolite or its derivatives,
         if the maximum flux for a reaction drops below reaction_proportion * maximum flux
@@ -572,6 +592,15 @@ def find_metabolite_consuming_network_genes(
             essential=essential,
         )
         res_df.loc[gene_list, metabolite] = True
+
+    if return_type == "DataFrame":
+        return res_df
+    elif return_type == "dict":
+        return {m: list(gs[gs].index) for m, gs in res_df.items()}
+    else:
+        raise ValueError(
+            f"Expected 'DataFrame' or 'dict' as 'return_type', received {return_type}"
+        )
     return res_df
 
 
