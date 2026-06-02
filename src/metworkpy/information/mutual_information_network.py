@@ -435,6 +435,65 @@ def create_grouped_mi_network(
     progress_bar: bool = False,
     **kwargs,
 ) -> nx.Graph:
+    """
+    Calculate all pairwise values of mutual information between groups of columns
+    in a dataset
+
+    Parameters
+    ----------
+    dataset : ArrayLike or DataFrame or NDArray
+        The dataset to calculate grouped pairwise mutual information values for,
+        should be a 2-dimensional array or Dataframe
+    groups : Iterable of indices or dict of Hashable to Iterable of indices
+        The groups of columns in the dataset to calculate the mutual information between.
+        Can be an iterable, in which case the groups will be named in order
+        '0', '1', etc., or a dict in which case the groups will be named
+        by the dict key. The definition of the groups themselves should be
+        the indices of the columns in the `dataset`. If `dataset` is
+        a numpy array, these should be ints, and if `dataset` is
+        a pandas DataFrame, these will be passed to
+        `pandas.Index.get_indexer <https://pandas.pydata.org/docs/reference/api/pandas.Index.get_indexer.html>`_
+        of the columns Index.
+    calculate_pvalue : bool
+         Whether to calculate a p-value for the mutual information using
+         a permutation test
+    alternative : 'less', 'greater', or 'two-sided'
+         The alternative to use
+    permutations : int
+         The number of permuatations to use when calculating the p-value
+    cutoff : float, optional
+        Lower bound for mutual information, all values smaller than this are
+        set to 0
+    cutoff_quantile : float, optional
+        Lower bound for mutual information as a quantile, must be a value
+        between 0 and 1 representing the quantile to use as a cutoff.
+        Any values below this quantile will be set to 0.
+    cutoff_significance : float, optional
+        Upper bound for the significance of the mutual information,
+        any mutual information values with p-values above this
+        cutoff will have their mutual information set to 0.
+        Requires that calculate_pvalue is True.
+    processes : int, default=-1
+        The number of processes to use for calculating the pairwise mutual information
+    progress_bar : bool, default=False
+        Whether a progress bar is desired
+    kwargs
+        Keyword arguments passed into the mutual_information function
+
+    Returns
+    -------
+    nx.Graph
+        The mutual information network with a node for each group, and edges between groups
+        with weights corresponding to the mutual information between them, and
+        if `calculate_pvalue` is True another edge attribute 'p-value' which
+        is the result of the permutation test for significance of the mutual
+        information.
+
+    Notes
+    -----
+    The parallelization uses joblib, and so can be configured with joblib's
+    parallel_config context manager
+    """
     res = mi_pairwise_grouped(
         dataset=dataset,
         groups=groups,
@@ -451,10 +510,16 @@ def create_grouped_mi_network(
     if calculate_pvalue:
         assert isinstance(res, tuple)
         assert len(res) == 2
-        adj_mat, _ = res
+        adj_mat, pvalue = res
+        assert isinstance(adj_mat, pd.DataFrame)
+        assert isinstance(pvalue, pd.DataFrame)
+        network = nx.from_pandas_adjacency(adj_mat)
+        for i, j in itertools.combinations(adj_mat.columns, 2):
+            network[i][j]["p-value"] = pvalue.loc[i, j]
     else:
         adj_mat = res
-    return nx.from_pandas_adjacency(adj_mat)
+        network = nx.from_pandas_adjacency(adj_mat)
+    return network
 
 
 def _mi_grouped_single_pair(

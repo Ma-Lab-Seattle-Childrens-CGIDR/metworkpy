@@ -3,6 +3,7 @@ import itertools
 import unittest
 
 # External Imports
+import networkx as nx
 import numpy as np
 import pandas as pd
 import scipy
@@ -11,6 +12,7 @@ import scipy
 from metworkpy.information.mutual_information_network import (
     mi_network_adjacency_matrix,
     mi_pairwise_grouped,
+    create_grouped_mi_network,
 )
 import metworkpy.information.mutual_information_functions as mi
 
@@ -223,9 +225,36 @@ class TestMINetworkGrouped(unittest.TestCase):
         for df in [mi_result, pval_result]:
             pd.testing.assert_index_equal(expected_index, df.index)
             pd.testing.assert_index_equal(expected_index, df.columns)
-        # All the values in the p-value matrix should be between 0 and 1 (though small errors may still occur)
+        # All the values in the p-value matrix should be between 0 and 1
         self.assertLessEqual(pval_result.max().max(), 1.0)
         self.assertGreaterEqual(pval_result.min().min(), 0.0)
+
+    def test_pvalue_edge_attributes(self):
+        groups = {
+            "A": [0, 3, 5],
+            "B": [1, 6],
+            "C": [2, 4],
+        }
+        result_network = create_grouped_mi_network(
+            self.dataset_df,
+            groups=groups,
+            calculate_pvalue=True,
+            permutations=100,
+            cutoff=0.0,
+            processes=1,
+        )
+        assert isinstance(result_network, nx.Graph)
+        for g in groups.keys():
+            self.assertTrue(g in result_network.nodes)
+        # For each edge, check that a p-value attribute is present
+        for i in groups.keys():
+            for j in groups.keys():
+                if i == j:
+                    continue
+                self.assertTrue("weight" in result_network[i][j])
+                self.assertTrue("p-value" in result_network[i][j])
+                self.assertLessEqual(result_network[i][j]["p-value"], 1.0)
+                self.assertGreaterEqual(result_network[i][j]["p-value"], 0.0)
 
 
 if __name__ == "__main__":
