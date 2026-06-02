@@ -435,7 +435,7 @@ def create_grouped_mi_network(
     progress_bar: bool = False,
     **kwargs,
 ) -> nx.Graph:
-    adj_mat = mi_pairwise_grouped(
+    res = mi_pairwise_grouped(
         dataset=dataset,
         groups=groups,
         calculate_pvalue=calculate_pvalue,
@@ -448,6 +448,12 @@ def create_grouped_mi_network(
         progress_bar=progress_bar,
         **kwargs,
     )
+    if calculate_pvalue:
+        assert isinstance(res, tuple)
+        assert len(res) == 2
+        adj_mat, _ = res
+    else:
+        adj_mat = res
     return nx.from_pandas_adjacency(adj_mat)
 
 
