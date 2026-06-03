@@ -52,7 +52,9 @@ def _wrap_divergence_functions(
     alternative: Literal["less", "greater", "two-sided"] = "greater",
     permutations: int = 500,
     permutation_rng: Optional[Union[np.random.Generator, int]] = None,
-    permutation_estimation_method: Literal["kernel", "empirical"] = "kernel",
+    permutation_estimation_method: Literal[
+        "kernel", "empirical"
+    ] = "empirical",
     n_neighbors: int = 5,
     discrete: bool = False,
     jitter: Optional[float] = None,
@@ -91,7 +93,7 @@ def _wrap_divergence_functions(
     permutation_rng : np.random.Generator or int, Optional
         A numpy random generator to use for sampling, or an int
         to seed the default generator.
-    permutation_estimation_method : {"kernel", "empirical"}, default="kernel"
+    permutation_estimation_method : {"kernel", "empirical"}, default="empirical"
         Method to use for estimating p-value, either an empirical cdf,
         or a gaussian_kde
     n_neighbors : int

@@ -35,7 +35,9 @@ def mutual_information(
     alternative: Literal["less", "greater", "two-sided"] = "greater",
     permutations: int = 500,
     permutation_rng: Optional[Union[np.random.Generator, int]] = None,
-    permutation_estimation_method: Literal["kernel", "empirical"] = "kernel",
+    permutation_estimation_method: Literal[
+        "kernel", "empirical"
+    ] = "empirical",
     jitter: Union[None, float] = None,
     jitter_seed: Union[None, int] = None,
     metric_x: Union[str, float] = "euclidean",
@@ -73,7 +75,7 @@ def mutual_information(
     permutation_rng : np.random.Generator or int, Optional
         A numpy random generator to use for sampling, or an int
         to seed the default generator.
-    permutation_estimation_method : {"kernel", "empirical"}, default="kernel"
+    permutation_estimation_method : {"kernel", "empirical"}, default="empirical"
         Method to use for estimating p-value, either an empirical cdf,
         or a gaussian_kde
     jitter : Union[None, float, tuple[float,float]]
