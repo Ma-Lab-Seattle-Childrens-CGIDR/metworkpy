@@ -27,6 +27,8 @@
 - Added dict return option to metabolite consumption network functions
 - Added function for finding all the pairwise mutual information values between
   groups of columns in a dataset.
+- Added function for finding the top n pairs of metabolites in the model, moved
+  the get_top_n metabolites function into the network submodule.
 
 ## Version 0.8.0
 
