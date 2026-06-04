@@ -3,7 +3,6 @@ from .models import (
     write_model,
     model_eq,
     model_bounds_eq,
-    get_top_metabolites,
 )
 from .expression_utils import (
     expr_to_imat_gene_weights,
@@ -37,7 +36,6 @@ __all__ = [
     "write_model",
     "model_eq",
     "model_bounds_eq",
-    "get_top_metabolites",
     "expr_to_imat_gene_weights",
     "count_to_rpkm",
     "count_to_fpkm",

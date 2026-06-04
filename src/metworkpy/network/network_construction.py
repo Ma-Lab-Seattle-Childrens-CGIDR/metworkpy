@@ -1005,6 +1005,101 @@ def create_group_distance_network(
     )
 
 
+def get_top_metabolites(
+    model: cobra.Model,
+    n: int,
+    type: Literal["substrate", "reactant", "product"] = "substrate",
+) -> list[str]:
+    """
+    Get a list of the top `n` metabolites involved in the
+    most reactions in the `model`
+
+    Parameters
+    ----------
+    model : cobra.Model
+        The model to find the top metabolites for
+    n : int
+        The number of top metabolites to find
+
+    Returns
+    -------
+    list of str
+        A list of the ids of the top `n` metabolites in the `model`
+    """
+    # Get a count of the reactions each metabolite is involved in
+    stoich_mat = cobra.util.create_stoichiometric_matrix(
+        model=model, array_type="DataFrame"
+    )
+    assert isinstance(stoich_mat, pd.DataFrame), (
+        "Cobra returned incorrect stoichiometric matrix type"
+    )
+    if type == "substrate":
+        counts = (stoich_mat.abs() > 0).sum(axis=1)
+    elif type == "reactant":
+        counts = (stoich_mat.clip(upper=0.0) < 0.0).sum(axis=1)
+    elif type == "product":
+        counts = (stoich_mat.clip(lower=0.0) > 0.0).sum(axis=1)
+    else:
+        raise ValueError(
+            f"Type must be 'substrate', 'reactant', or 'product', but received {type}"
+        )
+    return list(counts.sort_values(ascending=False).iloc[:n].index)
+
+
+def get_top_metabolite_pairs(
+    model: cobra.Model,
+    n: int,
+    ignore_top: int = 0,
+) -> list[tuple[str, str]]:
+    """
+    Get a list including tuples of the most frequent metabolite
+    pairs in the model
+
+    Parameters
+    ----------
+    model : cobra.Model
+        The model to find the top metabolite pairs for
+    n : int
+        The number of top metabolite pairs to find
+    ignore_top : int
+        Before finding pairwise frequency of metabolites,
+        remove the top `ignore_top` number of metabolites
+
+    Returns
+    -------
+    list of tuples of str,str
+        A list of the most common metabolite pairs in the form
+        of a list of tuples, each containg a pair of metabolite ids
+    """
+    # Get a count of the reactions each metabolite is involved in
+    stoich_mat = cobra.util.create_stoichiometric_matrix(
+        model=model, array_type="DataFrame"
+    ).drop(  # type:ignore
+        get_top_metabolites(model=model, n=ignore_top, type="substrate"),
+        axis=0,
+    )
+    met_pair_freq = pd.DataFrame(
+        0.0, index=stoich_mat.index, columns=stoich_mat.index
+    )
+    assert isinstance(stoich_mat, pd.DataFrame), (
+        "Cobra returned incorrect stoichiometric matrix type"
+    )
+    for met1, met2 in itertools.combinations(stoich_mat.index, 2):
+        count = (stoich_mat.loc[[met1, met2]].abs().sum(axis=0) > 0).sum()
+        # The heapq provides only min heap until 3.14, so use negative count
+        met_pair_freq.loc[met1, met2] = count
+        met_pair_freq.loc[met2, met1] = count
+    top_met_pair_list = []
+    for _ in range(n):
+        # Find the metabolite with the highest frquency
+        m1 = met_pair_freq.max(axis=0).idxmax()
+        m2 = met_pair_freq[m1].idxmax()
+        met_pair_freq.drop([m1, m2], axis=1, inplace=True)
+        met_pair_freq.drop([m1, m2], axis=0, inplace=True)
+        top_met_pair_list.append((m1, m2))
+    return top_met_pair_list
+
+
 # endregion Main Function
 
 
@@ -1012,7 +1107,6 @@ def create_group_distance_network(
 def _enforce_threshold(
     data: Union[pd.DataFrame, pd.Series], threshold: float
 ) -> Union[pd.DataFrame, pd.Series]:
-    """ """
     data[(data >= -threshold) & (data <= threshold)] = 0.0
     return data
 

@@ -8,6 +8,8 @@ from .network_construction import (
     create_group_neighborhood_network,
     create_group_distance_adjacency_matrix,
     create_group_distance_network,
+    get_top_metabolites,
+    get_top_metabolite_pairs,
 )
 from .density import (
     node_target_density,
@@ -58,4 +60,6 @@ __all__ = [
     "get_distance_matrix",
     "closeness_centrality_subset",
     "betweenness_centrality_subset",
+    "get_top_metabolites",
+    "get_top_metabolite_pairs",
 ]
