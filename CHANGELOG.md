@@ -29,6 +29,10 @@
   groups of columns in a dataset.
 - Added function for finding the top n pairs of metabolites in the model, moved
   the get_top_n metabolites function into the network submodule.
+- Added a function for calculating the betweenness centrality where only a
+  subset of nodes can be sources/targets, and the network is a bipartite network
+  and the nodes in one of the bipartite networks disjoint node sets are treated
+  as edges.
 
 ## Version 0.8.0
 

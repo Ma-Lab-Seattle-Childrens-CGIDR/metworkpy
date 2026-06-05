@@ -33,6 +33,7 @@ from .cluster import (
 from .centrality import (
     closeness_centrality_subset,
     betweenness_centrality_subset,
+    betweenness_centrality_bipartite_subset,
 )
 
 __all__ = [
@@ -60,6 +61,7 @@ __all__ = [
     "get_distance_matrix",
     "closeness_centrality_subset",
     "betweenness_centrality_subset",
+    "betweenness_centrality_bipartite_subset",
     "get_top_metabolites",
     "get_top_metabolite_pairs",
 ]
