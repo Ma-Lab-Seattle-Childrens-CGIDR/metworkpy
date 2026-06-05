@@ -1084,11 +1084,12 @@ def get_top_metabolite_pairs(
     assert isinstance(stoich_mat, pd.DataFrame), (
         "Cobra returned incorrect stoichiometric matrix type"
     )
-    for met1, met2 in itertools.combinations(stoich_mat.index, 2):
-        count = (stoich_mat.loc[[met1, met2]].abs().sum(axis=0) > 0).sum()
-        # The heapq provides only min heap until 3.14, so use negative count
-        met_pair_freq.loc[met1, met2] = count
-        met_pair_freq.loc[met2, met1] = count
+    for rxn, met_series in stoich_mat.items():
+        for met1, met2 in itertools.combinations(
+            met_series[met_series > 0].index, 2
+        ):
+            met_pair_freq.loc[met1, met2] += 1.0
+            met_pair_freq.loc[met2, met1] += 1.0
     top_met_pair_list = []
     for _ in range(n):
         # Find the metabolite with the highest frquency
