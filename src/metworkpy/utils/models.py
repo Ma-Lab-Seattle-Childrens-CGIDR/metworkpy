@@ -3,7 +3,6 @@
 # Standard Library Imports
 from __future__ import annotations
 import pathlib
-from typing import Literal
 
 # External Imports
 import cobra
