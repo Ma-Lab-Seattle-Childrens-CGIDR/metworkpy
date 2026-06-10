@@ -36,6 +36,8 @@ from .centrality import (
     betweenness_centrality_bipartite_subset,
 )
 
+from .components import find_variable_components
+
 __all__ = [
     "create_metabolic_network",
     "create_adjacency_matrix",
@@ -64,4 +66,5 @@ __all__ = [
     "betweenness_centrality_bipartite_subset",
     "get_top_metabolites",
     "get_top_metabolite_pairs",
+    "find_variable_components",
 ]

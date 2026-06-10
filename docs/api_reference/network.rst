@@ -11,6 +11,14 @@ Centrality
    :undoc-members:
    :show-inheritance:
 
+Components
+----------
+
+.. automodule:: metworkpy.network.components
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Density
 -------
 
