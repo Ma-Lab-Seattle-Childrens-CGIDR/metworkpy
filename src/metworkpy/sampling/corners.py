@@ -17,7 +17,7 @@ def corner_sampling(
     n_samples: int = 1_000,
     reaction_list: Optional[list[str]] = None,
     processes: Optional[int] = None,
-    fva_scale: bool = False,
+    fva_scale: bool = True,
     seed: Optional[Union[int, np.random.Generator]] = None,
     fva_kwargs: Optional[dict[str, Any]] = None,
 ):
@@ -38,9 +38,10 @@ def corner_sampling(
     processes : int, optional
         The number of processes to use (note uses joblib,
         so can be managed via a joblib context)
-    fva_scale : bool, default=False
-        Whether to scale the weights assigned to each objective
-        value by the maximum flux value it could achieve
+    fva_scale : bool, default=True
+        Whether to scale the weights assigned to reactions in the randomized
+        objectives by the maximum (absolute) flux value the associated reaction
+        could achieve
     seed : int or np.random.Generator, optional
         Optional seed to use for selection of reactions/weights.
         Note that this doesn't garuntee the generated solutions will
@@ -49,9 +50,9 @@ def corner_sampling(
         consistancy if the samples are identical).
     fva_kwargs : dict of str to Any
         Key word arguments passed to
-        `cobra.flux_analysis.flux_variability_analysis <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/variability/index.html#cobra.flux_analysis.variability.flux_variability_analysis>`_
-
-
+        `cobra.flux_analysis.flux_variability_analysis <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/variability/index.html#cobra.flux_analysis.variability.flux_variability_analysis>`_,
+        by default this will have the `fraction_of_optimum` set to 0.0,
+        so that the objective function doesn't impact the sampling.
 
     Notes
     -----
@@ -88,8 +89,12 @@ def corner_sampling(
     if reaction_list is None:
         reaction_list = model_.reactions.list_attr("id")
     if fva_scale:
+        default_fva_kwargs: dict[str, Any] = {"fraction_of_optimum": 0.0}
         if fva_kwargs is None:
-            fva_kwargs = {}
+            fva_kwargs = default_fva_kwargs
+        else:
+            default_fva_kwargs.update(fva_kwargs)
+            fva_kwargs = default_fva_kwargs
         fva_res = cobra.flux_analysis.flux_variability_analysis(
             model_,
             reaction_list=reaction_list,  # type:ignore
