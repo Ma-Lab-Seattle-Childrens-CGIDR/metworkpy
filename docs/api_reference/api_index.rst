@@ -11,6 +11,7 @@ API Reference for Metworkpy
    gpr
    metabolites
    network
+   sampling
    imat
    information
    synleth

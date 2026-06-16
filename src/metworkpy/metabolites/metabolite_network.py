@@ -52,17 +52,17 @@ def find_metabolite_synthesis_network_reactions(
         Which method to use to associate reactions with metabolites.
         Either
 
-        1. 'pfba'(default):
+        #. 'pfba'(default):
             Use parsimonious flux analysis with the metabolite as the
             objective to find reaction-metabolite associations.
             Each reaction is associated with a flux for generating a particular
             metabolite.
-        1. 'gfba'(default):
+        #. 'gfba'(default):
             Use geometric flux analysis with the metabolite as the
             objective to find reaction-metabolite associations.
             Each reaction is associated with a flux for generating a particular
             metabolite.
-        2. 'essential':
+        #. 'essential':
             Use essentiality to find reaction-metabolite associations.
             Find which reactions are essential for each metabolite.
 
@@ -95,11 +95,11 @@ def find_metabolite_synthesis_network_reactions(
         a dataframe with reactions as the index and metabolites as the
         columns, containing either
 
-        1. Flux values if pfba or gfba are used.
+        #. Flux values if pfba or gfba are used.
            For a given reaction and metabolite,
            this represents the reaction flux found during pFBA required to maximally
            produce the metabolite.
-        2. Boolean values if essentiality is used. For a given reaction and metabolite,
+        #. Boolean values if essentiality is used. For a given reaction and metabolite,
            this represents whether the reaction is essential for producing the
            metabolite.
 
@@ -222,23 +222,24 @@ def find_metabolite_synthesis_network_genes(
         Which method to use to associate genes with metabolites.
         Either
 
-        1. 'pfba'(default):
+        #. 'pfba'(default):
             Use parsimonious flux analysis with the metabolite as the
             objective to find genes-metabolite associations.
             Each reaction is associated with a flux for generating a particular
             metabolite. This is then translated to genes by finding the maximal
             (in terms of absolute value)
             flux for a reaction associated with a particular gene.
-        1. 'gfba'(default):
+        #. 'gfba'(default):
             Use geometric flux analysis with the metabolite as the
             objective to find genes-metabolite associations.
             Each reaction is associated with a flux for generating a particular
             metabolite. This is then translated to genes by finding the maximal
             (in terms of absolute value)
             flux for a reaction associated with a particular gene.
-        2. 'essential':
+        #. 'essential':
             Use essentiality to find gene-metabolite associations.
             Find which genes are essential for each metabolite.
+
 
     return_type : {'DataFrame', 'dict'}, default='DataFrame'
         How to return the networks, either a dataframe or dict
@@ -261,7 +262,7 @@ def find_metabolite_synthesis_network_genes(
         gene metabolite network for the pFBA method, whether
         to only include genes which are essential for a reaction
         in the genes associated with said reaction.
-    **kwargs : dict
+    kwargs : dict
         Keyword arguments passed to
         `cobra.flux_analysis.variability.find_essential_genes`,
         `cobra.flux_analysis.geometric_fba` or to
@@ -274,11 +275,11 @@ def find_metabolite_synthesis_network_genes(
         a dataframe with genes as the index and metabolites as the
         columns, containing either
 
-        1. Flux values if pfba or gfba is used. For a given gene and metabolite,
+        #. Flux values if pfba or gfba is used. For a given gene and metabolite,
            this represents the maximum of reaction fluxes associated with a gene,
            found during parsimoniou/geometric FBA required to maximally produce the
            metabolite.
-        2. Boolean values if essentiality is used. For a given reaction and metabolite,
+        #. Boolean values if essentiality is used. For a given reaction and metabolite,
            this represents whether the reaction is essential for producing the
            metabolite.
 

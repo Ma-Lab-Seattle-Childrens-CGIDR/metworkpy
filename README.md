@@ -130,3 +130,10 @@ under the BSD-3-Clause, see above) function closeness_centrality. Specifically,
 ### Permutation Testing
 
 1. [Phipson, B., & Smyth, G. K. (2010). Permutation p-values should never be zero: Calculating exact p-values when permutations are randomly drawn. Statistical Applications in Genetics and Molecular Biology, 9(1). https://doi.org/10.2202/1544-6115.1585](https://arxiv.org/abs/1603.05766)
+
+### Sampling
+
+1. Galuzzi, B. G., Milazzo, L., & Damiani, C. (2024). Adjusting for false
+   discoveries in constraint-based differential metabolic flux analysis. Journal
+   of Biomedical Informatics, 150, 104597.
+   [https://doi.org/10.1016/j.jbi.2024.104597](https://doi.org/10.1016/j.jbi.2024.104597)

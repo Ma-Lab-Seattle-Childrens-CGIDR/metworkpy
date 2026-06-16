@@ -9,6 +9,7 @@ __all__ = [
     "information",
     "divergence",
     "network",
+    "sampling",
     "synleth",
     "read_model",
     "write_model",
@@ -60,6 +61,7 @@ from metworkpy import (
     divergence,
     metabolites,
     network,
+    sampling,
     synleth,
 )
 
