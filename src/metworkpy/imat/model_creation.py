@@ -73,14 +73,11 @@ def generate_model(
 
     See Also
     --------
-    | :func:`imat_constraint_model` for more information on the
-        imat_restrictions method.
-    | :func:`simple_bounds_model` for more information on the
-        simple_bounds method.
-    | :func:`subset_model` for more information on the
-        subset method.
-    | :func:`fva_model` for more information on the fva method.
-    | :func:`milp_model` for more information on the milp method.
+    imat_constraint_model : imat_restrictions method
+    simple_bounds_model : simple_bounds method
+    subset_model : subset method.
+    fva_model : fva based method
+    milp_model : milp method.
     """
     method = _parse_method(method)
     if method == "imat_constraint":
@@ -166,9 +163,10 @@ def imat_constraint_model(
     This function first solves the iMAT problem, then adds a constraint
     to ensure that the iMAT objective value is within
     objective_tolerance*objective_value of the optimal objective value.
-    This model will include integer constraints, and so can not be used
-    for sampling. If you want to use the model for sampling,
-    use any of the other methods.
+    This model will include integer constraints, and so won't work with
+    COBRApy sampling methods, but can be used with
+    `metworkpy.sampling.corner_sampling`. If you want to use the model
+    with the COBRApy sampling methods, use any of the other methods.
     """
     original_objective = model.objective
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
@@ -234,8 +232,8 @@ def simple_bounds_model(
     if imat_solution.status != "optimal":
         raise ValueError("No optimal solution found for IMAT problem")
     fluxes = imat_solution.fluxes
-    rl = rxn_weights[rxn_weights < 0].index.tolist()
-    rh = rxn_weights[rxn_weights > 0].index.tolist()
+    rl = rxn_weights[rxn_weights < 0].index.tolist()  # type: ignore
+    rh = rxn_weights[rxn_weights > 0].index.tolist()  # type: ignore
     inactive_reactions = fluxes[
         (fluxes.abs() <= threshold) & (fluxes.index.isin(rl))
     ]

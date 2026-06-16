@@ -20,7 +20,7 @@ def corner_sampling(
     fva_scale: bool = True,
     seed: Optional[Union[int, np.random.Generator]] = None,
     fva_kwargs: Optional[dict[str, Any]] = None,
-):
+) -> pd.DataFrame:
     """
     Perform Corner Based sampling of a Metabolic Model
 
@@ -53,6 +53,13 @@ def corner_sampling(
         `cobra.flux_analysis.flux_variability_analysis <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/variability/index.html#cobra.flux_analysis.variability.flux_variability_analysis>`_,
         by default this will have the `fraction_of_optimum` set to 0.0,
         so that the objective function doesn't impact the sampling.
+
+    Returns
+    -------
+    samples : pd.DataFrame
+        A DataFrame of the generated samples, with shape (n_samples, n_reactions),
+        and with columns named after the reaction ids in the model, and
+        each row representing a random sample.
 
     Notes
     -----
@@ -89,7 +96,10 @@ def corner_sampling(
     if reaction_list is None:
         reaction_list = model_.reactions.list_attr("id")
     if fva_scale:
-        default_fva_kwargs: dict[str, Any] = {"fraction_of_optimum": 0.0}
+        default_fva_kwargs: dict[str, Any] = {
+            "fraction_of_optimum": 0.0,
+            "processes": processes,
+        }
         if fva_kwargs is None:
             fva_kwargs = default_fva_kwargs
         else:
@@ -101,6 +111,10 @@ def corner_sampling(
             **fva_kwargs,
         )
         fva_max = fva_res.abs().max(axis=1)
+        # remove all reactions which have an fva_max of 0.0 from
+        # possible selection
+        zero_reactions = set(fva_max[np.isclose(fva_max, 0.0)].index)
+        reaction_list = list(set(reaction_list) - zero_reactions)
     else:
         fva_max = None
     sample_df = pd.DataFrame(
