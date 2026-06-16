@@ -33,6 +33,9 @@
   subset of nodes can be sources/targets, and the network is a bipartite network
   and the nodes in one of the bipartite networks disjoint node sets are treated
   as edges.
+- Added a sampling submodule with corner based sampling, and a method for
+  upsampling previous samples by using samples as corners of polytopes and
+  sampling their interiors
 
 ## Version 0.8.0
 
