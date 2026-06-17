@@ -11,6 +11,15 @@ Corners
    :undoc-members:
    :show-inheritance:
 
+Diagnostics
+-----------
+
+.. automodule:: metworkpy.sampling.diagnostics
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
 Upsampling
 ----------
 
