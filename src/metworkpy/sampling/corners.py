@@ -141,18 +141,16 @@ def corner_sampling(
 def _corner_sampling_worker(
     model: cobra.Model,  # Model to sample from
     reaction_list: list[str],  # List of reactions to consider for objective
-    fva_max: Optional[
-        pd.Series
-    ],  # Maximum fva to divide weights by (should be max absolute?)
+    fva_max: Optional[pd.Series],  # Maximum fva to divide weights by
     fva_scale: bool,
     seed: list[int],  # List so that the seed can include the worker ID
 ) -> Optional[pd.Series]:
     # Create an RNG from the seed
     rng = np.random.default_rng(seed)
     # Decide how many reactions from the reaction list to consider
-    num_reactions = int(
-        rng.random() * len(reaction_list)
-    )  # Draw proportion from [0,1), get number of reactions instead of proportion, truncate
+    num_reactions = rng.integers(
+        1, len(reaction_list) + 1
+    )  # Pick at least 2 reactions
     # Select reactions
     objective_dict = {}
     for rxn in rng.choice(reaction_list, num_reactions, replace=False):
