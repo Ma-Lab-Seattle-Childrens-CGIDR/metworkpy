@@ -17,7 +17,7 @@ Array1D = np.ndarray[tuple[int], np.dtype[Union[np.float32, np.float64]]]
 
 def upsample(
     samples: pd.DataFrame,
-    n_samples: 1_000,
+    n_samples: int = 1_000,
     processes: Optional[int] = None,
     seed: Optional[Union[int, np.random.Generator]] = None,
 ) -> pd.DataFrame:
@@ -64,10 +64,8 @@ def upsample(
     # Store the sample columns, and convert it to a np.array
     sample_cols = samples.columns
     sample_array = samples.to_numpy()
-    print(f"Samples array shape: {sample_array.shape}")
     # Create a results array to store the additional samples
     upsample_array = np.zeros((n_samples, len(sample_cols)))
-    print(f"Upsample array shape: {upsample_array.shape}")
     for idx, sample in enumerate(
         Parallel(n_jobs=processes, return_as="generator")(
             delayed(_upsample_worker)(samples=sample_array, seed=[i, seed])

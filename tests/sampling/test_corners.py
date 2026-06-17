@@ -19,7 +19,7 @@ class TestCornerSampling(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         data_path = pathlib.Path(__file__).parent.parent.absolute() / "data"
-        cobra.Configuration().solver = "glpk"
+        cobra.Configuration().solver = "hybrid"
         cls.test_model = read_model(data_path / "textbook_model.json")
 
     def test_corner_sampling_serial(self):
