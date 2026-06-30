@@ -272,11 +272,11 @@ def add_imat_objective_(
     """
     if isinstance(rxn_weights, dict):
         rxn_weights = pd.Series(rxn_weights)
-    rh = rxn_weights[rxn_weights > 5e-17].index.tolist()
-    rl = rxn_weights[rxn_weights < -5e-17].index.tolist()
+    rh = rxn_weights[rxn_weights > 5e-17]
+    rl = rxn_weights[rxn_weights < -5e-17]
     rh_obj = []
     rl_obj = []
-    for rxn in rh:  # For each highly expressed reaction
+    for rxn, weight in rh.items():  # For each highly expressed reaction
         # Get the forward and reverse variables from the model
         forward_variable = model.solver.variables[
             _get_rxn_imat_binary_variable_name(
@@ -289,15 +289,15 @@ def add_imat_objective_(
             )
         ]
         # Adds the two variables to the rh list which will be used for sum
-        rh_obj += [forward_variable, reverse_variable]
-    for rxn in rl:  # For each lowly expressed reaction
+        rh_obj += [forward_variable * weight, reverse_variable * weight]
+    for rxn, weight in rl.items():  # For each lowly expressed reaction
         variable = model.solver.variables[
             _get_rxn_imat_binary_variable_name(
                 rxn, expression_weight="low", which="positive"
             )
         ]
         # Note: Only one variable for lowly expressed reactions
-        rl_obj += [variable]
+        rl_obj += [variable * abs(weight)]
     imat_obj = model.solver.interface.Objective(
         sym.Add(*rh_obj, *rl_obj), direction="max"
     )

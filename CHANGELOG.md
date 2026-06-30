@@ -36,6 +36,8 @@
 - Added a sampling submodule with corner based sampling, and a method for
   upsampling previous samples by using samples as corners of polytopes and
   sampling their interiors
+- Modified iMAT methods so that the weights of the reactions would be used as
+  coefficients in the iMAT objective function
 
 ## Version 0.8.0
 
