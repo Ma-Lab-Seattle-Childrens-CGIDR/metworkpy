@@ -3,7 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
-  - [Version DEV](#version-dev)
+  - [Version 0.9.0](#version-090)
   - [Version 0.8.0](#version-080)
   - [Version 0.7.0](#version-070)
   - [Version 0.6.0](#version-060)
@@ -17,7 +17,7 @@
 
 <!--toc:end-->
 
-## Version DEV
+## Version 0.9.0
 
 - Added a function for calculating the closeness centrality to a subset of nodes
 - Added a function for calculating the betweenness centrality where the shortest
