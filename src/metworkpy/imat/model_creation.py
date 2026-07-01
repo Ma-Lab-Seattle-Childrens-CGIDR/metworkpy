@@ -325,7 +325,6 @@ def fva_model(
     epsilon,
     threshold,
     objective_tolerance,
-    loopless: bool = True,
     warn_tolerance: bool = True,
     **kwargs,
 ):
@@ -348,15 +347,14 @@ def fva_model(
         The tolerance for the objective value. The objective will be
         restricted to be within objective_tolerance*objective_value of
         the optimal objective value. (default: 5e-2)
-    loopless : bool
-        Whether to use the loopless FVA method (default: True). If
-        False, the standard FVA method will be used.
     warn_tolerance
         Issue a warning if there is a problem with finding the bounds of
         a particular reaction due to the lower bound being greater than
         the upper bound. This is normally caused by the solver
         tolerance, and the values will be swapped to get valid bounds
         for the reaction.
+    kwargs:
+        Keyword arguments passed to `cobra.flux_analysis.flux_variability_analysis`
 
     Returns
     -------
@@ -380,7 +378,6 @@ def fva_model(
     fva_res = cobra.flux_analysis.flux_variability_analysis(
         imat_model,
         fraction_of_optimum=(1 - objective_tolerance),
-        loopless=loopless,
         reaction_list=reactions,
         **kwargs,
     ).dropna()
