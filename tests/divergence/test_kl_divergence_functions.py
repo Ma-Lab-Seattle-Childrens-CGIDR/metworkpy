@@ -1,4 +1,5 @@
 # Standard Library Imports
+from metworkpy import kl_divergence
 import unittest
 
 # External Imports
@@ -203,6 +204,15 @@ class TestContinuousKL(unittest.TestCase):
             p=self.norm_2_10, q=self.norm_2_10_rep, epsilon_mult=2.0
         )
         self.assertAlmostEqual(calc_kl_div_0, 0.0, delta=1e-1)
+
+    def test_kl_cont_adaptive_dispatch(self):
+        calc_kl_div_through_main = kl_divergence(
+            self.norm_0_3, self.norm_2_10, n_neighbors=None, epsilon_mult=2.0
+        )
+        calc_kl_div_direct = _kl_cont_adaptive(
+            self.norm_0_3, self.norm_2_10, epsilon_mult=2.0
+        )
+        self.assertAlmostEqual(calc_kl_div_direct, calc_kl_div_through_main)
 
     def test_multidimensional(self):
         _ = metworkpy.divergence.kl_divergence_functions._kl_cont(

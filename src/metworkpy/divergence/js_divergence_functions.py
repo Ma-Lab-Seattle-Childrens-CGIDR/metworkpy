@@ -189,7 +189,8 @@ def js_divergence_array(
 def _js_cont(
     p: np.ndarray,
     q: np.ndarray,
-    n_neighbors: int = 5,
+    n_neighbors: Optional[int] = 5,
+    epsilon_mult: float = 1.0,  # Doesn't do anything, just for compatibility with KL methods
     distance_metric: float = 2.0,
     clip: bool = False,
     **kwargs,
@@ -229,6 +230,10 @@ def _js_cont(
     Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
          Paper from which this method was obtained
     """
+    if n_neighbors is None:
+        raise ValueError(
+            "n_neighbors can't be None for the Jensen-Shannon divergence estimator"
+        )
     combined = np.vstack([p, q])
     n_data_points = combined.shape[0]
     classes = np.vstack([np.zeros((len(p), 1)), np.ones((len(q), 1))])

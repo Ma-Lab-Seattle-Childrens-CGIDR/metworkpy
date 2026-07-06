@@ -32,7 +32,8 @@ class ContinuousDivergenceFunction(Protocol):
         self,
         p: NDArray[float],
         q: NDArray[float],
-        n_neighbors: int,
+        n_neighbors: Optional[int],
+        epsilon_mult: float,
         distance_metric: float,
         clip: bool,
     ) -> float: ...

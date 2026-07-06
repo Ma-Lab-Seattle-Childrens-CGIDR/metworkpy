@@ -37,7 +37,8 @@ def kl_divergence(
     permutation_estimation_method: Literal[
         "kernel", "empirical"
     ] = "empirical",
-    n_neighbors: int = 5,
+    n_neighbors: Optional[int] = 5,
+    epsilon_mult: float = 1.0,
     discrete: bool = False,
     jitter: Optional[float] = None,
     jitter_seed: Optional[int] = None,
@@ -71,10 +72,14 @@ def kl_divergence(
     permutation_estimation_method : {"kernel", "empirical"}, default="empirical"
         Method to use for estimating p-value, either an empirical cdf,
         or a gaussian_kde
-    n_neighbors : int
+    n_neighbors : int, optional
         Number of neighbors to use for computing mutual information.
         Will attempt to coerce into an integer. Must be at least 1.
-        Default 5.
+        Default 5. If set to None, the adaptive method will be used,
+        see notes for details.
+    epsilon_mult : float, default=1.0
+        Number to multiply epsilon (the radius used to find density
+        in the adaptive method) by, see notes for more details
     discrete : bool
         Whether the samples are from discrete distributions
     jitter : Union[None, float, tuple[float,float]]
@@ -99,10 +104,27 @@ def kl_divergence(
 
     Notes
     -----
+    Uses the method of [1]_ for calculating the Kullback-Leibler divergence.
 
-    - This function is not symmetrical, p is treated as a 'true' distribution, and q as an
-      approximating distribution. If you want a symmetric metric try the Jenson-Shannon
-      divergence.
+    This function is not symmetrical, p is treated as a 'true' distribution, and q as an
+    approximating distribution. If you want a symmetric metric try the Jenson-Shannon
+    divergence.
+
+    If the `n_neighbors` parameter is None, will use the adaptive-k method of [1]_,
+    specifically the method specified in equation (25). This method uses a constant
+    radius around each point in p to calculate density based on the number of points
+    in p and q which lie within the ball of radius :math:`\epsilon(i)` centered at each
+    point i in p. The constant radius for each point in p is determined by the
+    maximum distance to its nearest neighbor in either p or q. This radius
+    will then be multiplied by `epsilon_mult`. A value of `epsilon_mult` greater
+    than 1.0 can reduce the bias of the estimator.
+
+    References
+    ----------
+    ..[1] Wang, Q.; Kulkarni, S. R.; Verdu, S. Divergence Estimation for
+          Multidimensional Densities Via K-Nearest-Neighbor Distances.
+          IEEE Trans. Inform. Theory 2009, 55 (5), 2392–2405.
+          https://doi.org/10.1109/TIT.2009.2016060.
 
     See Also
     --------
@@ -125,6 +147,7 @@ def kl_divergence(
         permutation_rng=permutation_rng,
         permutation_estimation_method=permutation_estimation_method,
         n_neighbors=n_neighbors,
+        epsilon_mult=epsilon_mult,
         discrete=discrete,
         jitter=jitter,
         jitter_seed=jitter_seed,
@@ -235,6 +258,36 @@ def _kl_disc(p: np.ndarray, q: np.ndarray):
 def _kl_cont(
     p: Array2D,
     q: Array2D,
+    n_neighbors: Optional[int] = 5,
+    epsilon_mult: float = 1.0,
+    distance_metric: float = 2.0,
+    clip=False,
+):
+    """
+    Small wrapper to dispatch to either the nearest neighbor method,
+    or the adaptive method depending on whether n_neighbors is None (in which
+    case it will dispatch to the adaptive method)
+    """
+    if n_neighbors is None:
+        return _kl_cont_adaptive(
+            p=p,
+            q=q,
+            epsilon_mult=epsilon_mult,
+            distance_metric=distance_metric,
+            clip=clip,
+        )
+    return _kl_cont_neighbors(
+        p=p,
+        q=q,
+        n_neighbors=n_neighbors,
+        distance_metric=distance_metric,
+        clip=clip,
+    )
+
+
+def _kl_cont_neighbors(
+    p: Array2D,
+    q: Array2D,
     n_neighbors: int = 5,
     distance_metric: float = 2.0,
     clip=False,
@@ -343,8 +396,8 @@ def _kl_cont_adaptive(
     A value of `epsilon_mult` greater than 1.0 can reduce the
     bias of the estimator.
 
-    Reference
-    ---------
+    References
+    ----------
     ..[1] Wang, Q.; Kulkarni, S. R.; Verdu, S. Divergence Estimation for
           Multidimensional Densities Via K-Nearest-Neighbor Distances.
           IEEE Trans. Inform. Theory 2009, 55 (5), 2392–2405.
