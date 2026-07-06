@@ -33,7 +33,7 @@ class ContinuousDivergenceFunction(Protocol):
         p: NDArray[float],
         q: NDArray[float],
         n_neighbors: int,
-        metric: float,
+        distance_metric: float,
         clip: bool,
     ) -> float: ...
 
@@ -55,12 +55,11 @@ def _wrap_divergence_functions(
     permutation_estimation_method: Literal[
         "kernel", "empirical"
     ] = "empirical",
-    n_neighbors: int = 5,
     discrete: bool = False,
     jitter: Optional[float] = None,
     jitter_seed: Optional[int] = None,
-    distance_metric: Union[float, str] = "euclidean",
     clip: bool = False,
+    **kwargs,
 ) -> Union[float, DivergenceResult]:
     """Calculate the divergence between two distributions represented by samples p and q
 
@@ -96,10 +95,6 @@ def _wrap_divergence_functions(
     permutation_estimation_method : {"kernel", "empirical"}, default="empirical"
         Method to use for estimating p-value, either an empirical cdf,
         or a gaussian_kde
-    n_neighbors : int
-        Number of neighbors to use for computing mutual information.
-        Will attempt to coerce into an integer. Must be at least 1.
-        Default 5.
     discrete : bool
         Whether the samples are from discrete distributions
     jitter : Union[None, float, tuple[float,float]]
@@ -110,10 +105,6 @@ def _wrap_divergence_functions(
         second element is the standard deviation added to the y array.
     jitter_seed : Union[None, int]
         Seed for the random number generator used for adding noise
-    distance_metric : Union[str, float]
-        Metric to use for computing distance between points in p and q,
-        can be "Euclidean", "Manhattan", or "Chebyshev". Can also be a
-        float representing the Minkowski p-norm.
     clip : bool, default=False
         Whether or not to clip the divergence values at 0.0
 
@@ -123,14 +114,11 @@ def _wrap_divergence_functions(
         The divergence between p and q, or if calculate_pvalue is True,
         returns a named tuple of divergence and p-value.
     """
-    try:
-        n_neighbors = int(n_neighbors)
-    except ValueError as err:
-        raise ValueError(
-            f"n_neighbors must be able to be converted to an integer, but a {type(n_neighbors)} was"
-            f"given instead."
-        ) from err
-    distance_metric = _parse_metric(distance_metric)
+    if "distance_metric" in kwargs:
+        if not isinstance(kwargs["distance_metric"], float):
+            kwargs["distance_metric"] = _parse_metric(
+                kwargs["distance_metric"]
+            )
     p, q = _validate_samples(p, q)
     if jitter and not discrete:
         rng = np.random.default_rng(jitter_seed)
@@ -163,18 +151,11 @@ def _wrap_divergence_functions(
             return DivergenceResult(divergence=divergence, pvalue=pvalue)
     # Continuous
     if not calculate_pvalue:
-        return continuous_method(
-            p, q, n_neighbors=n_neighbors, metric=distance_metric, clip=clip
-        )
+        return continuous_method(p, q, clip=clip, **kwargs)
     divergence, pvalue = permutation_test(
         p,
         q,
-        partial(
-            continuous_method,
-            n_neighbors=n_neighbors,
-            metric=distance_metric,
-            clip=clip,
-        ),
+        partial(continuous_method, clip=clip, **kwargs),
         **permutation_test_kwargs,  # type:ignore
     )
     return DivergenceResult(divergence=divergence, pvalue=pvalue)

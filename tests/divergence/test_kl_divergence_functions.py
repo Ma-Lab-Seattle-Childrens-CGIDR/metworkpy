@@ -7,7 +7,10 @@ from scipy.stats import multivariate_normal
 
 # Local Imports
 import metworkpy.divergence.kl_divergence_functions
-from metworkpy.divergence.kl_divergence_functions import kl_divergence_array
+from metworkpy.divergence.kl_divergence_functions import (
+    kl_divergence_array,
+    _kl_cont_adaptive,
+)
 
 
 class TestMainKL(unittest.TestCase):
@@ -182,12 +185,22 @@ class TestContinuousKL(unittest.TestCase):
         calc_kl_div = metworkpy.divergence.kl_divergence_functions._kl_cont(
             p=self.norm_0_3,
             q=self.norm_2_10,
-            n_neighbors=50,
+            n_neighbors=5,
         )
         self.assertAlmostEqual(calc_kl_div, self.theory_kl_div, delta=1e-1)
 
         calc_kl_div_0 = metworkpy.divergence.kl_divergence_functions._kl_cont(
-            p=self.norm_2_10, q=self.norm_2_10_rep, n_neighbors=20
+            p=self.norm_2_10, q=self.norm_2_10_rep, n_neighbors=5
+        )
+        self.assertAlmostEqual(calc_kl_div_0, 0.0, delta=1e-1)
+
+    def test_kl_cont_adaptive(self):
+        calc_kl_div = _kl_cont_adaptive(
+            self.norm_0_3, self.norm_2_10, epsilon_mult=2.0
+        )
+        self.assertAlmostEqual(calc_kl_div, self.theory_kl_div, delta=1e-1)
+        calc_kl_div_0 = _kl_cont_adaptive(
+            p=self.norm_2_10, q=self.norm_2_10_rep, epsilon_mult=2.0
         )
         self.assertAlmostEqual(calc_kl_div_0, 0.0, delta=1e-1)
 
@@ -303,6 +316,22 @@ class TestDiscreteKL(unittest.TestCase):
         )
         calc_kl_q_p = metworkpy.divergence.kl_divergence_functions._kl_disc(
             self.known_q, self.known_p
+        )
+
+        self.assertTrue(np.isclose(calc_kl_p_q, self.theory_kl_p_q, rtol=1e-1))
+        self.assertTrue(np.isclose(calc_kl_q_p, self.theory_kl_q_p, rtol=1e-1))
+
+    def test_method_dispatch(self):
+        # Test against theory KL values
+        calc_kl_p_q = (
+            metworkpy.divergence.kl_divergence_functions.kl_divergence(
+                self.known_p, self.known_q, discrete=True
+            )
+        )
+        calc_kl_q_p = (
+            metworkpy.divergence.kl_divergence_functions.kl_divergence(
+                self.known_q, self.known_p, discrete=True
+            )
         )
 
         self.assertTrue(np.isclose(calc_kl_p_q, self.theory_kl_p_q, rtol=1e-1))

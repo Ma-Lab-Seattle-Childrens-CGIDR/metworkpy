@@ -1,4 +1,5 @@
-"""Function for calculating the Kullback-Leibler divergence between two probability distributions based on samples from
+"""
+Function for calculating the Kullback-Leibler divergence between two probability distributions based on samples from
 those distributions.
 """
 
@@ -10,6 +11,7 @@ from typing import Literal, Optional, Tuple, Union
 # External Imports
 import numpy as np
 from scipy.spatial import KDTree
+from scipy.special import digamma
 
 # Local Imports
 from metworkpy.divergence._main_wrapper import (
@@ -21,6 +23,7 @@ from metworkpy.divergence._pairwise_divergence import (
     ArrayInput,
     Array1D,
 )
+from metworkpy.metworkpy_types import Array2D
 
 
 # region Main Function
@@ -217,7 +220,8 @@ def _kl_disc(p: np.ndarray, q: np.ndarray):
         # If the length of the pf vector is 0, add a 0. element
         if len(pf) == 0:
             pf = np.zeros(shape=(1,))
-        # If the length of qf is 0 (so the estimate of the probability is 0), the divergence defined as +inf
+        # If the length of qf is 0 (so the estimate of the probability is 0),
+        # the divergence defined as +inf
         if len(qf) == 0:
             return np.inf
         kl += (pf * np.log(pf / qf)).item()
@@ -229,13 +233,14 @@ def _kl_disc(p: np.ndarray, q: np.ndarray):
 
 # region Continuous Divergence
 def _kl_cont(
-    p: np.ndarray,
-    q: np.ndarray,
+    p: Array2D,
+    q: Array2D,
     n_neighbors: int = 5,
-    metric: float = 2.0,
+    distance_metric: float = 2.0,
     clip=False,
 ):
-    """Calculate the Kullback-Leibler divergence for two samples from two continuous distributions
+    """
+    Calculate the Kullback-Leibler divergence for two samples from two continuous distributions
 
     Parameters
     ----------
@@ -244,10 +249,10 @@ def _kl_cont(
         n_dimensions)
     q : np.ndarray
         Sample from the q distribution, with shape (n_samples,
-        n_dimensions
+        n_dimensions)
     n_neighbors : int
         Number of neighbors to use for the estimator
-    metric : float
+    distance_metric : float
         Minkowski p-norm to use for calculating distances, must be at
         least 1
     clip : bool, default=False
@@ -267,10 +272,10 @@ def _kl_cont(
     # Find the distance to the kth nearest neighbor of each p point in both p and q samples
     # Note: The distance arrays are column vectors
     p_dist, _ = p_tree.query(
-        p, k=[n_neighbors + 1], p=metric
+        p, k=[n_neighbors + 1], p=distance_metric
     )  # rho in wang et al. eq 5
     q_dist, _ = q_tree.query(
-        p, k=[n_neighbors], p=metric
+        p, k=[n_neighbors], p=distance_metric
     )  # nu in wang et al. eq 5
 
     # Reshape p and q_dist into 1D arrays
@@ -286,6 +291,113 @@ def _kl_cont(
     if not clip:
         return div
     return max(div, 0.0)
+
+
+def _kl_cont_adaptive(
+    p: Array2D,
+    q: Array2D,
+    epsilon_mult: float = 1.0,
+    distance_metric: float = 2.0,
+    clip: bool = False,
+):
+    r"""
+    Calculate the Kullback-Leibler divergence for two samples from
+    two continuous distributions using an adaptive k-NN
+    estimator
+
+    Parameters
+    ----------
+    p : np.ndarray
+        Sample from the p distribution, with shape (n_samples,
+        n_dimensions)
+    q : np.ndarray
+        Sample from the q distribution, with shape (n_samples,
+        n_dimensions)
+    epsilon_mult : float, default=1.0
+        Number to multiply epsilon (the radius used to find density)
+        by, see notes for more details
+    distance_metric : float
+        Minkowski p-norm to use for calculating distances, must be at
+        least 1
+    clip : bool, default=False
+        Whether or not to clip the divergence values at 0.0
+
+
+    Returns
+    -------
+    float
+        The Kullback-Leibler divergence between the distributions
+        represented by the p and q samples
+
+    Notes
+    -----
+    Uses the second version of an adaptive-k estimator from [1]_,
+    found in equation (25).
+
+    This method uses a constant radius around each point in p to
+    calculate density based on the number of points in p and q which
+    lie within the ball of radius $\epsilon(i)$ centered at
+    each point i in p. The constant radius for each point in p
+    is determined by the maximum distance to its nearest neighbor
+    in either p or q. This radius will then be multiplied by `epsilon_mult`.
+    A value of `epsilon_mult` greater than 1.0 can reduce the
+    bias of the estimator.
+
+    Reference
+    ---------
+    ..[1] Wang, Q.; Kulkarni, S. R.; Verdu, S. Divergence Estimation for
+          Multidimensional Densities Via K-Nearest-Neighbor Distances.
+          IEEE Trans. Inform. Theory 2009, 55 (5), 2392–2405.
+          https://doi.org/10.1109/TIT.2009.2016060.
+    """
+    # Construct the KDTrees for finding neighbors, and neighbor distances
+    p_tree = KDTree(p)
+    q_tree = KDTree(q)
+
+    # First find the epsilon using equations (26), (27), and (28)
+
+    # Find the distances from X to its nearest neighbors in p, and
+    # its nearest neighbors in q (this is for calculating epsilon(i))
+    # Since the points are in p, need to find the second neighbor
+    # (first is the point itself)
+    p_nn_dist, _ = np.nextafter(
+        p_tree.query(p, [2], p=distance_metric), np.inf
+    )
+    q_nn_dist, _ = np.nextafter(
+        q_tree.query(p, [1], p=distance_metric), np.inf
+    )
+
+    # Find the epsilon (radius around each point),
+    # this will be the maximum of the p and q nn distances
+    epsilon = np.maximum(p_nn_dist, q_nn_dist).ravel() * epsilon_mult
+
+    # Find the number of neighbors in p and q
+    # which are within epsilon of each point in p
+    # This corresponds to finding the l and k values
+    # for equation 25
+    # NOTE: The nextafter increases the epsilon in order to
+    # keep the nearest neighbor insideh
+    # NOTE: This is a 1-D array of number of neighbors
+    l_i = (
+        p_tree.query_ball_point(
+            x=p,
+            r=epsilon.ravel(),
+            p=distance_metric,
+            return_length=True,
+        )
+        - 1  # Subtract 1 to remove the points themselves
+    )
+    k_i = q_tree.query_ball_point(
+        x=p,
+        r=epsilon.ravel(),
+        p=distance_metric,
+        return_length=True,
+    )
+
+    # Now, calculate the actual divergence estimate
+    return np.sum(digamma(l_i) - digamma(k_i)) / p.shape[0] + np.log(
+        q.shape[0] / (p.shape[0] - 1)
+    )
 
 
 # endregion Continuous Divergence

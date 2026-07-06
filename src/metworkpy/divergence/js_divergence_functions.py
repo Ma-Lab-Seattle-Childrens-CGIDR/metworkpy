@@ -190,7 +190,7 @@ def _js_cont(
     p: np.ndarray,
     q: np.ndarray,
     n_neighbors: int = 5,
-    metric: float = 2.0,
+    distance_metric: float = 2.0,
     clip: bool = False,
     **kwargs,
 ) -> float:
@@ -209,7 +209,7 @@ def _js_cont(
         n_dimensions>=1
     n_neighbors : int
         The number of neighbors to use for computing mutual information
-    metric : float
+    distance_metric : float
         Metric to use for computing distance between points in y (must
         be `float>=1` representing Minkowski p-norm)
     clip : bool, default=False
@@ -247,14 +247,16 @@ def _js_cont(
         type_tree = KDTree(combined[same_class_index, :], **kwargs)
         # Get the neighbors (1st neighbor will just be the point itself)
         dist, _ = type_tree.query(
-            combined[same_class_index, :], k=[n_neighbors + 1], p=metric
+            combined[same_class_index, :],
+            k=[n_neighbors + 1],
+            p=distance_metric,
         )
         dist = dist.squeeze()
         radius_array[same_class_index] = np.nextafter(dist, np.inf)
 
     neighbors_within_radius = (
         full_tree.query_ball_point(
-            combined, radius_array, p=metric, return_length=True
+            combined, radius_array, p=distance_metric, return_length=True
         )
         - 1
     )
