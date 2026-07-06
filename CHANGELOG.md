@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version DEV](#version-dev)
   - [Version 0.9.0](#version-090)
   - [Version 0.8.0](#version-080)
   - [Version 0.7.0](#version-070)
@@ -16,6 +17,15 @@
   - [Version 0.2.7](#version-027)
 
 <!--toc:end-->
+
+## Version DEV
+
+- Added adaptive-k method for calculating Kullback-Leibler divergence, based on
+  equation (25) in Wang, Kulkarni 2009. This method can be used by passing
+  `n_neighbors=None` to the kl_divergence function. Additionally, the
+  kl_divergence function will accept an additional `epsilon_mult` parameter
+  which allows for increasing the radius used in this method by a constant
+  multiple, which seems to decrease bias (based on limited testing).
 
 ## Version 0.9.0
 
