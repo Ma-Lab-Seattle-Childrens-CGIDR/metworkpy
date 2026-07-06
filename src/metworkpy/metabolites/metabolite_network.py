@@ -680,8 +680,8 @@ def add_metabolite_objective_(model: cobra.Model, metabolite: str) -> str:
     reaction : str
         id of the added reaction
 
-    Note
-    ----
+    Notes
+    -----
     If used within a model context everything this function alters
     will be reset upon leaving the context
     """
@@ -794,8 +794,8 @@ def eliminate_maintenance_requirements_(model: cobra.Model):
     model : cobra.Model
         Model to eliminate maintenance requirements from
 
-    Note
-    ----
+    Notes
+    -----
     When used within a model context, all changes will be reversed on leaving the model context
     """
     for rxn in model.reactions:

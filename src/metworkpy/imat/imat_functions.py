@@ -218,6 +218,7 @@ def add_imat_constraints_(
         f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
     )
     for rxn, weight in rxn_weights.items():
+        assert isinstance(rxn, str)
         # Don't add any restrictions for 0 weight reactions
         if np.isclose(weight, 0):
             continue
@@ -351,8 +352,11 @@ def _imat_pos_weight_(model: cobra.Model, rxn: str, epsilon: float) -> None:
     """
     assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
     reaction = model.reactions.get_by_id(rxn)
+    assert isinstance(reaction, cobra.Reaction)
     lb = reaction.lower_bound
     ub = reaction.upper_bound
+    assert reaction.forward_variable is not None
+    assert reaction.reverse_variable is not None
     reaction_flux = reaction.forward_variable - reaction.reverse_variable
     y_pos = model.solver.interface.Variable(
         _get_rxn_imat_binary_variable_name(
@@ -405,8 +409,11 @@ def _imat_neg_weight_(model: cobra.Model, rxn: str, threshold: float) -> None:
         None
     """
     reaction = model.reactions.get_by_id(rxn)
+    assert isinstance(reaction, cobra.Reaction)
     lb = reaction.lower_bound
     ub = reaction.upper_bound
+    assert reaction.forward_variable is not None
+    assert reaction.reverse_variable is not None
     reaction_flux = reaction.forward_variable - reaction.reverse_variable
     y_pos = model.solver.interface.Variable(
         _get_rxn_imat_binary_variable_name(

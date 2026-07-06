@@ -95,10 +95,15 @@ def js_divergence(
     float
         The Jensen-Shannon divergence between p and q
 
-    See Also
-    --------
+    Notes
+    -----
+    Uses the method of [1]_
 
-    Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
+    References
+    ----------
+    .. [1] Ross, B. C. Mutual Information between Discrete and Continuous Data Sets.
+       PLoS One 2014, 9 (2), e87357. https://doi.org/10.1371/journal.pone.0087357.
+
     """
     return _wrap_divergence_functions(
         p=p,

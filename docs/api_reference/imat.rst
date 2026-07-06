@@ -18,6 +18,7 @@ iMAT Iterator
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: ImatBinaryVariables
 
 iMAT Model Creation
 -------------------

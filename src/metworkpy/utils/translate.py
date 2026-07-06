@@ -167,8 +167,8 @@ def gene_to_reaction_list(
     reaction_list : list[str]
         list of reactions associated with the genes in `gene_list`
 
-    Note
-    ----
+    Notes
+    -----
     The order of the genes is not perseved in the order of the reactions
     """
     return list(
@@ -206,8 +206,8 @@ def reaction_to_gene_list(
     gene_list : list[str]
         list of genes associated with the reactions in `reaction_list`
 
-    Note
-    ----
+    Notes
+    -----
     The order of the reactions is not perseved in the order of the genes
     """
     return list(

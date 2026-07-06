@@ -34,6 +34,7 @@ Fuzzy Reaction Sets
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: FuzzyMembershipFunction
 
 Neighborhoods
 -------------

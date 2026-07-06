@@ -44,6 +44,7 @@ Statistics
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: SignificanceResult, MannWhitneyUResult
 
 Translation
 -----------

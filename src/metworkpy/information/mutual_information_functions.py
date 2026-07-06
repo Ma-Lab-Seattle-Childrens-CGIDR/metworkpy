@@ -105,22 +105,26 @@ def mutual_information(
 
     Notes
     -----
+    Uses the method of [1]_ for estimating the mutual information between samples from two
+    continous distributions, uses the method of [2]_ for estimating the mutual information
+    between samples from a discrete and a continous distribution.
 
-    - The metrics can either be provided as a float greater than 1 representing the Minkowski p-norm, or a string
-      representing the name of a metric such as 'Manhattan', 'Chebyshev', or 'Euclidean'.
-    - For scalar samples (samples from a 1-D distribution), all the metrics are the same.
-    - In the case of two continuous distributions, the distance in the z space (i.e. the joint (X,Y) space), is
-      determined by the maximum norm (||z-z\\`|| = max{||x-x\\`||, ||y-y\\`||}), see [1] for more details.
-    - Always returns value in nats (i.e. mutual information is calculated using the natural logarithm.
+    The metrics can either be provided as a float greater than 1 representing the Minkowski p-norm, or a string
+    representing the name of a metric such as 'Manhattan', 'Chebyshev', or 'Euclidean'.
 
-    See Also
-    --------
+    For scalar samples (samples from a 1-D distribution), all the metrics are the same.
 
-    1. Kraskov, A., Stögbauer, H., & Grassberger, P. (2004). Estimating mutual information. Physical Review E, 69(6), 066138.
-         Method for estimating mutual information between samples from two continuous distributions.
-    2. Ross, B. C. (2014). Mutual Information between Discrete and Continuous Data Sets. PLoS ONE, 9(2), e87357.
-        Method for estimating mutual information between a sample from a discrete distribution and a sample
-        from a continuous distribution.
+    In the case of two continuous distributions, the distance in the z space (i.e. the joint (X,Y) space), is
+    determined by the maximum norm (||z-z\\`|| = max{||x-x\\`||, ||y-y\\`||}), see [1] for more details.
+
+    Always returns value in nats (i.e. mutual information is calculated using the natural logarithm).
+
+    References
+    ----------
+    .. [1] Kraskov, A.; Stögbauer, H.; Grassberger, P. Estimating Mutual Information.
+       Phys. Rev. E 2004, 69 (6), 066138. https://doi.org/10.1103/PhysRevE.69.066138.
+    .. [2] Ross, B. C. Mutual Information between Discrete and Continuous Data Sets.
+       PLoS One 2014, 9 (2), e87357. https://doi.org/10.1371/journal.pone.0087357.
     """
     try:
         n_neighbors = int(n_neighbors)

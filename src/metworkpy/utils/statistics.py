@@ -11,6 +11,13 @@ from scipy import stats
 class SignificanceResult(NamedTuple):
     """
     Class for return values from significance tests
+
+    Attributes
+    ----------
+    statistic : float
+        The statistic associated with a test
+    pvalue : float
+        The p-value associated with a test
     """
 
     statistic: float
@@ -21,6 +28,19 @@ class MannWhitneyUResult(NamedTuple):
     """
     Class for the results of the extended Mann-Whitney U-test,
     which includes the U1,U2, AUC ROC, and p-value
+
+    Attributes
+    ----------
+    u1 : float
+        Mann-Whitney U statistic corresponding with sample x
+    u2 : float
+        Mann-Whitney U statistic corresponding with sample y
+    auc_roc : float
+        The area under the receiver operator curve if treating
+        the test as a classification problem between x and y
+    pvalue : float
+        The associated p-value value for the chosen
+        alternative
     """
 
     u1: float
@@ -49,7 +69,7 @@ def fisher_enrichment(
         `SciPy's fisher_exact <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.fisher_exact.html>`_
         for details.
 
-    Results
+    Returns
     -------
     SignificanceResult
         Named tuple of statistic and p-value for the result of the

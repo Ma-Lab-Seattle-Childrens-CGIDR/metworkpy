@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections import namedtuple
+from dataclasses import dataclass
 from enum import Enum
-from typing import Union, Literal, Optional, Any
+from typing import NamedTuple, Union, Literal, Optional, Any
 
 # External Imports
 import cobra
@@ -24,14 +24,27 @@ from metworkpy.imat.imat_functions import (
     _get_rxn_imat_binary_variable_name,
 )
 
+# Make sure optlang has Variable
+assert "Variable" in optlang.__dir__()
+
+
 # define defaults for the iMAT functions
-DEFAULTS = {
-    "epsilon": 1,
-    "threshold": 1e-2,
-    "tolerance": Configuration().tolerance,
-    "objective_tolerance": 5e-2,
-    "max_iter": 20,
-}
+@dataclass
+class DefaultValues:
+    epsilon: float
+    threshold: float
+    tolerance: float
+    objective_tolerance: float
+    max_iter: int
+
+
+DEFAULTS = DefaultValues(
+    epsilon=1,
+    threshold=1e-2,
+    tolerance=Configuration().tolerance,
+    objective_tolerance=5e-2,
+    max_iter=20,
+)
 
 
 # region Reaction Activity Enum
@@ -87,10 +100,10 @@ class ImatIter:
         output: Literal[
             "model", "binary-variables", "reaction-activity"
         ] = "model",
-        max_iter: int = DEFAULTS["max_iter"],
-        epsilon: float = DEFAULTS["epsilon"],
-        threshold: float = DEFAULTS["threshold"],
-        objective_tolerance: float = DEFAULTS["objective_tolerance"],
+        max_iter: int = DEFAULTS.max_iter,
+        epsilon: float = DEFAULTS.epsilon,
+        threshold: float = DEFAULTS.threshold,
+        objective_tolerance: float = DEFAULTS.objective_tolerance,
         **kwargs,
     ):
         # Save all provided parameter to pass to specific iterator
@@ -141,11 +154,11 @@ def imat_iter_flux_sample(
     model: cobra.Model,
     rxn_weights: pd.Series[float],
     model_generation_method: Literal["simple", "subset"] = "simple",
-    max_iter: int = DEFAULTS["max_iter"],
-    epsilon: float = DEFAULTS["epsilon"],
-    threshold: float = DEFAULTS["threshold"],
-    objective_tolerance: float = DEFAULTS["objective_tolerance"],
-    sampler: Optional[cobra.sampling.HRSampler] = None,
+    max_iter: int = DEFAULTS.max_iter,
+    epsilon: float = DEFAULTS.epsilon,
+    threshold: float = DEFAULTS.threshold,
+    objective_tolerance: float = DEFAULTS.objective_tolerance,
+    sampler: Optional[type[cobra.sampling.HRSampler]] = None,
     thinning: int = 100,
     num_samples: int = 1_000,
     sampler_kwargs: Optional[dict[str, Any]] = None,
@@ -244,7 +257,7 @@ def imat_iter_flux_sample(
         # Validate the flux samples
         # noinspection PyTypeChecker
         valid_flux_samples = flux_samples[
-            imat_sampler.validate(flux_samples) == "v"
+            imat_sampler.validate(flux_samples) == "v"  # type: ignore
         ]
         # Add the valid samples to the results list
         flux_sample_df_list.append(valid_flux_samples)
@@ -287,10 +300,10 @@ class ImatIterBase(ABC):
         self,
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
-        max_iter: int = DEFAULTS["max_iter"],
-        epsilon: float = DEFAULTS["epsilon"],
-        threshold: float = DEFAULTS["threshold"],
-        objective_tolerance: float = DEFAULTS["objective_tolerance"],
+        max_iter: int = DEFAULTS.max_iter,
+        epsilon: float = DEFAULTS.epsilon,
+        threshold: float = DEFAULTS.threshold,
+        objective_tolerance: float = DEFAULTS.objective_tolerance,
     ):
         self.in_model = model
         self._imat_model = (
@@ -299,7 +312,7 @@ class ImatIterBase(ABC):
         # Save the values into the iterator
         self._epsilon = epsilon
         self._threshold = threshold
-        self._rxn_weights = rxn_weights
+        self._rxn_weights = pd.Series(rxn_weights)
         self._objective_tolerance = objective_tolerance
         self._max_iter = max_iter
         # Start a counter for the maximum number of iterations
@@ -333,6 +346,7 @@ class ImatIterBase(ABC):
         list[str]
             The list of high expression reaction ids.
         """
+        assert isinstance(self._rxn_weights, pd.Series)
         return list(self._rxn_weights[self._rxn_weights > 0.5].index)
 
     def _get_low_expr_rxns(self) -> list[str]:
@@ -345,7 +359,7 @@ class ImatIterBase(ABC):
         """
         return list(self._rxn_weights[self._rxn_weights < -0.5].index)
 
-    def _get_high_expr_pos_variables(self) -> dict[str, optlang.Variable]:
+    def _get_high_expr_pos_variables(self) -> dict[str, optlang.Variable]:  # type: ignore ## Checked on import earlier
         """Get a dict of all the y_pos variables for high expression reactions, keyed by reaction id
 
         Returns
@@ -363,7 +377,7 @@ class ImatIterBase(ABC):
             )
         return high_expr_pos_variables
 
-    def _get_high_expr_neg_variables(self) -> dict[str, optlang.Variable]:
+    def _get_high_expr_neg_variables(self) -> dict[str, optlang.Variable]:  # type: ignore ## Checked on import earlier
         """Get a dict of all the y_neg variables for high expression reactions, keyed by reaction id
 
         Returns
@@ -381,7 +395,7 @@ class ImatIterBase(ABC):
             )
         return high_expr_neg_variables
 
-    def _get_low_expr_variables(self) -> dict[str, optlang.Variable]:
+    def _get_low_expr_variables(self) -> dict[str, optlang.Variable]:  # type: ignore ## Checked on import earlier
         """Get a dict of all the y_pos variables for low expression reactions, keyed by reaction id
 
         Returns
@@ -401,7 +415,7 @@ class ImatIterBase(ABC):
 
     def _get_high_expr_variables(
         self,
-    ) -> dict[str, dict[str, optlang.Variable]]:
+    ) -> dict[str, dict[str, optlang.Variable]]:  # type: ignore ## Checked on import earlier
         """Get a nested dict of all the variables associated with high expression reactions, keyed by reaction id,
         and then by 'pos'/'neg' for positive and negative variables respectively
 
@@ -418,7 +432,7 @@ class ImatIterBase(ABC):
             high_expr_variables[rxn]["neg"] = y_neg
         return high_expr_variables
 
-    def _get_binary_variables_state(self) -> pd.Series[ReactionActivity]:
+    def _get_binary_variables_state(self) -> pd.Series[ReactionActivity]:  # type: ignore
         """Get a pandas Series describing the state of the weighted reactions in the iMAT solution
 
         Returns
@@ -456,7 +470,7 @@ class ImatIterBase(ABC):
                 reaction_activities[rxn] = ReactionActivity.Inactive
         return reaction_activities
 
-    def _get_all_binary_variables(self) -> list[optlang.Variable]:
+    def _get_all_binary_variables(self) -> list[optlang.Variable]:  # type: ignore ## Checked on import earlier
         """Get all the binary variables associated with the underlying iMAT model
 
         Returns
@@ -556,9 +570,11 @@ class ImatIterBase(ABC):
 
 # region Binary Variable Values iMAT Iterator
 
-ImatBinaryVariables = namedtuple(
-    "ImatBinaryVariables", ["rh_y_pos", "rh_y_neg", "rl_y_pos"]
-)
+
+class ImatBinaryVariables(NamedTuple):
+    rh_y_pos: pd.Series
+    rh_y_neg: pd.Series
+    rl_y_pos: pd.Series
 
 
 class ImatIterBinaryVariables(ImatIterBase):
@@ -590,16 +606,16 @@ class ImatIterBinaryVariables(ImatIterBase):
 
     Returns
     -------
-    unknown
+    ImatBinaryVariables
         A named tuple with 3 fields
 
-        * rh_y_pos: A pandas Series indexed by reaction id with the values indicating the state of the y+ variables
+        - rh_y_pos: A pandas Series indexed by reaction id with the values indicating the state of the y+ variables
           associated with the high expression reactions. A value of 1 indicates that the reaction is **active** in the
           forward direction.
-        * rh_y_neg: A pandas Series indexed by reaction id with the values indicating the state of the y- variables
+        - rh_y_neg: A pandas Series indexed by reaction id with the values indicating the state of the y- variables
           associated with the high expression reactions. A value of 1 indicates that the reaction is active in the
           reverse direction.
-        * rl_y_pos: A pandas Series indexed by reaction id with the values indicating the state of the y+ variables
+        - rl_y_pos: A pandas Series indexed by reaction id with the values indicating the state of the y+ variables
           associated with the low expression reactions. A value of 1 indicates that the reaction is **inactive**.
     """
 
@@ -607,10 +623,10 @@ class ImatIterBinaryVariables(ImatIterBase):
         self,
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
-        max_iter: int = DEFAULTS["max_iter"],
-        epsilon: float = DEFAULTS["epsilon"],
-        threshold: float = DEFAULTS["threshold"],
-        objective_tolerance: float = DEFAULTS["objective_tolerance"],
+        max_iter: int = DEFAULTS.max_iter,
+        epsilon: float = DEFAULTS.epsilon,
+        threshold: float = DEFAULTS.threshold,
+        objective_tolerance: float = DEFAULTS.objective_tolerance,
     ):
         super().__init__(
             model=model,
@@ -698,10 +714,10 @@ class ImatIterReactionActivities(ImatIterBase):
         self,
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
-        max_iter: int = DEFAULTS["max_iter"],
-        epsilon: float = DEFAULTS["epsilon"],
-        threshold: float = DEFAULTS["threshold"],
-        objective_tolerance: float = DEFAULTS["objective_tolerance"],
+        max_iter: int = DEFAULTS.max_iter,
+        epsilon: float = DEFAULTS.epsilon,
+        threshold: float = DEFAULTS.threshold,
+        objective_tolerance: float = DEFAULTS.objective_tolerance,
     ):
         super().__init__(
             model=model,
@@ -712,7 +728,7 @@ class ImatIterReactionActivities(ImatIterBase):
             objective_tolerance=objective_tolerance,
         )
 
-    def __next__(self) -> pd.Series[ReactionActivity]:
+    def __next__(self) -> pd.Series[ReactionActivity]:  # type: ignore ## Checked on import earlier
         # Call the base classes iter_update method to update the iter state
         self._iter_update()
         # Get the binary series of reaction activities to return
@@ -788,10 +804,10 @@ class ImatIterModels(ImatIterBase):
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
         method: Literal["simple", "subset"] = "simple",
-        max_iter: int = DEFAULTS["max_iter"],
-        epsilon: float = DEFAULTS["epsilon"],
-        threshold: float = DEFAULTS["threshold"],
-        objective_tolerance: float = DEFAULTS["objective_tolerance"],
+        max_iter: int = DEFAULTS.max_iter,
+        epsilon: float = DEFAULTS.epsilon,
+        threshold: float = DEFAULTS.threshold,
+        objective_tolerance: float = DEFAULTS.objective_tolerance,
     ):
         super().__init__(
             model=model,
@@ -809,6 +825,7 @@ class ImatIterModels(ImatIterBase):
         self._iter_update()
         # Create the model to be returned
         updated_model = self.in_model.copy()
+        assert isinstance(updated_model, cobra.Model)
         # Get the reaction activities of the underlying problem
         reaction_activities = self._get_binary_variables_state()
         active_forward_reactions = reaction_activities[
@@ -822,14 +839,16 @@ class ImatIterModels(ImatIterBase):
         ].index
         for rxn in inactive_reactions:
             reaction = updated_model.reactions.get_by_id(rxn)
-            # noinspection PyProtectedMember
+            assert isinstance(reaction, cobra.Reaction)
             reaction.bounds = model_creation._inactive_bounds(
-                reaction.lower_bound, reaction.upper_bound, self._threshold
+                reaction.lower_bound,
+                reaction.upper_bound,
+                self._threshold,
             )
         if self._method == "simple":
             for rxn in active_forward_reactions:
                 reaction = updated_model.reactions.get_by_id(rxn)
-                # noinspection PyProtectedMember
+                assert isinstance(reaction, cobra.Reaction)
                 reaction.bounds = model_creation._active_bounds(
                     reaction.lower_bound,
                     reaction.upper_bound,
@@ -838,6 +857,7 @@ class ImatIterModels(ImatIterBase):
                 )
             for rxn in active_reverse_reactions:
                 reaction = updated_model.reactions.get_by_id(rxn)
+                assert isinstance(reaction, cobra.Reaction)
                 reaction.bounds = model_creation._active_bounds(
                     reaction.lower_bound,
                     reaction.upper_bound,

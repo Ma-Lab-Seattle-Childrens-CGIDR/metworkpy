@@ -65,7 +65,7 @@ def closeness_centrality_subset(
     r"""Compute closeness centrality for nodes, considering only paths
     to a subset of other nodes.
 
-    Subset closeness centrality, based on closeness centrality [1]__, of a
+    Subset closeness centrality, based on closeness centrality [1]_, of a
     node `u` is the reciprocal of the avergage shortest path distance
     to `u` over all `n-1` reachable nodes which are in `targets`
 
@@ -84,7 +84,7 @@ def closeness_centrality_subset(
     Wasserman and Faust propose an improved formula for graphs with
     more than one connected component. The result is "a ratio of the
     fraction of actors in the group who are reachable, to the average
-    distance" from the reachable actors [2]__. You might think this
+    distance" from the reachable actors [2]_. You might think this
     scale factor is inverted but it is not. As is, nodes from small
     components receive a smaller closeness value. Letting `N` denote
     the number of nodes in the graph,
@@ -207,12 +207,12 @@ def betweenness_centrality_subset(
 
        c_B(v) =\sum_{s,t \in T} \frac{\sigma(s, t|v)}{\sigma(s, t)}
 
-    where $T$ is the set of targets,
-    $\sigma(s, t)$ is the number of shortest $(s, t)$-paths,
-    and $\sigma(s, t|v)$ is the number of those paths
-    passing through some  node $v$ other than $s, t$.
-    If $s = t$, $\sigma(s, t) = 1$,
-    and if $v \in {s, t}$, $\sigma(s, t|v) = 0$ [2]__.
+    where :math:`T` is the set of targets,
+    :math:`\sigma(s, t)` is the number of shortest :math:`(s, t)`-paths,
+    and :math:`\sigma(s, t|v)` is the number of those paths
+    passing through some  node :math:`v` other than :math:`s, t`.
+    If :math:`s = t`, :math:`\sigma(s, t) = 1`,
+    and if :math:`v \in {s, t}`, :math:`\sigma(s, t|v) = 0` [2]_.
 
     The normalization is slightly different from NetworkX,
     as it normalizes only to the possible (s,t) pairs in targets,
@@ -228,8 +228,8 @@ def betweenness_centrality_subset(
       Nodes to use as sources/targets for shortest paths in betweenness
 
     normalized : bool, optional
-      If True the betweenness values are normalized by $2/((n-1)(n-2))$
-      for graphs, and $1/((n-1)(n-2))$ for directed graphs where $n$
+      If True the betweenness values are normalized by :math:`2/((n-1)(n-2))`
+      for graphs, and :math:`1/((n-1)(n-2))` for directed graphs where :math:`n`
       is the number of nodes in targets.
 
     weight : None or string, optional (default=None)
@@ -245,7 +245,7 @@ def betweenness_centrality_subset(
 
     Notes
     -----
-    The basic algorithm is from [1]__.
+    The basic algorithm is from [1]_.
 
     For weighted graphs the edge weights must be greater than zero.
     Zero edge weights can produce an infinite number of equal length
@@ -308,11 +308,11 @@ def betweenness_centrality_bipartite_subset(
 
        c_B(v) =\sum_{s,t \in T} \frac{\sigma(s, t|v)}{\sigma(s, t)}
 
-    where $T$ is the set of targets, $\sigma(s, t)$ is the number of
-    shortest $(s, t)$-paths, and $\sigma(s, t|v)$ is the number of
-    those paths passing through some  node $v$ other than $s, t$.
-    If $s = t$, $\sigma(s, t) = 1$, and if $v \in {s, t}$,
-    $\sigma(s, t|v) = 0$ [2]__.
+    where :math:`T` is the set of targets, :math:`\sigma(s, t)` is the number of
+    shortest :math:`(s, t)`-paths, and :math:`\sigma(s, t|v)` is the number of
+    those paths passing through some  node :math:`v` other than :math:`s, t`.
+    If :math:`s = t`, :math:`\sigma(s, t) = 1`, and if :math:`v \in {s, t}`,
+    :math:`\sigma(s, t|v) = 0` [2]_.
 
     The betweenness can also be further normalized to
     the number of possible pairs of s and t.
@@ -333,8 +333,8 @@ def betweenness_centrality_bipartite_subset(
       in the node_partition
 
     normalized : bool, optional
-      If True the betweenness values are normalized by $2/((n-1)(n-2))$
-      for graphs, and $1/((n-1)(n-2))$ for directed graphs where $n$
+      If True the betweenness values are normalized by :math:`2/((n-1)(n-2))`
+      for graphs, and :math:`1/((n-1)(n-2))` for directed graphs where :math:`n`
       is the number of nodes in targets.
 
     Returns
@@ -346,7 +346,7 @@ def betweenness_centrality_bipartite_subset(
 
     Notes
     -----
-    The basic algorithm is from [1]__.
+    The basic algorithm is from [1]_.
 
     The total number of paths between source and target is counted
     differently for directed and undirected graphs. Directed paths

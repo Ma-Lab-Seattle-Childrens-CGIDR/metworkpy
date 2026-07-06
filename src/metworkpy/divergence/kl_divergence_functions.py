@@ -45,7 +45,7 @@ def kl_divergence(
     distance_metric: Union[float, str] = "euclidean",
     clip: bool = False,
 ) -> Union[float, DivergenceResult]:
-    """Calculate the Kulback-Leibler divergence between two distributions represented by samples p and q
+    r"""Calculate the Kulback-Leibler divergence between two distributions represented by samples p and q
 
     Parameters
     ----------
@@ -92,7 +92,7 @@ def kl_divergence(
         Seed for the random number generator used for adding noise
     distance_metric : Union[str, float]
         Metric to use for computing distance between points in p and q,
-        can be \"Euclidean\", \"Manhattan\", or \"Chebyshev\". Can also
+        can be "Euclidean", "Manhattan", or "Chebyshev". Can also
         be a float representing the Minkowski p-norm.
     clip : bool, default=False
         Whether or not to clip the divergence values at 0.0
@@ -121,20 +121,10 @@ def kl_divergence(
 
     References
     ----------
-    ..[1] Wang, Q.; Kulkarni, S. R.; Verdu, S. Divergence Estimation for
-          Multidimensional Densities Via K-Nearest-Neighbor Distances.
-          IEEE Trans. Inform. Theory 2009, 55 (5), 2392–2405.
-          https://doi.org/10.1109/TIT.2009.2016060.
-
-    See Also
-    --------
-
-    1. Q. Wang, S. R. Kulkarni and S. Verdu, \"Divergence Estimation for Multidimensional Densities Via
-    k-Nearest-Neighbor Distances\" in IEEE Transactions on Information Theory, vol. 55, no. 5, pp. 2392-2405,
-    May 2009, doi: 10.1109/TIT.2009.2016060.
-
-         Method for estimating the mutual information between samples from two continuous distributions based
-         on nearest-neighbor distances.
+    .. [1] Wang, Q.; Kulkarni, S. R.; Verdu, S. Divergence Estimation for
+       Multidimensional Densities Via K-Nearest-Neighbor Distances.
+       IEEE Trans. Inform. Theory 2009, 55 (5), 2392–2405.
+       https://doi.org/10.1109/TIT.2009.2016060.
     """
     return _wrap_divergence_functions(
         p=p,
@@ -389,7 +379,7 @@ def _kl_cont_adaptive(
 
     This method uses a constant radius around each point in p to
     calculate density based on the number of points in p and q which
-    lie within the ball of radius $\epsilon(i)$ centered at
+    lie within the ball of radius :math:`\epsilon(i)` centered at
     each point i in p. The constant radius for each point in p
     is determined by the maximum distance to its nearest neighbor
     in either p or q. This radius will then be multiplied by `epsilon_mult`.
@@ -398,10 +388,10 @@ def _kl_cont_adaptive(
 
     References
     ----------
-    ..[1] Wang, Q.; Kulkarni, S. R.; Verdu, S. Divergence Estimation for
-          Multidimensional Densities Via K-Nearest-Neighbor Distances.
-          IEEE Trans. Inform. Theory 2009, 55 (5), 2392–2405.
-          https://doi.org/10.1109/TIT.2009.2016060.
+    .. [1] Wang, Q.; Kulkarni, S. R.; Verdu, S. Divergence Estimation for
+       Multidimensional Densities Via K-Nearest-Neighbor Distances.
+       IEEE Trans. Inform. Theory 2009, 55 (5), 2392–2405.
+       https://doi.org/10.1109/TIT.2009.2016060.
     """
     # Construct the KDTrees for finding neighbors, and neighbor distances
     p_tree = KDTree(p)

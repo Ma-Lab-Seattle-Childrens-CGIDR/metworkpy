@@ -167,8 +167,8 @@ def find_representative_nodes(
         A dictionary with the representative nodes as the keys,
         and a set of the nodes they represent as the values
 
-    Note
-    ----
+    Notes
+    -----
     The sets of nodes in the returned dictionary will include the representative node
     """
     representative_nodes: dict[HCT, set[HCT]] = defaultdict(set)
