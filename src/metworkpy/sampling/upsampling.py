@@ -10,9 +10,8 @@ from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
 
-# Define some types for the sample arrays/returns
-Array2D = np.ndarray[tuple[int, int], np.dtype[Union[np.float32, np.float64]]]
-Array1D = np.ndarray[tuple[int], np.dtype[Union[np.float32, np.float64]]]
+# Local
+from metworkpy.metworkpy_types import Array1D, Array2D
 
 
 def upsample(
