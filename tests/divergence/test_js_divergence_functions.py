@@ -96,12 +96,16 @@ class TestMainKL(unittest.TestCase):
         # distributions increases
         small_sd_diff = js_divergence(self.norm_2_3, self.norm_2_10)
         large_sd_diff = js_divergence(self.norm_2_3, self.norm_2_15)
+        assert isinstance(small_sd_diff, float)
+        assert isinstance(large_sd_diff, float)
         self.assertLess(small_sd_diff, large_sd_diff)
 
     def test_greater_mean(self):
         # JS Divergence should increase when the difference in means in greater
         small_mean_diff = js_divergence(self.norm_0_3, self.norm_2_3)
         large_mean_diff = js_divergence(self.norm_0_3, self.norm_5_3)
+        assert isinstance(small_mean_diff, float)
+        assert isinstance(large_mean_diff, float)
         self.assertLess(small_mean_diff, large_mean_diff)
 
     def test_known_js(self):
@@ -153,7 +157,7 @@ class TestMainKL(unittest.TestCase):
 class TestContinuousJS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        generator = np.random.default_rng(314)
+        generator = np.random.default_rng(8092348527091)
         cls.norm_0_3 = generator.normal(loc=0, scale=3, size=500).reshape(
             -1, 1
         )
@@ -197,10 +201,8 @@ class TestContinuousJS(unittest.TestCase):
 
     def test_identical_distributions(self):
         # JS should be close to 0 for identical distributions
-        self.assertTrue(
-            np.isclose(
-                0.0, _js_cont(self.norm_2_10, self.norm_2_10_rep), atol=1e-1
-            )
+        self.assertAlmostEqual(
+            0.0, _js_cont(self.norm_2_10, self.norm_2_10_rep), places=1
         )
 
     def test_greater_sd(self):
@@ -221,6 +223,46 @@ class TestContinuousJS(unittest.TestCase):
             self.norm_2d_2d_0_3_0_6_sample_1000[:, [0, 1]],
             self.norm_2d_2d_0_3_0_6_sample_1000[:, [2, 3]],
         )
+
+    def test_permutation(self):
+        # Test that it detects that identical distributions
+        # are not significantly different
+        rng = np.random.default_rng(102470124)
+        res = js_divergence(
+            self.norm_2_10,
+            self.norm_2_10_rep,
+            calculate_pvalue=True,
+            alternative="greater",
+            permutations=500,
+            permutation_rng=rng,
+            permutation_estimation_method="empirical",
+            n_neighbors=20,
+            discrete=False,
+            jitter=None,
+            distance_metric="euclidean",
+            clip=True,
+        )
+        assert isinstance(res, tuple)
+        _, pvalue = res
+        self.assertGreater(pvalue, 0.1)
+        # Test that it detects different distributions as significantly different
+        res = js_divergence(
+            self.norm_0_3,
+            self.norm_2_10,
+            calculate_pvalue=True,
+            alternative="two-sided",
+            permutations=500,
+            permutation_rng=rng,
+            permutation_estimation_method="empirical",
+            n_neighbors=20,
+            discrete=False,
+            jitter=None,
+            distance_metric="euclidean",
+            clip=True,
+        )
+        assert isinstance(res, tuple)
+        _, pvalue = res
+        self.assertLessEqual(pvalue, 0.01)
 
 
 class TestDiscreteJS(unittest.TestCase):

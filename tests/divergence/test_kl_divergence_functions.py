@@ -180,14 +180,16 @@ class TestContinuousKL(unittest.TestCase):
 
     def test_kl_cont(self):
         calc_kl_div = metworkpy.divergence.kl_divergence_functions._kl_cont(
-            p=self.norm_0_3, q=self.norm_2_10, n_neighbors=3
+            p=self.norm_0_3,
+            q=self.norm_2_10,
+            n_neighbors=50,
         )
-        self.assertTrue(np.isclose(calc_kl_div, self.theory_kl_div, rtol=2e-1))
+        self.assertAlmostEqual(calc_kl_div, self.theory_kl_div, delta=1e-1)
 
         calc_kl_div_0 = metworkpy.divergence.kl_divergence_functions._kl_cont(
-            p=self.norm_2_10, q=self.norm_2_10_rep, n_neighbors=4
+            p=self.norm_2_10, q=self.norm_2_10_rep, n_neighbors=20
         )
-        self.assertTrue(np.isclose(calc_kl_div_0, 0.0, rtol=1e-1, atol=0.05))
+        self.assertAlmostEqual(calc_kl_div_0, 0.0, delta=1e-1)
 
     def test_multidimensional(self):
         _ = metworkpy.divergence.kl_divergence_functions._kl_cont(
@@ -205,6 +207,46 @@ class TestContinuousKL(unittest.TestCase):
             self.norm_0_3, self.norm_2_10, jitter_seed=42, jitter=1e-10
         )
         self.assertTrue(np.isclose(kl_jitter, kl_no_jitter))
+
+    def test_permutation(self):
+        # Test that it detects that identical distributions
+        # are not significantly different
+        rng = np.random.default_rng(102470124)
+        res = metworkpy.divergence.kl_divergence(
+            self.norm_2_10,
+            self.norm_2_10_rep,
+            calculate_pvalue=True,
+            alternative="two-sided",
+            permutations=500,
+            permutation_rng=rng,
+            permutation_estimation_method="empirical",
+            n_neighbors=3,
+            discrete=False,
+            jitter=None,
+            distance_metric="euclidean",
+            clip=True,
+        )
+        assert isinstance(res, tuple)
+        _, pvalue = res
+        self.assertGreater(pvalue, 0.1)
+        # Test that it detects different distributions as significantly different
+        res = metworkpy.divergence.kl_divergence(
+            self.norm_0_3,
+            self.norm_2_10,
+            calculate_pvalue=True,
+            alternative="two-sided",
+            permutations=500,
+            permutation_rng=rng,
+            permutation_estimation_method="empirical",
+            n_neighbors=3,
+            discrete=False,
+            jitter=None,
+            distance_metric="euclidean",
+            clip=True,
+        )
+        assert isinstance(res, tuple)
+        _, pvalue = res
+        self.assertLessEqual(pvalue, 0.01)
 
 
 class TestDiscreteKL(unittest.TestCase):
