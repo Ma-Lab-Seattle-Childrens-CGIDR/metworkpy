@@ -24,7 +24,7 @@ def setup(cls):
         index_col=0,
         header=None,
     ).squeeze("columns")
-    cls.epsilon = 1
+    cls.epsilon = 1.0
     cls.threshold = 1e-2
 
 
@@ -40,6 +40,10 @@ class TestAddSingleConstraints(unittest.TestCase):
         setup(cls)
 
     def test_imat_neg_weight(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.rxn_weights, pd.Series)
         test_model = self.model.copy()
         imat_functions._imat_neg_weight_(
             model=test_model, rxn="r_C_H", threshold=self.threshold
@@ -80,6 +84,10 @@ class TestAddSingleConstraints(unittest.TestCase):
         # https://docs.sympy.org/latest/modules/solvers/inequalities.html
 
     def test_imat_pos_weight(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.rxn_weights, pd.Series)
         test_model = self.model.copy()
         imat_functions._imat_pos_weight_(
             model=test_model, rxn="r_C_H", epsilon=self.epsilon
@@ -127,6 +135,10 @@ class TestAddImatConstraints(unittest.TestCase):
         setup(cls)
 
     def test_add_imat_constraints_inplace(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.rxn_weights, pd.Series)
         test_model = self.model.copy()
         copy_model = self.model.copy()
         imat_functions.add_imat_constraints_(
@@ -153,6 +165,10 @@ class TestAddImatConstraints(unittest.TestCase):
         self.assertTrue(model_eq(test_model, copy_model))
 
     def test_add_imat_constraints_not_inplace(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.rxn_weights, pd.Series)
         test_model = self.model.copy()
         copy_model = test_model.copy()
         updated_model = imat_functions.add_imat_constraints(
@@ -191,6 +207,10 @@ class TestAddImatObjective(unittest.TestCase):
         setup(cls)
 
     def test_add_objective_inplace(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.rxn_weights, pd.Series)
         test_model = self.model.copy()
         # add imat constraints
         imat_functions.add_imat_constraints_(
@@ -217,6 +237,10 @@ class TestAddImatObjective(unittest.TestCase):
         # TODO: Check that the objective is actually correct
 
     def test_add_objective_not_inplace(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.rxn_weights, pd.Series)
         test_model = self.model.copy()
         # add imat constraints
         imat_functions.add_imat_constraints_(
@@ -259,6 +283,9 @@ class TestImat(unittest.TestCase):
         setup(cls)
 
     def imat_helper(self, test_model):
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.rxn_weights, pd.Series)
         copy_model = test_model.copy()
         # Perform iMAT
         imat_res = imat_functions.imat(
@@ -294,6 +321,7 @@ class TestImat(unittest.TestCase):
         importlib.util.find_spec("cplex") is None, "cplex is not installed"
     )
     def test_imat_cplex(self):
+        assert self.model is not None
         test_model = self.model.copy()
         test_model.solver = "cplex"
         self.imat_helper(test_model)
@@ -303,6 +331,7 @@ class TestImat(unittest.TestCase):
         "gurobipy is not installed",
     )
     def test_imat_gurobi(self):
+        assert self.model is not None
         test_model = self.model.copy()
         test_model.solver = "gurobi"
         self.imat_helper(test_model)
@@ -311,6 +340,7 @@ class TestImat(unittest.TestCase):
         importlib.util.find_spec("swiglpk") is None, "glpk is not installed"
     )
     def test_imat_glpk(self):
+        assert self.model is not None
         test_model = self.model.copy()
         test_model.solver = "glpk"
         self.imat_helper(test_model)
@@ -328,6 +358,10 @@ class TestImatExtensionFunctions(unittest.TestCase):
         setup(cls)
 
     def test_compute_imat_objective(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.rxn_weights, pd.Series)
         test_model = self.model.copy()
         # Solve imat problem
         imat_sol = imat_functions.imat(

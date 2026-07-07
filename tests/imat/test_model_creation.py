@@ -36,7 +36,7 @@ def setup(cls):
         index_col=0,
         header=None,
     ).squeeze("columns")
-    cls.epsilon = 1
+    cls.epsilon = 1.0
     cls.threshold = 1e-2
     cls.objective_tolerance = 5e-2
 
@@ -54,6 +54,10 @@ class TestModelCreation(unittest.TestCase):
         setup(cls)
 
     def test_imat_model(self):
+        assert self.model is not None
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
         test_model = self.model.copy()
         imat_sol = metworkpy.imat.imat(
             model=test_model,
@@ -123,12 +127,17 @@ class TestModelCreation(unittest.TestCase):
             epsilon=self.epsilon,
             threshold=self.threshold,
         )
+        assert self.objective_tolerance is not None
         self.assertTrue(
             np.abs(imat_objective - imat_sol.objective_value)
             < self.objective_tolerance * imat_sol.objective_value
         )
 
     def test_simple_bounds_model(self):
+        assert self.model is not None
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
         test_model = self.model.copy()
         updated_model = simple_bounds_model(
             test_model, self.rxn_weights, self.epsilon, self.threshold
@@ -182,6 +191,10 @@ class TestModelCreation(unittest.TestCase):
         _ = updated_model.optimize()
 
     def test_subset_model(self):
+        assert self.model is not None
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
         test_model = self.model.copy()
         updated_model = subset_model(
             test_model, self.rxn_weights, self.epsilon, self.threshold
@@ -235,6 +248,10 @@ class TestModelCreation(unittest.TestCase):
         _ = updated_model.optimize()
 
     def test_fva_model(self):
+        assert self.model is not None
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
         test_model = self.model.copy()
         updated_model = fva_model(
             test_model,
@@ -292,6 +309,10 @@ class TestModelCreation(unittest.TestCase):
         _ = updated_model.optimize()
 
     def test_milp_model(self):
+        assert self.model is not None
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
         test_model = self.model.copy()
         updated_model = milp_model(
             test_model, self.rxn_weights, self.epsilon, self.threshold

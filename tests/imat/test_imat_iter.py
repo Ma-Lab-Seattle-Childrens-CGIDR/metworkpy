@@ -62,6 +62,12 @@ class TestImatIterBinaryVariables(unittest.TestCase):
 
     def test_iteration(self):
         # Mainly a catch-fire test, just ensure iteration is actually occurring
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         counter = 0
         test_iter = imat_iter.ImatIterBinaryVariables(
             model=self.model.copy(),
@@ -77,6 +83,12 @@ class TestImatIterBinaryVariables(unittest.TestCase):
         self.assertGreater(counter, 5)
 
     def test_max_iter(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         counter = 0
         test_iter = imat_iter.ImatIterBinaryVariables(
             model=self.model.copy(),
@@ -93,6 +105,12 @@ class TestImatIterBinaryVariables(unittest.TestCase):
 
     def test_different_solutions(self):
         # Test that the solutions returned are different
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         test_iter = imat_iter.ImatIterBinaryVariables(
             model=self.model.copy(),
             rxn_weights=self.rxn_weights,
@@ -126,6 +144,12 @@ class TestImatIterBinaryVariables(unittest.TestCase):
 
     def test_near_optimality(self):
         # Test that the solutions returned are different
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         test_iter = imat_iter.ImatIterBinaryVariables(
             model=self.model.copy(),
             rxn_weights=self.rxn_weights,
@@ -163,6 +187,12 @@ class TestImatIterReactionActivity(unittest.TestCase):
 
     def test_iteration(self):
         # Mainly a catch-fire test, just ensure iteration is actually occurring
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         counter = 0
         test_iter = imat_iter.ImatIterReactionActivities(
             model=self.model.copy(),
@@ -178,6 +208,12 @@ class TestImatIterReactionActivity(unittest.TestCase):
         self.assertGreater(counter, 5)
 
     def test_near_optimality(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         counter = 0
         test_iter = imat_iter.ImatIterReactionActivities(
             model=self.model.copy(),
@@ -238,6 +274,12 @@ class TestImatIterModels(unittest.TestCase):
 
     def test_iteration(self):
         # Mainly a catch-fire test, just ensure iteration is actually occurring
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         counter = 0
         test_iter = imat_iter.ImatIterModels(
             model=self.model.copy(),
@@ -255,6 +297,12 @@ class TestImatIterModels(unittest.TestCase):
 
     def test_different_method(self):
         # Mainly a catch-fire test, just ensure iteration is actually occurring
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         counter = 0
         test_iter = imat_iter.ImatIterModels(
             model=self.model.copy(),
@@ -272,6 +320,12 @@ class TestImatIterModels(unittest.TestCase):
 
     def test_model_changing(self):
         # Check that the returned models are actually different than the initial model
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         counter = 0
         test_iter = imat_iter.ImatIterModels(
             model=self.model.copy(),
@@ -307,6 +361,12 @@ class TestImatIterMain(unittest.TestCase):
         setup(cls)
 
     def test_model_dispatch(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         counter = 0
         test_iter = imat_iter.ImatIterModels(
             model=self.model.copy(),
@@ -324,6 +384,12 @@ class TestImatIterMain(unittest.TestCase):
         self.assertGreater(counter, 5)
 
     def test_binary_variable_dispatch(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         counter = 0
         test_iter = imat_iter.ImatIterBinaryVariables(
             model=self.model.copy(),
@@ -346,6 +412,12 @@ class TestImatIterMain(unittest.TestCase):
         self.assertGreater(counter, 5)
 
     def test_reaction_activity_dispatch(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         counter = 0
         test_iter = imat_iter.ImatIterReactionActivities(
             model=self.model.copy(),
@@ -380,6 +452,12 @@ class TestImatIterSampling(unittest.TestCase):
         setup(cls)
 
     def test_imat_sampling(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
         sample_res = imat_iter.imat_iter_flux_sample(
             model=self.model,
             rxn_weights=self.rxn_weights,
