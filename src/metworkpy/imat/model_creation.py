@@ -17,14 +17,9 @@ from metworkpy.imat.imat_functions import (
     add_imat_objective_,
 )
 from metworkpy.utils import _arguments
+from metworkpy.metworkpy_defaults import IMAT_DEFAULTS
 
 # define defaults for the iMAT functions
-DEFAULTS = {
-    "epsilon": 1.0,
-    "objective_tolerance": 5e-2,
-    "threshold": 1e-1,
-    "tolerance": 1e-7,
-}
 
 
 # region: Main Model Creation Function
@@ -33,9 +28,9 @@ def generate_model(
     rxn_weights: Union[pd.Series, dict],
     imat_solution: Optional[cobra.Solution] = None,
     method: str = "imat_restrictions",
-    epsilon: float = DEFAULTS["epsilon"],
-    threshold: float = DEFAULTS["threshold"],
-    objective_tolerance: float = DEFAULTS["objective_tolerance"],
+    epsilon: float = IMAT_DEFAULTS.epsilon,
+    threshold: float = IMAT_DEFAULTS.threshold,
+    objective_tolerance: float = IMAT_DEFAULTS.objective_tolerance,
     **kwargs,
 ):
     """Generate a context specific model using iMAT.
@@ -305,16 +300,20 @@ def subset_model(
         imat_solution = imat(model, rxn_weights, epsilon, threshold)
     if imat_solution.status != "optimal":
         raise ValueError("No optimal solution found for IMAT problem")
+    if not isinstance(rxn_weights, pd.Series):
+        rxn_weights = pd.Series(rxn_weights)
     fluxes = imat_solution.fluxes
-    rl = rxn_weights[rxn_weights < 0].index.tolist()
+    rl = rxn_weights[rxn_weights < 0.0].index.tolist()  # type: ignore
     inactive_reactions = fluxes[
         (fluxes.abs() <= threshold) & (fluxes.index.isin(rl))
     ]
     for rxn in inactive_reactions.index:
         reaction = updated_model.reactions.get_by_id(rxn)
+        assert isinstance(reaction, cobra.Reaction)
         # Force reaction to be below threshold
         reaction.bounds = _inactive_bounds(
-            *reaction.bounds, threshold=threshold
+            *reaction.bounds,
+            threshold=threshold,  # type: ignore
         )
     return updated_model
 
@@ -453,6 +452,7 @@ def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
     for rxn in reactions:
         with imat_model as ko_model:  # Knock out the reaction
             reaction = ko_model.reactions.get_by_id(rxn)
+            assert isinstance(reaction, cobra.Reaction)
             if (
                 reaction.lower_bound > threshold
                 or reaction.upper_bound < -threshold
@@ -466,6 +466,7 @@ def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
                 ko_solution = ko_model.slim_optimize(error_value=-1.0)
         with imat_model as forward_model:
             reaction = forward_model.reactions.get_by_id(rxn)
+            assert isinstance(reaction, cobra.Reaction)
             if reaction.upper_bound < epsilon:
                 # Reaction can't be forced forward, so skip
                 forward_solution = -1
@@ -481,6 +482,7 @@ def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
                 )
         with imat_model as reverse_model:
             reaction = reverse_model.reactions.get_by_id(rxn)
+            assert isinstance(reaction, cobra.Reaction)
             if reaction.lower_bound > -epsilon:
                 # Reaction can't be forced reverse, so skip
                 reverse_solution = -1
@@ -663,7 +665,10 @@ def _milp_eval(milp_res: pd.Series) -> float:
             res = -1  # reverse is the max
         else:
             res = max_ind  # Index corresponds to which is max
-        return res
+        assert isinstance(res, (np.number, int, float)), (
+            f"Result is {type(res)}, expected a number"
+        )
+        return res  # type: ignore
     elif (milp_res["forward"] == milp_res["reverse"]) and (
         milp_res["inactive"] > milp_res["forward"]
     ):

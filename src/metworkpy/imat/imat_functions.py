@@ -13,24 +13,17 @@ import cobra
 import numpy as np
 import pandas as pd
 import sympy as sym
-from cobra.core.configuration import Configuration
 
 # Local Imports
-
-# define defaults for the iMAT functions
-DEFAULTS = {
-    "epsilon": 1,
-    "threshold": 1e-2,
-    "tolerance": Configuration().tolerance,
-}
+from metworkpy.metworkpy_defaults import IMAT_DEFAULTS
 
 
 # region: Main iMat Function
 def imat(
     model: cobra.Model,
     rxn_weights: Union[pd.Series, dict],
-    epsilon: float = DEFAULTS["epsilon"],
-    threshold: float = DEFAULTS["threshold"],
+    epsilon: float = IMAT_DEFAULTS.epsilon,
+    threshold: float = IMAT_DEFAULTS.threshold,
 ) -> cobra.Solution:
     """Function for performing iMAT analysis. Returns a cobra Solution object,
     with objective value and fluxes.
@@ -70,9 +63,9 @@ def imat(
 def flux_to_binary(
     fluxes: pd.Series,
     which_reactions: str = "active",
-    epsilon: float = DEFAULTS["epsilon"],
-    threshold: float = DEFAULTS["threshold"],
-    tolerance=DEFAULTS["tolerance"],
+    epsilon: float = IMAT_DEFAULTS.epsilon,
+    threshold: float = IMAT_DEFAULTS.threshold,
+    tolerance=IMAT_DEFAULTS.solver_tolerance,
 ) -> pd.Series:
     """Convert a pandas series of fluxes to a pandas series of binary values.
 
@@ -140,8 +133,8 @@ def flux_to_binary(
 def compute_imat_objective(
     fluxes: pd.Series,
     rxn_weights,
-    epsilon: float = DEFAULTS["epsilon"],
-    threshold: float = DEFAULTS["threshold"],
+    epsilon: float = IMAT_DEFAULTS.epsilon,
+    threshold: float = IMAT_DEFAULTS.threshold,
 ):
     """Compute the iMAT objective value for a given set of fluxes.
 
@@ -189,8 +182,8 @@ def compute_imat_objective(
 def add_imat_constraints_(
     model: cobra.Model,
     rxn_weights: Union[pd.Series, dict],
-    epsilon: float = DEFAULTS["epsilon"],
-    threshold: float = DEFAULTS["threshold"],
+    epsilon: float = IMAT_DEFAULTS.epsilon,
+    threshold: float = IMAT_DEFAULTS.threshold,
 ) -> cobra.Model:
     """Add the IMAT constraints to the model (updates the model in place).
 

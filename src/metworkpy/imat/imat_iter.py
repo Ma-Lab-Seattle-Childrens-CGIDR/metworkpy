@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from enum import Enum
 from typing import NamedTuple, Union, Literal, Optional, Any
 
@@ -13,7 +12,6 @@ import cobra
 import numpy as np
 import optlang
 import pandas as pd
-from cobra import Configuration
 
 from metworkpy.imat import model_creation
 
@@ -23,28 +21,10 @@ from metworkpy.imat.imat_functions import (
     add_imat_constraints_,
     _get_rxn_imat_binary_variable_name,
 )
+from metworkpy.metworkpy_defaults import IMAT_DEFAULTS
 
 # Make sure optlang has Variable
 assert "Variable" in optlang.__dir__()
-
-
-# define defaults for the iMAT functions
-@dataclass
-class DefaultValues:
-    epsilon: float
-    threshold: float
-    tolerance: float
-    objective_tolerance: float
-    max_iter: int
-
-
-DEFAULTS = DefaultValues(
-    epsilon=1,
-    threshold=1e-2,
-    tolerance=Configuration().tolerance,
-    objective_tolerance=5e-2,
-    max_iter=20,
-)
 
 
 # region Reaction Activity Enum
@@ -100,10 +80,10 @@ class ImatIter:
         output: Literal[
             "model", "binary-variables", "reaction-activity"
         ] = "model",
-        max_iter: int = DEFAULTS.max_iter,
-        epsilon: float = DEFAULTS.epsilon,
-        threshold: float = DEFAULTS.threshold,
-        objective_tolerance: float = DEFAULTS.objective_tolerance,
+        max_iter: int = IMAT_DEFAULTS.max_iter,
+        epsilon: float = IMAT_DEFAULTS.epsilon,
+        threshold: float = IMAT_DEFAULTS.threshold,
+        objective_tolerance: float = IMAT_DEFAULTS.objective_tolerance,
         **kwargs,
     ):
         # Save all provided parameter to pass to specific iterator
@@ -154,10 +134,10 @@ def imat_iter_flux_sample(
     model: cobra.Model,
     rxn_weights: pd.Series[float],
     model_generation_method: Literal["simple", "subset"] = "simple",
-    max_iter: int = DEFAULTS.max_iter,
-    epsilon: float = DEFAULTS.epsilon,
-    threshold: float = DEFAULTS.threshold,
-    objective_tolerance: float = DEFAULTS.objective_tolerance,
+    max_iter: int = IMAT_DEFAULTS.max_iter,
+    epsilon: float = IMAT_DEFAULTS.epsilon,
+    threshold: float = IMAT_DEFAULTS.threshold,
+    objective_tolerance: float = IMAT_DEFAULTS.objective_tolerance,
     sampler: Optional[type[cobra.sampling.HRSampler]] = None,
     thinning: int = 100,
     num_samples: int = 1_000,
@@ -300,10 +280,10 @@ class ImatIterBase(ABC):
         self,
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
-        max_iter: int = DEFAULTS.max_iter,
-        epsilon: float = DEFAULTS.epsilon,
-        threshold: float = DEFAULTS.threshold,
-        objective_tolerance: float = DEFAULTS.objective_tolerance,
+        max_iter: int = IMAT_DEFAULTS.max_iter,
+        epsilon: float = IMAT_DEFAULTS.epsilon,
+        threshold: float = IMAT_DEFAULTS.threshold,
+        objective_tolerance: float = IMAT_DEFAULTS.objective_tolerance,
     ):
         self.in_model = model
         self._imat_model = (
@@ -623,10 +603,10 @@ class ImatIterBinaryVariables(ImatIterBase):
         self,
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
-        max_iter: int = DEFAULTS.max_iter,
-        epsilon: float = DEFAULTS.epsilon,
-        threshold: float = DEFAULTS.threshold,
-        objective_tolerance: float = DEFAULTS.objective_tolerance,
+        max_iter: int = IMAT_DEFAULTS.max_iter,
+        epsilon: float = IMAT_DEFAULTS.epsilon,
+        threshold: float = IMAT_DEFAULTS.threshold,
+        objective_tolerance: float = IMAT_DEFAULTS.objective_tolerance,
     ):
         super().__init__(
             model=model,
@@ -714,10 +694,10 @@ class ImatIterReactionActivities(ImatIterBase):
         self,
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
-        max_iter: int = DEFAULTS.max_iter,
-        epsilon: float = DEFAULTS.epsilon,
-        threshold: float = DEFAULTS.threshold,
-        objective_tolerance: float = DEFAULTS.objective_tolerance,
+        max_iter: int = IMAT_DEFAULTS.max_iter,
+        epsilon: float = IMAT_DEFAULTS.epsilon,
+        threshold: float = IMAT_DEFAULTS.threshold,
+        objective_tolerance: float = IMAT_DEFAULTS.objective_tolerance,
     ):
         super().__init__(
             model=model,
@@ -804,10 +784,10 @@ class ImatIterModels(ImatIterBase):
         model: cobra.Model,
         rxn_weights: Union[pd.Series, dict],
         method: Literal["simple", "subset"] = "simple",
-        max_iter: int = DEFAULTS.max_iter,
-        epsilon: float = DEFAULTS.epsilon,
-        threshold: float = DEFAULTS.threshold,
-        objective_tolerance: float = DEFAULTS.objective_tolerance,
+        max_iter: int = IMAT_DEFAULTS.max_iter,
+        epsilon: float = IMAT_DEFAULTS.epsilon,
+        threshold: float = IMAT_DEFAULTS.threshold,
+        objective_tolerance: float = IMAT_DEFAULTS.objective_tolerance,
     ):
         super().__init__(
             model=model,
