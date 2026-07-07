@@ -20,6 +20,8 @@
 
 ## Version DEV
 
+- Added helper method for performing iMAT sampling using the corner-sampling
+  approach
 - Added adaptive-k method for calculating Kullback-Leibler divergence, based on
   equation (25) in Wang, Kulkarni 2009. This method can be used by passing
   `n_neighbors=None` to the kl_divergence function. Additionally, the

@@ -1,4 +1,5 @@
 # Standard Library Imports
+from metworkpy.imat.imat_functions import imat_sampling
 import copy
 import importlib.util
 import pathlib
@@ -380,6 +381,34 @@ class TestImatExtensionFunctions(unittest.TestCase):
         )
         # Check that the objectives are equal
         self.assertEqual(imat_objective, computed_objective)
+
+
+class TestImatSampling(unittest.TestCase):
+    model = None
+    data_path = None
+    rxn_weights = None
+    epsilon = None
+    threshold = None
+
+    @classmethod
+    def setUpClass(cls):
+        setup(cls)
+
+    def test_imat_sampling(self):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        NUM_SAMPLES = 25
+        imat_samples = imat_sampling(
+            model=self.model,
+            rxn_weights=self.rxn_weights,
+            epsilon=self.epsilon,
+            threshold=self.threshold,
+            n_samples=NUM_SAMPLES,
+        )
+        self.assertIsInstance(imat_samples, pd.DataFrame)
+        self.assertEqual(imat_samples.shape[0], NUM_SAMPLES)
 
 
 if __name__ == "__main__":

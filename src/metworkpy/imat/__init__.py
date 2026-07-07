@@ -1,5 +1,6 @@
 from .imat_functions import (
     imat,
+    imat_sampling,
     flux_to_binary,
     compute_imat_objective,
     add_imat_objective,
@@ -27,6 +28,7 @@ from .imat_iter import (
 
 __all__ = [
     "imat",
+    "imat_sampling",
     "flux_to_binary",
     "compute_imat_objective",
     "add_imat_objective",

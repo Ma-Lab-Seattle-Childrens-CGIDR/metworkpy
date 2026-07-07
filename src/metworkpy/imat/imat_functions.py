@@ -1,5 +1,5 @@
 """Submodule with functions for adding iMAT constraints and objectives to a cobra
-model, and running iMAT
+model, and running iMAT, as well as sampling from an iMAT model using corner-sampling
 """
 
 # Standard Library Imports
@@ -15,6 +15,7 @@ import pandas as pd
 import sympy as sym
 
 # Local Imports
+from metworkpy.sampling import corner_sampling
 from metworkpy.metworkpy_defaults import IMAT_DEFAULTS
 
 
@@ -57,6 +58,59 @@ def imat(
 
 
 # endregion: Main iMat Function
+
+
+# region: Main iMAT Sampling function
+def imat_sampling(
+    model: cobra.Model,
+    rxn_weights: Union[pd.Series, dict],
+    epsilon: float = IMAT_DEFAULTS.epsilon,
+    threshold: float = IMAT_DEFAULTS.threshold,
+    **kwargs,
+):
+    """Function for sampling from an iMAT model. Returns a cobra Solution object,
+    with objective value and fluxes.
+
+    Parameters
+    ----------
+    model : cobra.Model
+        A cobra.Model object to use for iMAT
+    rxn_weights : dict | pandas.Series
+        A dictionary or pandas series of reaction weights.
+    epsilon : float
+        The epsilon value to use for iMAT (default: 1). Represents the
+        minimum flux for a reaction to be considered on.
+    threshold : float
+        The threshold value to use for iMAT (default: 1e-2). Represents
+        the maximum flux for a reaction to be considered off.
+    kwargs
+        Keyword arguments are passed to the `metworkpy.sampling.corner_sampling`
+        method
+
+    Returns
+    -------
+    samples : pd.DataFrame
+        A DataFrame of the generated samples, with shape (n_samples, n_reactions),
+        and with columns named after the reaction ids in the model, and
+        each row representing a random sample.
+
+    See Also
+    --------
+    metworkpy.sampling.corner_sampling : Sampling method used
+    """
+    assert epsilon > 0.0, f"Epsilon must be positive, but was {epsilon}"
+    assert threshold >= 0.0, f"Threshold must be positive, but was {threshold}"
+    assert epsilon > threshold, (
+        f"Epsilon must be greater than threshold, but epsilon: {epsilon} < threshold: {threshold}"
+    )
+    # Create the iMAT model to sample from
+    imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
+    add_imat_objective_(imat_model, rxn_weights)
+    # Sample from the iMAT model
+    return corner_sampling(model=imat_model, **kwargs)
+
+
+# endregion: Main iMAT Sampling function
 
 
 # region: iMAT extension functions
