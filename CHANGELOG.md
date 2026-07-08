@@ -48,6 +48,13 @@
   Additionally, significant refactor reducing code duplication between the
   different iterators.
 
+- Added imat_iter_essentiality and consensus_essentiality functions to the
+  imat_iter submodule. These both use iterating through multiple iMAT models in
+  order to determine gene essentiality. The first provides a dataframe of the
+  essentiality of genes in each of the iMAT models, the second aggregates this
+  to identify which genes are considered essential by a consensus of the iMAT
+  models.
+
 - Removed fastparquet optional dependency. Previously used for its append, not
   pyarrow is always used for writing parquet files (since it is required for
   pandas 3.0 anyway)

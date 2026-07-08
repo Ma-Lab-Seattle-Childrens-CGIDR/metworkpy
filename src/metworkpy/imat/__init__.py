@@ -24,6 +24,8 @@ from .imat_iter import (
     ImatIterBinaryVariables,
     ImatIterModels,
     imat_iter_flux_sample,
+    imat_iter_essential,
+    consensus_essentiality,
 )
 
 __all__ = [
@@ -46,4 +48,6 @@ __all__ = [
     "ImatIterBinaryVariables",
     "ImatIterModels",
     "imat_iter_flux_sample",
+    "imat_iter_essential",
+    "consensus_essentiality",
 ]

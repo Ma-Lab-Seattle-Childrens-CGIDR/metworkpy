@@ -2,6 +2,7 @@
 
 # Standard Library Imports
 from __future__ import annotations
+import warnings
 
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -9,10 +10,12 @@ from typing import NamedTuple, Union, Literal, Optional, Any
 
 # External Imports
 import cobra
+from cobra.exceptions import OptimizationError
 from docrep import DocstringProcessor
 import numpy as np
 import optlang
 import pandas as pd
+import tqdm
 
 from metworkpy.imat import model_creation
 
@@ -206,7 +209,9 @@ class ImatIterBase(ABC):
 
     @abstractmethod
     def __next__(self):
-        pass
+        raise NotImplementedError(
+            "Not implemented in the ImatIterBase class, try ImatIterBinaryVariables, ImatIterReactionActivities, or ImatIterModels instead"
+        )
 
     # Some Helper methods available for all subclasses
     def _get_high_expr_rxns(self) -> list[str]:
@@ -602,7 +607,7 @@ class ImatIterModels(ImatIterBase):
     %(ImatIterBase.parameters)s
     model_method : {"simple", "subset"}
         Which method to use to create the returned iMAT model, can be
-        either 'simple', or 'subset', see notes for details.
+        either 'simple', or 'subset', see notes for details. *KEYWORD ONLY*
 
     Yields
     ------
@@ -710,7 +715,7 @@ class ImatIter:
     %(ImatIterBase.parameters)s
     output : {'model', 'binary-variables', 'reaction-activity'}
         The output desired for each iteration, see the
-        iterators in the `See Also` section for more details
+        iterators in the `See Also` section for more details. *KEYWORD ONLY*
 
     See Also
     --------
@@ -772,15 +777,16 @@ def imat_iter_flux_sample(
 
     Parameters
     ----------
+    %(ImatIterBase.parameters)s
     n_samples : int, default=1000
         Number of samples to generate from *each* iMAT model, (so the total
-        number of samples will depend on how many iMAT models are generated)
+        number of samples will depend on how many iMAT models are generated).
+        *KEYWORD ONLY*
     sampler : cobra.sampling.HRSampler class, default=cobra.sampling.OptGPSampler
         The sampling class to use for generating flux samples from
-        each iMAT model, defaults to OptGPSampler
+        each iMAT model, defaults to OptGPSampler. *KEYWORD ONLY*
     sampler_kwargs : dict of str to Any, optional
-        Keyword arguments to pass to the sampler's __init__ method
-    %(ImatIterBase.parameters)s
+        Keyword arguments to pass to the sampler's __init__ method. *KEYWORD ONLY*
     kwargs
         Keyword arguments are passed to the `ImatIterModels`
         iterator class
@@ -828,3 +834,155 @@ def imat_iter_flux_sample(
 
 
 # endregion Iterative Sampling
+
+
+# region Consensus Essentiality
+@docs.dedent
+def imat_iter_essential(
+    *args,
+    essential_proportion: float = 0.1,
+    processes: Optional[int] = None,
+    progress_bar: bool = False,
+    **kwargs,
+) -> pd.DataFrame:
+    """
+    Iterate through iMAT solutions to identify which genes are essential
+    for each iMAT model.
+
+    Parameters
+    ----------
+    %(ImatIterBase.parameters)s
+    essential_proportion : float, default=0.1
+        Minimal objective flux to be considered viable, in terms of
+        proportion of the pre-gene-KO maximum objective flux. That is
+        a value of 0.1 indicates that if genes whose knockout results
+        in a maximum objective flux less than 10% of the pre-knockout
+        level are considered essential. *KEYWORD ONLY*
+    processes : int, optional
+        Number of parallel processes to use for finding the essential genes. *KEYWORD ONLY*
+    progress_bar : bool, default=False
+        Whether a progress bar is desired. *KEYWORD ONLY*
+    kwargs
+        Keyword arguments are passed to `ImatIterModels`
+
+    Returns
+    -------
+    pd.DataFrame
+        Pandas dataframe with a column for each gene in the
+        model, each row representing a different iMAT model,
+        and boolean indicating if a gene was essential in
+        a given iMAT model.
+    """
+    # Extract the model from args/kwargs
+    if "model" in kwargs:
+        model = kwargs["model"]
+    else:
+        model = args[0]
+    assert isinstance(model, cobra.Model)
+    # Determine the max_iter
+    if "max_iter" in kwargs:
+        max_iter = kwargs["max_iter"]
+    elif len(args) >= 4:
+        max_iter = args[3]
+    else:
+        max_iter = IMAT_DEFAULTS.max_iter
+    # Find the genes in the model to construct the
+    # results dataframe
+    model_gene_list = model.genes.list_attr("id")
+    result_df = pd.DataFrame(index=pd.Index(model_gene_list), dtype="boolean")
+    # NOTE: Catching these may be unnecesary, not sure
+    # if the fragmented data warning occurs with writing columns instead of rows
+    # but this will definitely not be the performance bottleneck
+    with warnings.catch_warnings():
+        warnings.simplefilter(
+            action="ignore", category=pd.errors.PerformanceWarning
+        )
+        # Iterate through the iMAT models
+        for idx, imat_model in enumerate(
+            tqdm.tqdm(
+                ImatIterModels(*args, **kwargs),
+                disable=not progress_bar,
+                total=max_iter,
+            )
+        ):
+            try:
+                # Use COBRApy to find the essential genes for each Model
+                ess_genes = [
+                    g.id
+                    for g in cobra.flux_analysis.variability.find_essential_genes(
+                        imat_model,
+                        threshold=essential_proportion
+                        * imat_model.slim_optimize(),
+                        processes=processes,
+                    )
+                ]
+            except OptimizationError as e:
+                # If there is a problem with the optimization,
+                # just stop and return what we have so far
+                # (There might be issues with numerical instability
+                # given the number of integer constraints that will
+                # be added)
+                warnings.warn(
+                    f"Optimization Error occured while finding essential genes: {e}"
+                )
+                break
+            result_df[idx] = False
+            result_df.loc[ess_genes, idx] = True
+    # NOTE: We start with the transpose since writing the results
+    # as columns is more efficient
+    return result_df.T
+
+
+@docs.dedent
+def consensus_essentiality(
+    *args, consensus_method: float = 0.5, **kwargs
+) -> pd.Series:
+    """
+    Iterate through iMAT solutions to identify gene essentiality based
+    on consensus of the iMAT models
+
+    Parameters
+    ----------
+    %(ImatIterBase.parameters)s
+    consensus_method : float or str, default=0.5
+        The method for determining whether the gene is considered
+        essential. A str value of 'all' indicates that genes will only
+        be considered essential if it was essential for all the iMAT models.
+        A str value of 'any' indicates that if the gene was essential
+        in any of the iMAT models it will be considered essential.
+        Floats are treated as the proportion of iMAT models in which
+        the gene is essential for it to be considered essential by the
+        consensus method. For example a value of 0.6 indicates that for
+        a gene to be considered essential, it must have been essential in
+        at least 60% of the iMAT models. *KEYWORD ONLY*
+    kwargs
+        Keyword arguments are passed to `imat_iter_essential`
+
+    Returns
+    -------
+    pd.Series
+        A boolean series, indexed by gene id. True indicates the gene
+        is essential based on the consensus essentiality approach,
+        False indicates it is not considered essential.
+
+    Notes
+    -----
+    This is basically just a wrapper around `imat_iter_essential`
+    adding a final aggregation step after finding the essential
+    genes for each iMAT model. If a different aggregation
+    method is desired, you can use that function directly
+    and then aggregate essentiality across the returned dataframe.
+    """
+    iter_essential = imat_iter_essential(*args, **kwargs)
+    if isinstance(consensus_method, float):
+        return iter_essential.sum(axis=0) > consensus_method
+    if consensus_method == "any":
+        return iter_essential.any(axis=0)
+    elif consensus_method == "all":
+        return iter_essential.all(axis=0)
+    raise ValueError(
+        f"Unrecognized consensus_method, value should be 'all', 'any' or a float but received {consensus_method}"
+    )
+
+
+# endregion Consensus Essentiality

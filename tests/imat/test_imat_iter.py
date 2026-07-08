@@ -371,5 +371,87 @@ class TestImatIterSampling(unittest.TestCase):
         self.assertEqual(sample_res.shape[0], 3 * 100)
 
 
+class TestImatIterEssentiality(unittest.TestCase):
+    model = None
+    data_path = None
+    rxn_weights = None
+    epsilon = None
+    threshold = None
+    max_iter = None
+    objective_tolerance = None
+
+    @classmethod
+    def setUpClass(cls):
+        setup(cls)
+
+    def check_iter_essentiality(self, **kwargs):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
+        ess_df = imat_iter.imat_iter_essential(
+            model=self.model.copy(),
+            rxn_weights=self.rxn_weights,
+            max_iter=self.max_iter,
+            epsilon=self.epsilon,
+            threshold=self.threshold,
+            objective_tolerance=self.objective_tolerance,
+            processes=1,
+            **kwargs,
+        )
+        self.assertIsInstance(ess_df, pd.DataFrame)
+        # Should have a column for every gene
+        self.assertEqual(ess_df.shape[1], len(self.model.genes))
+        self.assertCountEqual(
+            list(ess_df.columns), self.model.genes.list_attr("id")
+        )
+        # Should be able to iterate at least 5 times
+        self.assertGreater(ess_df.shape[0], 5)
+        # All the dtypes should be boolean
+        # Should have some True, and some False
+        for _, row in ess_df.iterrows():
+            self.assertFalse(row.all())
+            self.assertTrue(row.any())
+
+    def test_iter_essentiality(self):
+        for iter_method in ["icut", "maxdist", "corner"]:
+            self.check_iter_essentiality(iter_method=iter_method)
+
+    def check_consensus_essentiality(self, **kwargs):
+        assert self.model is not None
+        assert isinstance(self.epsilon, float)
+        assert isinstance(self.rxn_weights, pd.Series)
+        assert isinstance(self.max_iter, int)
+        assert isinstance(self.threshold, float)
+        assert isinstance(self.objective_tolerance, float)
+        ess_series = imat_iter.consensus_essentiality(
+            model=self.model.copy(),
+            rxn_weights=self.rxn_weights,
+            max_iter=self.max_iter,
+            iter_method="icut",
+            epsilon=self.epsilon,
+            threshold=self.threshold,
+            objective_tolerance=self.objective_tolerance,
+            processes=1,
+            **kwargs,
+        )
+        self.assertIsInstance(ess_series, pd.Series)
+        # Should be indexed by gene
+        self.assertCountEqual(
+            list(ess_series.index), self.model.genes.list_attr("id")
+        )
+        # Should have some True and Some False
+        self.assertFalse(ess_series.all())
+        self.assertTrue(ess_series.any())
+
+    def test_consensus_essentiality(self):
+        for consensus_method in ["any", "all", 0.5]:
+            self.check_consensus_essentiality(
+                consensus_method=consensus_method
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
