@@ -16,7 +16,7 @@ import sympy as sym
 
 # Local Imports
 from metworkpy.sampling import corner_sampling
-from metworkpy.metworkpy_defaults import IMAT_DEFAULTS
+from metworkpy.utils.metworkpy_defaults import IMAT_DEFAULTS
 
 
 # region: Main iMat Function

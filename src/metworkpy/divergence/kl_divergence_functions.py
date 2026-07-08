@@ -23,7 +23,7 @@ from metworkpy.divergence._pairwise_divergence import (
     ArrayInput,
     Array1D,
 )
-from metworkpy.metworkpy_types import Array2D
+from metworkpy.utils.metworkpy_types import Array2D
 
 
 # region Main Function

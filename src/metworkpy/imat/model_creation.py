@@ -17,7 +17,7 @@ from metworkpy.imat.imat_functions import (
     add_imat_objective_,
 )
 from metworkpy.utils import _arguments
-from metworkpy.metworkpy_defaults import IMAT_DEFAULTS
+from metworkpy.utils.metworkpy_defaults import IMAT_DEFAULTS
 
 # define defaults for the iMAT functions
 

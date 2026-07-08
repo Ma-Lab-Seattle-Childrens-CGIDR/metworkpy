@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 # Local
-from metworkpy.metworkpy_types import Array1D, Array2D
+from metworkpy.utils.metworkpy_types import Array1D, Array2D
 
 
 def upsample(
