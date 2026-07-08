@@ -41,7 +41,7 @@ def corner_sampling(
     fva_scale : bool, default=True
         Whether to scale the weights assigned to reactions in the randomized
         objectives by the maximum (absolute) flux value the associated reaction
-        could achieve
+        could achieve.
     seed : int or np.random.Generator, optional
         Optional seed to use for selection of reactions/weights.
         Note that this doesn't garuntee the generated solutions will
@@ -66,7 +66,7 @@ def corner_sampling(
     Corner Based sampling iteratively creates a random objective
     function, and then optimizes it, storing the resulting flux
     distribution. It creates a random objective function by first selecting
-    a value $\tau$, which is the proportion of reactions that will be involved.
+    a value :math`\tau`, which is the proportion of reactions that will be involved.
     Then, for it chooses a subset of reaction based on this proportion,
     and for each assigns a random weight between -1 and 1. These weights
     can be optionally scaled using flux variability analysis.
@@ -150,7 +150,7 @@ def _corner_sampling_worker(
     # Decide how many reactions from the reaction list to consider
     num_reactions = rng.integers(
         1, len(reaction_list) + 1
-    )  # Pick at least 2 reactions
+    )  # Pick at least 1 reactions
     # Select reactions
     objective_dict = {}
     for rxn in rng.choice(reaction_list, num_reactions, replace=False):
