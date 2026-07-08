@@ -32,7 +32,6 @@ Changelog = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/blob/ma
 [project.optional-dependencies]
 cplex = ["cplex>=22.1.1.1"]
 gurobi = ["gurobipy>=11.0.0"]
-fastparquet = ["fastparquet>=2024.5.0"]
 excel = ["openpyxl>=3.1.4"]
 hybrid = ["highspy>=1.10.0", "osqp>=1.0.3"]
 

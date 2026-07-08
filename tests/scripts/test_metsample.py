@@ -131,10 +131,6 @@ class TestMetsampleRun(unittest.TestCase):
         self.assertEqual(len(res.columns), len(self.test_model.reactions))
         self.assertFalse(res.isna().any(axis=None))
 
-    @skipIf(
-        importlib.util.find_spec("fastparquet") is None,
-        "fastparquet not installed, can't append to parquet",
-    )
     def test_batch_parquet(self):
         res = self.run_cli(
             batches=2,

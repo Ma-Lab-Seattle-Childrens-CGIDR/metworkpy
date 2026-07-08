@@ -4,14 +4,17 @@
 # Standard Library Imports
 from __future__ import annotations
 import argparse
-import importlib.util
 import math
 import os.path
 import pathlib
 import sys
+from typing import Optional
 
 # External Imports
 import cobra
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 # Local Imports
 import metworkpy
@@ -127,8 +130,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         "up a lot of ram, so this option allows for batches of samples to be taken, "
         "to reduce this issue. Batches are only allowed with csv and parquet file types. "
         "If samples is not a multiple of batches (so it can't be cleanly broken up into batches) "
-        "the number of samples taken will be increased to the closest multiple of batches. "
-        "Batch sampling with a parquet file requires fastparquet.",
+        "the number of samples taken will be increased to the closest multiple of batches. ",
         type=int,
     )
     parser.add_argument(
@@ -182,13 +184,6 @@ def main_run(arg_list: list[str] | None = None) -> None:
             file=sys.stderr,
         )
         sys.exit()
-    if args.batches and out_format == "parquet":
-        if importlib.util.find_spec("fastparquet") is None:
-            print(
-                "Batch sampling with parquet output requires fastparquet, but it is not installed/n",
-                file=sys.stderr,
-            )
-            sys.exit()
     if verbose:
         print("Creating Sampler")
     if method == "achr":
@@ -227,7 +222,7 @@ def main_run(arg_list: list[str] | None = None) -> None:
             print("Finished Sampling, writing output")
         if args.validate:
             valid = sampler.validate(
-                samples
+                samples  # type: ignore ## COBRA type error
             )  # Samples is a DataFrame, not a matrix
             samples = samples.loc[valid == "v", :]
         if out_format == "csv":
@@ -259,36 +254,38 @@ def _batch_sample(
     samples: int = 10_000,
     validate: bool = False,
 ) -> None:
-    """Perform batch sampling
+    """
+    Perform batch sampling
 
     Parameters
     ----------
     sampler : cobra.sampling.HRSampler
         Sampler object (either OptGpSampler, or ACHRSampler)
     out_file : str | pathlib.Path
-        Path to output file
+        Path to output file, note that this file
+        will be overwritten if it already exists
     out_format : str
         Format for output file, must be csv or parquet
     batches : int
         Number of batches to break the sampling up into
-    samples
+    samples: int
         Total number of samples to generate, if not a multiple of
         batches, will be increased to the closest multiple of batches
-    validate
-
-    Returns
-    -------
-    unknown
+    validate : bool
+        Whether to only save valid samples
     """
     # Clear file, so that if you are writing to the same file as previous run it clears it rather than append
     if os.path.exists(out_file):
         os.remove(out_file)
     samples_per_batch = math.ceil(samples / batches)
+    pqwriter: Optional[pq.ParquetWriter] = None
     for sample in sampler.batch(samples_per_batch, batches):
         if validate:
-            valid = sampler.validate(sample)
             # Filter for only valid samples
-            sample = sample.loc[valid == "v", :]
+            sample = sample.loc[sampler.validate(sample) == "v", :]  # type: ignore ## cobra type error
+        assert isinstance(sample, pd.DataFrame), (
+            "COBRA Generated something other than a pandas DataFrame during sampling"
+        )
         if out_format == "csv":
             if not os.path.exists(out_file):
                 sample.to_csv(out_file, index=False, header=True)
@@ -296,14 +293,17 @@ def _batch_sample(
                 with open(out_file, "a") as f:
                     sample.to_csv(f, header=False, index=False)
         elif out_format == "parquet":
-            if not os.path.exists(out_file):
-                sample.to_parquet(out_file, index=False, engine="fastparquet")
-            else:
-                sample.to_parquet(
-                    out_file, index=False, engine="fastparquet", append=True
-                )
+            # Convert the samples to a Pyarrow table for writing to disk
+            table = pa.Table.from_pandas(sample)
+            # First iteration, file not yet open
+            if pqwriter is None:
+                pqwriter = pq.ParquetWriter(out_file, table.schema)
+            # Write or append sample
+            pqwriter.write_table(table)
         else:
             raise ValueError(f"Invalid out_format: {out_format}")
+    if pqwriter is not None:
+        pqwriter.close()
 
 
 def _parse_method(method_str: str) -> str:
