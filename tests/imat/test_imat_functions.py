@@ -1,6 +1,5 @@
 # Standard Library Imports
 from metworkpy.imat.imat_functions import imat_sampling
-import copy
 import importlib.util
 import pathlib
 import unittest
@@ -250,7 +249,7 @@ class TestAddImatObjective(unittest.TestCase):
             epsilon=self.epsilon,
             threshold=self.threshold,
         )
-        copy_model = copy.deepcopy(test_model)
+        copy_model = test_model.copy()
         # imat_functions._enforce_binary(model=copy_model)
         # Check that the copy creates an identical model
         self.assertTrue(model_eq(test_model, copy_model, verbose=True))

@@ -6,7 +6,7 @@ version = "0.9.0"
 readme = "README.md"
 keywords = ["FBA", "metabolism", "IMAT", "metchange"]
 license = { text = "MIT" }
-requires-python = "<3.14,>=3.9"
+requires-python = "<3.15,>=3.9"
 dependencies = [
   "cobra>=0.30.0",
   "scipy>=1.12.0",
