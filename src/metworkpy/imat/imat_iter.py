@@ -184,7 +184,13 @@ class ImatIterBase(ABC):
             fva_max = fva_res.abs().max(axis=1)
             # remove all reactions which have an fva_max of 0.0 from
             # possible selection
-            zero_reactions = set(fva_max[np.isclose(fva_max, 0.0)].index)
+            zero_reactions = set(
+                fva_max[
+                    np.isclose(
+                        fva_max, 0.0, atol=cobra.Configuration().tolerance
+                    )
+                ].index
+            )
             self._reaction_list = list(
                 set(self._reaction_list) - zero_reactions
             )
@@ -336,13 +342,25 @@ class ImatIterBase(ABC):
         )
         # Go through all high expression reactions
         for rxn, variables in self._get_high_expr_variables().items():
-            if np.isclose(variables["pos"].primal, 1.0):
+            if np.isclose(
+                variables["pos"].primal,
+                1.0,
+                atol=cobra.Configuration().tolerance,
+            ):
                 reaction_activities[rxn] = ReactionActivity.ActiveForward
-            elif np.isclose(variables["neg"].primal, 1.0):
+            elif np.isclose(
+                variables["neg"].primal,
+                1.0,
+                atol=cobra.Configuration().tolerance,
+            ):
                 reaction_activities[rxn] = ReactionActivity.ActiveReverse
         # Next through all the low expression reactions
         for rxn, y_neg in self._get_low_expr_variables().items():
-            if np.isclose(y_neg.primal, 1.0):
+            if np.isclose(
+                y_neg.primal,
+                1.0,
+                atol=cobra.Configuration().tolerance,
+            ):
                 reaction_activities[rxn] = ReactionActivity.Inactive
         return reaction_activities
 
@@ -433,9 +451,13 @@ class ImatIterBase(ABC):
         # Iterate through all binary variables
         for var in self._get_all_binary_variables():
             # Check if the variable is on or off
-            if np.isclose(var.primal, 1.0):
+            if np.isclose(
+                var.primal, 1.0, atol=cobra.Configuration().tolerance
+            ):
                 on_variables.append(1 - var)
-            elif np.isclose(var.primal, 0.0):
+            elif np.isclose(
+                var.primal, 0.0, atol=cobra.Configuration().tolerance
+            ):
                 off_variables.append(var)
             else:
                 raise RuntimeError(
