@@ -48,6 +48,12 @@
   Additionally, significant refactor reducing code duplication between the
   different iterators.
 
+- Removed fastparquet optional dependency. Previously used for its append, not
+  pyarrow is always used for writing parquet files (since it is required for
+  pandas 3.0 anyway)
+
+- Python version increase, added python 3.14 to allowed versions and CI pipeline
+
 ## Version 0.9.0
 
 - Added a function for calculating the closeness centrality to a subset of nodes
