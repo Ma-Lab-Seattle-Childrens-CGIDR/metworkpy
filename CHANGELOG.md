@@ -22,12 +22,31 @@
 
 - Added helper method for performing iMAT sampling using the corner-sampling
   approach
+
 - Added adaptive-k method for calculating Kullback-Leibler divergence, based on
   equation (25) in Wang, Kulkarni 2009. This method can be used by passing
   `n_neighbors=None` to the kl_divergence function. Additionally, the
   kl_divergence function will accept an additional `epsilon_mult` parameter
   which allows for increasing the radius used in this method by a constant
   multiple, which seems to decrease bias (based on limited testing).
+
+- Significant update to imat_iter, allowing for multiple methods to perform the
+  iteration including
+
+  - icut: This was the method available previously, adds integer cut constraints
+    in order to stop duplicate iMAT solutions, and then optimizes the iMAT
+    objective repeatedly.
+  - maxdist: Similar to icut, adds an integer cut constraint but then maximizes
+    the distance (in terms of differences between the iMAT binary variables)
+    between the solutions (adds a constraint to ensure the iMAT objective
+    remains within a configurable tolerance of the initial objective value).
+  - corner: Like the previous method adds integer cut constraints, and a
+    constraint to ensure the iMAT objective is within configurable tolerance of
+    the initial iMAT objective, but uses a corner-sampling inspired approach for
+    the objective (randomized selection of reactions and objective direction).
+
+  Additionally, significant refactor reducing code duplication between the
+  different iterators.
 
 ## Version 0.9.0
 
