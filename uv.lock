@@ -832,6 +832,15 @@ wheels = [
 ]
 
 [[package]]
+name = "docrep"
+version = "0.3.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/44/8e/250fab1cafeea43f4eb11f1d64cd6313f639965ff62cb0d9da3883655781/docrep-0.3.2.tar.gz", hash = "sha256:ed8a17e201abd829ef8da78a0b6f4d51fb99a4cbd0554adbed3309297f964314", size = 33197, upload-time = "2021-02-16T09:01:50.183Z" }
+
+[[package]]
 name = "docutils"
 version = "0.20.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2187,6 +2196,7 @@ version = "0.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "cobra" },
+    { name = "docrep" },
     { name = "joblib" },
     { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -2257,6 +2267,7 @@ test = [
 requires-dist = [
     { name = "cobra", specifier = ">=0.30.0" },
     { name = "cplex", marker = "extra == 'cplex'", specifier = ">=22.1.1.1" },
+    { name = "docrep", specifier = ">=0.3.2" },
     { name = "fastparquet", marker = "extra == 'fastparquet'", specifier = ">=2024.5.0" },
     { name = "gurobipy", marker = "extra == 'gurobi'", specifier = ">=11.0.0" },
     { name = "highspy", marker = "extra == 'hybrid'", specifier = ">=1.10.0" },
