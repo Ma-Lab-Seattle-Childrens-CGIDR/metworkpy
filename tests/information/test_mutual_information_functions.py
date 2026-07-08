@@ -225,7 +225,7 @@ class TestMainMI(unittest.TestCase):
 
     def test_pvalue(self):
         # Test the cheb method
-        mi_res, pvalue = mi.mutual_information(
+        res = mi.mutual_information(
             x=self.norm_2d_2d_0_3_0_6_sample_1000[:, [0, 1]],
             y=self.norm_2d_2d_0_3_0_6_sample_1000[:, [2, 3]],
             discrete_x=False,
@@ -236,6 +236,8 @@ class TestMainMI(unittest.TestCase):
             metric_x=np.inf,
             metric_y=np.inf,
         )
+        assert isinstance(res, tuple)
+        mi_res, pvalue = res
         self.assertLess(pvalue, 0.05)
 
 

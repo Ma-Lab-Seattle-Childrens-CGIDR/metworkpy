@@ -15,7 +15,7 @@ from typing import cast, Literal, Optional, Tuple, Union
 # External Imports
 import numpy as np
 from numpy.typing import ArrayLike
-from scipy.spatial import KDTree, distance_matrix
+from scipy.spatial import KDTree, distance
 from scipy.special import digamma
 
 # local imports
@@ -398,8 +398,12 @@ def _mi_cont_cont_gen(
         The mutual information score between the two distributions
         represented by the x and y samples
     """
-    x_dist = distance_matrix(x, x, p=metric_x)  # Distance in x space
-    y_dist = distance_matrix(y, y, p=metric_y)  # Distance in y space
+    x_dist = distance.cdist(
+        x, x, metric="minkowski", p=metric_x
+    )  # Distance in x space
+    y_dist = distance.cdist(
+        y, y, metric="minkowski", p=metric_y
+    )  # Distance in y space
     z_dist = np.maximum(
         x_dist, y_dist
     )  # Equivalent to p=np.inf Minkosky p-norm
