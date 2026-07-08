@@ -53,12 +53,31 @@ you would prefer). Then you can run linting with `tox -e lint`, formatting with
 also run the full lint/format/test pipeline with
 `tox -p <number of parallel threads>`.
 
+Documentation is automatically generated from the docstrings of functions and
+classes using [sphinx](https://www.sphinx-doc.org/en/master/), with the
+[numpydoc](https://numpydoc.readthedocs.io/en/latest/) extension. We (attempt)
+to use the numpy
+[style guide](https://numpydoc.readthedocs.io/en/latest/format.html) for
+docstrings. Also, to help reduce duplication in docstrings we make use of
+[docrep](https://docrep.readthedocs.io/en/latest/) (see the imat_iter submodule
+for example usage)
+
+## Testing
+
+As mentioned [above](#development-setup), testing can be run with tox. All tests
+are under the `tests` directory, and organized by the module that they are
+testing. Tests are currently mostly written using Python's builtin unittest
+framework, but are run (during CI) using
+[pytest](https://docs.pytest.org/en/stable/), so feel free to use that when
+writing new tests.
+
 ## Pull Requests
 
 When submitting a pull request (especially one that changes user facing code),
 please make sure that there are tests for any added functionality, and add a
 note to the
 [changelog file](https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/blob/main/CHANGELOG.md).
-All pull requests will have to pass the CI, which includes testing against
-various python versions, and linting with ruff. You can check this locally using
-tox (see [Development Setup](#development-setup) section above).
+All public functions should be documented with at least a summary, parameters,
+and returns. All pull requests will have to pass the CI, which includes testing
+against various python versions, and linting with ruff. You can check this
+locally using tox (see [Development Setup](#development-setup) section above).
