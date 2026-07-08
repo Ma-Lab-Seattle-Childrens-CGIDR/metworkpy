@@ -1,50 +1,14 @@
 name: Build and Publish
 
 on:
-  push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_run:
+    workflows: [Check] # only run when check is run
+    types: [completed]
+    branches: "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-  test:
-    name: test with ${{ matrix.env }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        env:
-          - "3.14"
-          - "3.13"
-          - "3.12"
-          - "3.11"
-          - "3.10"
-          - "3.9"
-        os:
-          - ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990
-        with:
-          cache-suffix: ${{ matrix.env }}
-      - name: Install tox
-        run:
-          uv tool install --python-preference only-managed --python 3.14 tox --with
-          tox-uv --with tox-gh
-      - name: Install Python
-        if: matrix.env != '3.14'
-        run: uv python install --python-preference only-managed ${{ matrix.env }}
-      - name: Setup test suite
-        run: tox run -vv --notest --skip-missing-interpreters false
-        env:
-          TOX_GH_MAJOR_MINOR: ${{ matrix.env }}
-      - name: Run test suite
-        run: tox run --skip-pkg-install
-        env:
-          TOX_GH_MAJOR_MINOR: ${{ matrix.env }}
   build_dist:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     needs: test
     name: Build source distribution
     runs-on: ubuntu-latest
