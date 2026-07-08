@@ -36,6 +36,8 @@ jobs:
           fetch-depth: 0
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990
+        with:
+          cache-suffix: ${{ matrix.env }}
       - name: Install tox
         run:
           uv tool install --python-preference only-managed --python 3.14 tox --with
