@@ -70,28 +70,33 @@ class TestRunSingle(unittest.TestCase):
         "verbose": False,
         "solver": "glpk",
         "sep": ",",
-        "loopless": False,
+        "loopless": None,
         "processes": None,
         "func": imatgen.run_single,
     }
 
+    # Things setup by shared setup function
     data_path = None
     tmp_path = None
     gene_expression = None
+    tmp_dir = None
     model = None
 
     @classmethod
     def setUpClass(cls):
         setup(cls, "test_model_gene_expression.csv")
+        assert isinstance(cls.tmp_path, pathlib.Path)
         cls.default_dict["output_file"] = (
             cls.tmp_path / "test_result_model.json"
         )
 
     def setUp(self):
+        assert isinstance(self.model, cobra.Model)
         self.test_model = self.model.copy()
 
     @classmethod
     def tearDownClass(cls):
+        assert cls.tmp_dir is not None
         cls.tmp_dir.cleanup()
 
     def cli_tester(self, **kwargs):
@@ -104,7 +109,7 @@ class TestRunSingle(unittest.TestCase):
             # Test that it created the expected file
             self.assertTrue(
                 os.path.exists(
-                    argparse.ArgumentParser.parse_args().output_file
+                    argparse.ArgumentParser.parse_args().output_file  # type: ignore
                 )
             )
             # Test that the output model is the same that would be created by
@@ -225,7 +230,7 @@ class TestRunMulti(unittest.TestCase):
         "verbose": False,
         "solver": "glpk",
         "sep": ",",
-        "loopless": False,
+        "loopless": None,
         "processes": None,
         "func": imatgen.run_multi,
         "prefix": None,
