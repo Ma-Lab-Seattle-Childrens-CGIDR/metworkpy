@@ -118,7 +118,7 @@ class TestImatIterators(unittest.TestCase):
                 self.check_basic_iteration(
                     imat_iter.ImatIterModels,
                     iter_method=iter_method,
-                    method=model_method,
+                    model_method=model_method,
                 )
 
     def test_max_iter(self):
@@ -133,7 +133,7 @@ class TestImatIterators(unittest.TestCase):
                 self.check_max_iter(
                     imat_iter.ImatIterModels,
                     iter_method=iter_method,
-                    method=model_method,
+                    model_method=model_method,
                 )
 
     def check_different_solutions_binary_var_iter(self, **kwargs):

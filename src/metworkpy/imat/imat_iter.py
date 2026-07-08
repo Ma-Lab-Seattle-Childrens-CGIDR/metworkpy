@@ -427,9 +427,6 @@ class ImatIterBase(ABC):
         off_variables = []
         # Iterate through all binary variables
         for var in self._get_all_binary_variables():
-            print(type(var))
-            print(var.name)
-            print(type(var.primal))
             # Check if the variable is on or off
             if np.isclose(var.primal, 1.0):
                 on_variables.append(1 - var)
