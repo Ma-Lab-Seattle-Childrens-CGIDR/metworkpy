@@ -9,7 +9,6 @@ on:
 jobs:
   build_dist:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    needs: test
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
