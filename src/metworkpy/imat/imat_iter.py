@@ -315,7 +315,8 @@ class ImatIterBase(ABC):
         return high_expr_variables
 
     def _get_binary_variables_state(self) -> pd.Series[ReactionActivity]:  # type: ignore
-        """Get a pandas Series describing the state of the weighted reactions in the iMAT solution
+        """
+        Get a pandas Series describing the state of the weighted reactions in the iMAT solution
 
         Returns
         -------
@@ -527,7 +528,7 @@ class ImatIterBinaryVariables(ImatIterBase):
           associated with the high expression reactions. A value of 1 indicates that the reaction is **active** in the
           forward direction.
         * rh_y_neg: A pandas Series indexed by reaction id with the values indicating the state of the y- variables
-          associated with the high expression reactions. A value of 1 indicates that the reaction is active in the
+          associated with the high expression reactions. A value of 1 indicates that the reaction is **active** in the
           reverse direction.
         * rl_y_pos: A pandas Series indexed by reaction id with the values indicating the state of the y+ variables
           associated with the low expression reactions. A value of 1 indicates that the reaction is **inactive**.
@@ -581,7 +582,8 @@ class ImatIterBinaryVariables(ImatIterBase):
 
 @docs.dedent
 class ImatIterReactionActivities(ImatIterBase):
-    """Iterator for stepping through different possible iMAT solutions, returning the reaction state of
+    """
+    Iterator for stepping through different possible iMAT solutions, returning the reaction state of
     reactions with non-zero iMAT weights
 
     Parameters

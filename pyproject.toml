@@ -62,6 +62,8 @@ docs = [
   "matplotlib>=3.9.4",
   "iplotx>=0.0.1",
   "numpydoc>=1.9.0",
+  "highspy>=1.10.0",
+  "osqp>=1.0.3",
 ]
 
 [build-system]

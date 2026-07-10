@@ -5,7 +5,7 @@ data, and converting it into qualitative weights
 from __future__ import annotations
 
 # Standard library imports
-from typing import Callable, Union, Iterable, Optional
+from typing import cast, Callable, Union, Iterable, Optional
 from warnings import warn
 
 # External imports
@@ -79,15 +79,21 @@ def expr_to_imat_gene_weights(
     if isinstance(expression, pd.DataFrame):
         expression = expression.apply(aggregator, axis=sample_axis)
     if not subset:
-        low, high = np.quantile(expression, quantile)
-        return expression.map(
+        quantiles = np.quantile(expression, quantile)
+        assert isinstance(quantiles, tuple)
+        low, high = quantiles
+        gene_weights = expression.map(
             lambda x: -1 if x <= low else (1 if x >= high else 0)
         )
+        assert isinstance(gene_weights, pd.Series)
+        return gene_weights
     # Only use subset genes which are in expression data
     subset_genes = [gene for gene in subset if gene in expression.index]
     expression = expression[subset_genes]
     result_series = pd.Series(0, index=subset)
-    low, high = np.quantile(expression, quantile)
+    quantiles = np.quantile(expression, quantile)
+    assert isinstance(quantiles, tuple)
+    low, high = quantiles
     result_series[subset_genes] = expression.map(
         lambda x: -1 if x <= low else (1 if x >= high else 0)
     )[subset_genes]
@@ -209,7 +215,7 @@ def count_to_rpkm(
             "Different genes in count dataframe and feature length series, dropping any not in common"
         )
         genes = sorted(list(count_genes.intersection(fl_genes)))
-        count = count[genes]
+        count = cast(pd.DataFrame, count[genes])
         feature_length = feature_length[genes]
     rpm = count.divide(per_million, axis=0)
     rpkm = rpm.divide(feature_length / 1000, axis=1)

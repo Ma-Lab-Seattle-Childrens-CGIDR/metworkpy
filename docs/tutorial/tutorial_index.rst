@@ -8,3 +8,4 @@ Tutorial's for MetworkPy
    :caption: Contents:
 
    network-creation
+   imat
