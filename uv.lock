@@ -2199,6 +2199,7 @@ dev = [
     { name = "types-networkx", version = "3.6.0.20251127", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
 docs = [
+    { name = "highspy" },
     { name = "iplotx", version = "0.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "iplotx", version = "1.7.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "jupyter" },
@@ -2207,6 +2208,7 @@ docs = [
     { name = "nbsphinx" },
     { name = "numpydoc", version = "1.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "numpydoc", version = "1.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "osqp" },
     { name = "sphinx" },
     { name = "sphinx-rtd-theme" },
 ]
@@ -2250,11 +2252,13 @@ dev = [
     { name = "types-networkx", specifier = ">=3.4.2.20250509" },
 ]
 docs = [
+    { name = "highspy", specifier = ">=1.10.0" },
     { name = "iplotx", specifier = ">=0.0.1" },
     { name = "jupyter", specifier = ">=1.0.0,<2.0.0" },
     { name = "matplotlib", specifier = ">=3.9.4" },
     { name = "nbsphinx", specifier = ">=0.9.8" },
     { name = "numpydoc", specifier = ">=1.9.0" },
+    { name = "osqp", specifier = ">=1.0.3" },
     { name = "sphinx", specifier = ">=7.2.6,<8.0.0" },
     { name = "sphinx-rtd-theme", specifier = ">=2.0.0,<3.0.0" },
 ]

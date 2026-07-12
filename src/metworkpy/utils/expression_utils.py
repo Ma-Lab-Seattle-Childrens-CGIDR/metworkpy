@@ -3,9 +3,10 @@ data, and converting it into qualitative weights
 """
 
 from __future__ import annotations
+from collections.abc import Iterable
 
 # Standard library imports
-from typing import cast, Callable, Union, Iterable, Optional
+from typing import cast, Callable, Union, Optional
 from warnings import warn
 
 # External imports
@@ -80,7 +81,8 @@ def expr_to_imat_gene_weights(
         expression = expression.apply(aggregator, axis=sample_axis)
     if not subset:
         quantiles = np.quantile(expression, quantile)
-        assert isinstance(quantiles, tuple)
+        print(f"Quantiles type: {type(quantiles)} Value: {quantiles}")
+        assert isinstance(quantiles, Iterable)
         low, high = quantiles
         gene_weights = expression.map(
             lambda x: -1 if x <= low else (1 if x >= high else 0)
@@ -92,7 +94,7 @@ def expr_to_imat_gene_weights(
     expression = expression[subset_genes]
     result_series = pd.Series(0, index=subset)
     quantiles = np.quantile(expression, quantile)
-    assert isinstance(quantiles, tuple)
+    assert isinstance(quantiles, Iterable)
     low, high = quantiles
     result_series[subset_genes] = expression.map(
         lambda x: -1 if x <= low else (1 if x >= high else 0)
