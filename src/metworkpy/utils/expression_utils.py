@@ -94,7 +94,7 @@ def expr_to_imat_gene_weights(
     expression = expression[subset_genes]
     result_series = pd.Series(0, index=subset)
     quantiles = np.quantile(expression, quantile)
-    assert isinstance(quantiles, tuple)
+    assert isinstance(quantiles, Iterable)
     low, high = quantiles
     result_series[subset_genes] = expression.map(
         lambda x: -1 if x <= low else (1 if x >= high else 0)
