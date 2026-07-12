@@ -10,13 +10,15 @@ from typing import Union, Literal
 
 # External Imports
 import cobra
-import numpy as np
 import pandas as pd
 import sympy as sym
 
 # Local Imports
 from metworkpy.sampling import corner_sampling
 from metworkpy.utils.metworkpy_defaults import IMAT_DEFAULTS
+
+# Define global constaints
+ALMOST_ZERO = 5e-17
 
 
 # region: Main iMat Function
@@ -217,8 +219,8 @@ def compute_imat_objective(
     )
     if isinstance(rxn_weights, dict):
         rxn_weights = pd.Series(rxn_weights)
-    rh = rxn_weights[rxn_weights > 0]
-    rl = rxn_weights[rxn_weights < 0]
+    rh = rxn_weights[rxn_weights > ALMOST_ZERO]
+    rl = rxn_weights[rxn_weights < -ALMOST_ZERO]
     # Get the fluxes greater than epsilon which are highly expressed
     rh_pos = fluxes[rh.index].ge(epsilon).sum()
     # Get the fluxes less than -epsilon which are highly expressed
@@ -267,17 +269,20 @@ def add_imat_constraints_(
     for rxn, weight in rxn_weights.items():
         assert isinstance(rxn, str)
         # Don't add any restrictions for 0 weight reactions
-        if np.isclose(weight, 0):
+        if -ALMOST_ZERO < weight < ALMOST_ZERO:
             continue
-        if weight > 0:  # Add highly expressed constraint
+        if weight > ALMOST_ZERO:  # Add highly expressed constraint
             _imat_pos_weight_(model=model, rxn=rxn, epsilon=epsilon)
-        elif weight < 0:  # Add lowly expressed constraint
+        elif weight < -ALMOST_ZERO:  # Add lowly expressed constraint
             _imat_neg_weight_(model=model, rxn=rxn, threshold=threshold)
     return model
 
 
 def add_imat_constraints(
-    model, rxn_weights, epsilon: float = 1e-3, threshold: float = 1e-4
+    model,
+    rxn_weights,
+    epsilon: float = IMAT_DEFAULTS.epsilon,
+    threshold: float = IMAT_DEFAULTS.threshold,
 ) -> cobra.Model:
     """Add the IMAT constraints to the model (returns new model, doesn't
     update model in place).
@@ -320,8 +325,8 @@ def add_imat_objective_(
     """
     if isinstance(rxn_weights, dict):
         rxn_weights = pd.Series(rxn_weights)
-    rh = rxn_weights[rxn_weights > 5e-17]
-    rl = rxn_weights[rxn_weights < -5e-17]
+    rh = rxn_weights[rxn_weights > ALMOST_ZERO]
+    rl = rxn_weights[rxn_weights < -ALMOST_ZERO]
     rh_obj = []
     rl_obj = []
     for rxn, weight in rh.items():  # For each highly expressed reaction
