@@ -98,7 +98,7 @@ def node_target_density(
             f"Network must be a networkx network, but received {type(network)}"
         )
     if isinstance(targets, list):
-        targets = pd.Series(1, index=list)  # type: ignore
+        targets = pd.Series(1, index=targets)
     elif isinstance(targets, dict):
         targets = pd.Series(targets)
     if callable(node_filter):
