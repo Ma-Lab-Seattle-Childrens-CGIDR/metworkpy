@@ -18,3 +18,11 @@ Mutual Information Networks
    :members:
    :undoc-members:
    :show-inheritance:
+
+Variation of Information Functions
+----------------------------------
+
+.. automodule:: metworkpy.information.variation_of_information_functions
+   :members:
+   :undoc-members:
+   :show-inheritance:

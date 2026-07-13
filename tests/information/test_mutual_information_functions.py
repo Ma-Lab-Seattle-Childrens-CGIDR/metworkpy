@@ -55,8 +55,8 @@ class TestMainMI(unittest.TestCase):
     def test_disc_disc(self):
         x = np.array([0, 1, 1, 0, 0])
         y = np.array([1, 0, 0, 0, 1])
-        x_col = np.array([0, 1, 1, 0, 0]).reshape(-1, 1)
-        y_col = np.array([1, 0, 0, 0, 1]).reshape(-1, 1)
+        x_col = x.reshape(-1, 1)
+        y_col = y.reshape(-1, 1)
         H_x = H_y = -(3 / 5) * np.log(3 / 5) - (2 / 5) * np.log(2 / 5)
         H_xy = (
             -1 / 5 * np.log(1 / 5)

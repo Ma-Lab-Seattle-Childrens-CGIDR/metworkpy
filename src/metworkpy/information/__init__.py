@@ -5,6 +5,7 @@ from .mutual_information_network import (
     mi_pairwise_grouped,
     create_grouped_mi_network,
 )
+from .variation_of_information_functions import variation_of_information
 
 __all__ = [
     "mutual_information",
@@ -12,4 +13,5 @@ __all__ = [
     "mi_pairwise",
     "mi_pairwise_grouped",
     "create_grouped_mi_network",
+    "variation_of_information",
 ]
