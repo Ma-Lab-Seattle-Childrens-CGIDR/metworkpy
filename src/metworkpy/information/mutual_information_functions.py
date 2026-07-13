@@ -45,6 +45,9 @@ def mutual_information(
     clip: bool = False,
 ) -> Union[float, Tuple[float, float]]:
     """
+    Calculate the mutual information between two samples from continuous
+    or discrete distributions
+
     Parameters
     ----------
     x : ArrayLike

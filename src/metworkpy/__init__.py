@@ -16,6 +16,7 @@ __all__ = [
     "model_eq",
     "model_bounds_eq",
     "mutual_information",
+    "variation_of_information",
     "mi_network_adjacency_matrix",
     "kl_divergence",
     "js_divergence",
@@ -79,6 +80,7 @@ from metworkpy.utils import (
 from metworkpy.information import (
     mutual_information,
     mi_network_adjacency_matrix,
+    variation_of_information,
 )
 
 from metworkpy.divergence import kl_divergence, js_divergence
