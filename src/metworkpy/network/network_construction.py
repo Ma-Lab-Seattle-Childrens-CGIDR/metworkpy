@@ -249,7 +249,8 @@ def create_metabolic_network(
     threshold: float = 0.0,
     **kwargs,
 ) -> nx.Graph | nx.DiGraph:
-    """Create a metabolic network from a cobrapy Model
+    """
+    Create a metabolic network from a cobrapy Model
 
     Parameters
     ----------

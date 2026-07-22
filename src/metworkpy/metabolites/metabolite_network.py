@@ -32,6 +32,7 @@ def find_metabolite_synthesis_network_reactions(
     method: Literal["pfba", "gfba", "essential"] = "pfba",
     return_type: Literal["dict", "DataFrame"] = "DataFrame",
     metabolites: Optional[Iterable[str]] = None,
+    add_sinks: bool = False,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
@@ -72,6 +73,9 @@ def find_metabolite_synthesis_network_reactions(
     metabolites : iterable of str, optional
         Which metabolites to find the synthesis networks for, if not provided will
         find the networks for all the metabolites in the model
+    add_sinks : bool, default=False
+        Add sinks for all the metabolites in the model to allow for reactions
+        to be active without all of their products having a final destination.
     pfba_proportion : float
         Proportion to use for pfba analysis. This represents the
         fraction of optimum constraint applied before minimizing the sum
@@ -135,6 +139,8 @@ def find_metabolite_synthesis_network_reactions(
             metabolite_sink_reaction_id = add_metabolite_objective_(
                 m, metabolite
             )
+            if add_sinks:
+                add_all_metabolite_sinks_(m)
             if method == "essential":
                 ess_rxns = [
                     rxn.id
@@ -205,6 +211,7 @@ def find_metabolite_synthesis_network_genes(
     method: Literal["pfba", "gfba", "essential"] = "pfba",
     return_type: Literal["DataFrame", "dict"] = "DataFrame",
     metabolites: Optional[Iterable[str]] = None,
+    add_sinks: bool = False,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
@@ -247,6 +254,9 @@ def find_metabolite_synthesis_network_genes(
     metabolites : iterable of str, optional
         Which metabolites to find the synthesis networks for, if not provided will
         find the networks for all the metabolites in the model
+    add_sinks : bool, default=False
+        Add sinks for all the metabolites in the model to allow for reactions
+        to be active without all of their products having a final destination.
     pfba_proportion : float
         Proportion to use for pfba analysis. This represents the
         fraction of optimum constraint applied before minimizing the sum
@@ -327,6 +337,8 @@ def find_metabolite_synthesis_network_genes(
     for metabolite in tqdm(res_df.columns, disable=not progress_bar):
         with model as m:
             _ = add_metabolite_objective_(m, metabolite)
+            if add_sinks:
+                add_all_metabolite_sinks_(m)
             if method == "essential":
                 ess_genes = [
                     gene.id

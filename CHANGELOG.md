@@ -28,6 +28,9 @@
   direct or indirect consumer of the metabolite of interest itself. Turned off
   by default for now, since it is not backwards compatible, but this may change
   in the future.
+- Added HyperGraphs and associated methods (currently only the Graphs
+  themselves, will be updated in future to be used for the metabolic networks
+  directly)
 
 ## Version 0.10.0
 
