@@ -44,21 +44,40 @@ class HyperGraph:
         """
         self._add_node(node, kwargs)
 
-    def add_edge(self, id: Hashable, edge: Iterable[Hashable], **kwargs):
+    def add_edge(
+        self,
+        id: Hashable,
+        u: Iterable[Hashable],
+        v: Optional[Iterable[Hashable]],
+        **kwargs,
+    ):
         """
-        Add an edge to the HyperGraph
+        Add an edge (u<->v) to the HyperGraph
 
         Parameters
         ----------
         id : Hashable
             The id of the edge, can be any Hashable
-        edge : Iterable of Hashable
-            An iterable of nodes in the edge, if the nodes are not already in the HyperGraph
-            they will be added
+        u : iterable of node ids
+            An iterable of source nodes in the edge, if the nodes are
+            not already in the HyperGraph they will be added.
+            In undirected HyperGraphs, nodes in u and v will
+            all be included in the edge with no difference between
+            the nodes.
+        v : iterable of node ids, optional
+            An iterable of target nodes in the edge, if the nodes are
+            not already in the HyperGraph they will be added.
+            In undirected HyperGraphs, nodes in u and v will
+            all be included in the edge with no difference between
+            the nodes.
         kwargs
             Keyword arguments are added as properties of the edge
         """
-        self._add_edge(id, tuple(edge), kwargs)
+        if v is not None:
+            edge = tuple(n for n in itertools.chain(u, v))
+        else:
+            edge = tuple(u)
+        self._add_edge(id, edge, kwargs)
 
     def add_nodes_from(
         self,
@@ -122,6 +141,8 @@ class HyperGraph:
             elif len_e == 2:
                 edge_id, edge = e  # type: ignore
                 properties = {}
+            else:
+                raise ValueError("Invalid edge group, must be a 2 or 3 tuple")
             if edge_id in self._edge_properties:
                 edge_property_dict = self._edge_properties[edge_id]
             else:
@@ -156,30 +177,30 @@ class HyperGraph:
         for n1, n2 in itertools.combinations(edge, 2):
             self._add_adj(n1, n2, edge_id)
 
-    def _add_adj(self, n1, n2, edge_id):
+    def _add_adj(self, u, v, edge_id):
         """Add a connection between n1<->n2 (undirected), can overwrite in derived
         classes to create a directed version"""
         # One direction
-        if n1 not in self._adj:
-            self._adj[n1] = {}
-        if n2 not in self._adj[n1]:
-            self._adj[n1][n2] = {edge_id}
+        if u not in self._adj:
+            self._adj[u] = {}
+        if v not in self._adj[u]:
+            self._adj[u][v] = {edge_id}
         else:
-            self._adj[n1][n2].add(edge_id)
+            self._adj[u][v].add(edge_id)
 
         # Then the opposite direction
-        if n2 not in self._adj:
-            self._adj[n2] = {}
-        if n1 not in self._adj[n2]:
-            self._adj[n2][n1] = {edge_id}
+        if v not in self._adj:
+            self._adj[v] = {}
+        if u not in self._adj[v]:
+            self._adj[v][u] = {edge_id}
         else:
-            self._adj[n2][n1].add(edge_id)
+            self._adj[v][u].add(edge_id)
 
     def _remove_edge(self, edge_id):
         """Remove an edge from the HyperGraph"""
         _ = self._edges.pop(edge_id)
         _ = self._edge_properties.pop(edge_id)
-        self._remove_edge_adj(edge_id)
+        self._remove_edge_adj(edge_id, self._adj)
 
     def _remove_node(self, node, remove_associated_edges: bool):
         """Remove a node from the HyperGraph"""
@@ -204,22 +225,30 @@ class HyperGraph:
                 self._edges[edge_id] = tuple(
                     n for n in self._edges[edge_id] if n != node
                 )
-            self._remove_node_adj(node)
+                # Check if the edge needs to be removed (i.e.
+                # the edge has fewer than two nodes
+                if len(self._edges[edge_id]) < 2:
+                    self._remove_edge(edge_id)
+        self._remove_node_adj(node, self._adj)
 
-    def _remove_node_adj(self, node):
+    def _remove_node_adj(self, node, adj_map):
         """Remove a node from the adjacency map"""
         # Silently ignore if the node isn't present, since it might not have
         # any neighbors
-        _ = self._adj.pop(node, None)
-        for _, n_dict in self._adj.items():
+        _ = adj_map.pop(node, None)
+        for _, n_dict in adj_map.items():
             _ = n_dict.pop(node, None)
 
-    def _remove_edge_adj(self, edge_id):
+    def _remove_edge_adj(self, edge_id, adj_map):
         """Remove an edge from the adjacency map"""
-        for _, n_dict in self._adj.items():
-            n_dict = {
-                n: {e for e in es if e != edge_id} for n, es in n_dict.items()
-            }
+        for _, n_dict in adj_map.items():
+            cutoff_neighbors = []
+            for target_id, edge_set in n_dict.items():
+                edge_set.discard(edge_id)
+                if len(edge_set) == 0:
+                    cutoff_neighbors.append(target_id)
+            for t in cutoff_neighbors:
+                _ = n_dict.pop(t, None)
 
     @property
     def adj(self):
@@ -271,12 +300,12 @@ class HyperGraph:
     #################
     ### Traversal ###
     #################
-    def _get_neighbors_of_node(self, node: Hashable) -> set[Hashable]:
-        return set(self._adj[node].keys())
+    def _get_neighbors_of_node(self, node_id: Hashable) -> set[Hashable]:
+        return set(self._adj[node_id].keys())
 
-    def _get_neighbors_of_edge(self, edge: Hashable) -> set[Hashable]:
+    def _get_neighbors_of_edge(self, edge_id: Hashable) -> set[Hashable]:
         neighbors = set()
-        for n in self._edges[edge]:
+        for n in self._edges[edge_id]:
             for edge_set in self._adj[n].values():
                 neighbors |= edge_set
         return neighbors
