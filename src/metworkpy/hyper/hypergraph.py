@@ -2,11 +2,12 @@
 Class representing Hypergraphs
 """
 
-from collections import deque
 import itertools
-from typing import cast, Any, Hashable, Iterable, Optional, Union
+from collections import deque
+from collections.abc import Hashable, Iterable
+from typing import Any, Optional, Union, cast
 
-from .views import AtlasView, AdjacencyView, ReadOnlyDictView
+from .views import AdjacencyView, AtlasView, ReadOnlyDictView
 
 
 class HyperGraph:

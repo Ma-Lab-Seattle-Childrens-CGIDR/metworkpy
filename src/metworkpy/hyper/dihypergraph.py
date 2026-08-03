@@ -2,11 +2,11 @@
 Class representing a directed HyperGraph
 """
 
-from networkx.classes.coreviews import AdjacencyView
-
-
 import itertools
-from typing import Any, Hashable, Iterable, Optional, Union
+from collections.abc import Hashable, Iterable
+from typing import Any, Optional, Union
+
+from networkx.classes.coreviews import AdjacencyView
 
 from .hypergraph import HyperGraph
 from .views import ReadOnlyDictView
