@@ -4,14 +4,15 @@ import unittest
 # External Imports
 from cobra.core.configuration import Configuration
 
+from metworkpy.examples import get_example_model
+
 # Local Imports
 from metworkpy.utils.translate import (
-    reaction_to_gene_ids,
     gene_to_reaction_ids,
     gene_to_reaction_list,
+    reaction_to_gene_ids,
     reaction_to_gene_list,
 )
-from metworkpy.examples import get_example_model
 
 
 class TestIdTranslate(unittest.TestCase):

@@ -3,8 +3,10 @@
 # region Imports
 # Standard Library Imports
 from __future__ import annotations
+
 import functools
-from typing import cast, Iterable
+from collections.abc import Iterable
+from typing import cast
 
 # External Imports
 import cobra
@@ -174,11 +176,9 @@ def gene_to_reaction_list(
     return list(
         functools.reduce(
             lambda x, y: x | y,
-            map(
-                lambda g: gene_to_reaction_ids(
-                    model=model, gene=g, essential=essential
-                ),
-                gene_list,
+            (
+                gene_to_reaction_ids(model=model, gene=g, essential=essential)
+                for g in gene_list
             ),
             set(),
         )
@@ -213,11 +213,11 @@ def reaction_to_gene_list(
     return list(
         functools.reduce(
             lambda x, y: x | y,
-            map(
-                lambda r: reaction_to_gene_ids(
+            (
+                reaction_to_gene_ids(
                     model=model, reaction=r, essential=essential
-                ),
-                reaction_list,
+                )
+                for r in reaction_list
             ),
             set(),
         )

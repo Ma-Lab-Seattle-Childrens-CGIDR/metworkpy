@@ -1,7 +1,7 @@
 """Functions to add noise to arrays to avoid ties"""
 
 # Standard Library Imports
-from typing import Union, Optional
+from __future__ import annotations
 
 # External Imports
 import numpy as np
@@ -34,8 +34,8 @@ def _jitter_single(
 def _jitter(
     x: np.ndarray,
     y: np.ndarray,
-    jitter: Union[float, tuple[float, float]],
-    jitter_seed: Optional[int],
+    jitter: float | tuple[float, float],
+    jitter_seed: int | None,
     discrete_x: bool,
     discrete_y: bool,
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -75,7 +75,7 @@ def _jitter(
         jitter_x = jitter
         jitter_y = jitter
     else:
-        raise ValueError(
+        raise TypeError(
             "Unexpected type for jitter, should be float or tuple of floats"
         )
     if not discrete_x:

@@ -9,14 +9,14 @@ import unittest
 from unittest import mock, skipIf
 
 # External Imports
-import cobra  # type: ignore
+import cobra
 import numpy as np
 import pandas as pd
 
 # Local Imports
 import metworkpy
 import metworkpy.scripts._script_utils
-from metworkpy.scripts import imatgen, _script_utils
+from metworkpy.scripts import _script_utils, imatgen
 
 BASE_PATH = pathlib.Path(__file__).parent.parent
 
@@ -50,31 +50,6 @@ def model_bounds_equality(self, model_a, model_b):
 
 
 class TestRunSingle(unittest.TestCase):
-    default_dict = {
-        "model_file": BASE_PATH / "data" / "test_model.json",
-        "gene_expression_file": BASE_PATH
-        / "data"
-        / "test_model_gene_expression.csv",
-        "output_file": None,
-        "method": "subset",
-        "epsilon": 1.0,
-        "threshold": 0.001,
-        "objective_tolerance": 5e-2,
-        "model_format": None,
-        "output_format": "json",
-        "samples": None,
-        "aggregation_method": "median",
-        "transpose": False,
-        "quantile": "0.15",
-        "subset": False,
-        "verbose": False,
-        "solver": "glpk",
-        "sep": ",",
-        "loopless": None,
-        "processes": None,
-        "func": imatgen.run_single,
-    }
-
     # Things setup by shared setup function
     data_path = None
     tmp_path = None
@@ -86,6 +61,30 @@ class TestRunSingle(unittest.TestCase):
     def setUpClass(cls):
         setup(cls, "test_model_gene_expression.csv")
         assert isinstance(cls.tmp_path, pathlib.Path)
+        cls.default_dict = {
+            "model_file": BASE_PATH / "data" / "test_model.json",
+            "gene_expression_file": BASE_PATH
+            / "data"
+            / "test_model_gene_expression.csv",
+            "output_file": cls.tmp_path / "test_result_model.json",
+            "method": "subset",
+            "epsilon": 1.0,
+            "threshold": 0.001,
+            "objective_tolerance": 5e-2,
+            "model_format": None,
+            "output_format": "json",
+            "samples": None,
+            "aggregation_method": "median",
+            "transpose": False,
+            "quantile": "0.15",
+            "subset": False,
+            "verbose": False,
+            "solver": "glpk",
+            "sep": ",",
+            "loopless": None,
+            "processes": None,
+            "func": imatgen.run_single,
+        }
         cls.default_dict["output_file"] = (
             cls.tmp_path / "test_result_model.json"
         )
@@ -115,15 +114,17 @@ class TestRunSingle(unittest.TestCase):
             # Test that the output model is the same that would be created by
             # running the IMAT algorithm by hand
             out_model = metworkpy.read_model(
-                argparse.ArgumentParser.parse_args().output_file
+                argparse.ArgumentParser.parse_args().output_file  # type: ignore
             )
+            assert isinstance(self.gene_expression, pd.DataFrame)
+            assert self.model is not None
             gene_weights = metworkpy.utils.expr_to_imat_gene_weights(
                 expression=self.gene_expression,
                 quantile=_script_utils._parse_quantile(
-                    namespace_dict["quantile"]
+                    namespace_dict["quantile"]  # type: ignore
                 ),
                 aggregator=_script_utils._parse_aggregation_method(
-                    namespace_dict["aggregation_method"]
+                    namespace_dict["aggregation_method"]  # type: ignore
                 ),
                 subset=(
                     None
@@ -135,6 +136,10 @@ class TestRunSingle(unittest.TestCase):
             rxn_weights = metworkpy.gpr.gene_to_rxn_weights(
                 model=self.test_model, gene_weights=gene_weights
             )
+            assert isinstance(namespace_dict["method"], str)
+            assert isinstance(namespace_dict["epsilon"], float)
+            assert isinstance(namespace_dict["threshold"], float)
+            assert isinstance(namespace_dict["objective_tolerance"], float)
             expected_model = metworkpy.imat.generate_model(
                 model=self.test_model,
                 rxn_weights=rxn_weights,
@@ -211,56 +216,60 @@ class TestRunMulti(unittest.TestCase):
     tmp_path = None
     gene_expression = None
     model = None
-    default_dict = {
-        "model_file": BASE_PATH / "data" / "test_model.json",
-        "gene_expression_file": BASE_PATH
-        / "data"
-        / "test_model_gene_expression_imatgen_multi.csv",
-        "output_dir": None,
-        "method": "subset",
-        "epsilon": 1.0,
-        "threshold": 0.001,
-        "objective_tolerance": 5e-2,
-        "model_format": None,
-        "output_format": "json",
-        "aggregation_method": "median",
-        "transpose": False,
-        "quantile": "0.10",
-        "subset": False,
-        "verbose": False,
-        "solver": "glpk",
-        "sep": ",",
-        "loopless": None,
-        "processes": None,
-        "func": imatgen.run_multi,
-        "prefix": None,
-        "sample_groups": None,
-        "fold_change": None,
-        "wildtype": "6,7,8",
-        "sample_group_names": None,
-    }
+    tmp_dir = None
 
     @classmethod
     def setUpClass(cls):
         setup(cls, "test_model_gene_expression_imatgen_multi.csv")
-        # Setup paths in the default dict using the temporary directory
-        cls.default_dict["output_dir"] = cls.tmp_path
+        cls.default_dict = {
+            "model_file": BASE_PATH / "data" / "test_model.json",
+            "gene_expression_file": BASE_PATH
+            / "data"
+            / "test_model_gene_expression_imatgen_multi.csv",
+            "output_dir": cls.tmp_path,
+            "method": "subset",
+            "epsilon": 1.0,
+            "threshold": 0.001,
+            "objective_tolerance": 5e-2,
+            "model_format": None,
+            "output_format": "json",
+            "aggregation_method": "median",
+            "transpose": False,
+            "quantile": "0.10",
+            "subset": False,
+            "verbose": False,
+            "solver": "glpk",
+            "sep": ",",
+            "loopless": None,
+            "processes": None,
+            "func": imatgen.run_multi,
+            "prefix": None,
+            "sample_groups": None,
+            "fold_change": None,
+            "wildtype": "6,7,8",
+            "sample_group_names": None,
+        }
 
     def setUp(self):
+        assert self.model is not None
         self.test_model = self.model.copy()
 
     @classmethod
     def tearDownClass(cls):
+        assert cls.tmp_dir is not None
         cls.tmp_dir.cleanup()
 
     def run_cli(self, **kwargs):
         namespace_dict = self.default_dict | kwargs
+        assert self.tmp_path is not None
+        assert self.model is not None
+        assert self.gene_expression is not None
         with mock.patch(
             "argparse.ArgumentParser.parse_args",
             return_value=argparse.Namespace(**namespace_dict),
         ):
             imatgen.main_run()
-            args = argparse.ArgumentParser.parse_args()
+            args = argparse.ArgumentParser.parse_args()  # type: ignore
             # Check that the expected file outputs exist
             if args.wildtype:
                 wildtype = _script_utils._parse_samples(args.wildtype)
@@ -330,9 +339,11 @@ class TestRunMulti(unittest.TestCase):
                         + 1e-10
                     )
                     g_weights = log2fc.apply(
-                        lambda x: -1
-                        if x <= -args.fold_change
-                        else (1 if x >= args.fold_change else 0)
+                        lambda x: (
+                            -1
+                            if x <= -args.fold_change
+                            else (1 if x >= args.fold_change else 0)
+                        )
                     )
                     rxn_weights[name] = metworkpy.gene_to_rxn_weights(
                         model=self.test_model,

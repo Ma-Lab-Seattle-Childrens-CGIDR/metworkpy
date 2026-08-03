@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from multiprocessing import cpu_count
-from typing import Protocol, Tuple, Union
+from typing import Protocol, Union
 
 # External Imports
 import joblib
@@ -22,13 +22,13 @@ class DivergenceFunction(Protocol):
         p: np.typing.ArrayLike,
         q: np.typing.ArrayLike,
         **kwargs,
-    ) -> Union[float, DivergenceResult]: ...
+    ) -> float | DivergenceResult: ...
 
 
 ArrayInput = Union[pd.DataFrame, np.ndarray]
 Array1D = Union[
     pd.Series,
-    np.ndarray[Tuple[int], np.dtype[Union[np.float32, np.float64]]],
+    np.ndarray[tuple[int], np.dtype[Union[np.float32, np.float64]]],
 ]
 
 
@@ -41,7 +41,7 @@ def _divergence_array(
     axis: int = 1,
     processes: int = 1,
     **kwargs,
-) -> Union[Array1D, Tuple[Array1D, Array1D]]:
+) -> Array1D | tuple[Array1D, Array1D]:
     processes = min(processes, cpu_count())
     # Check that if either p or q are DataFrames, they both are, and that
     # their column indices align
@@ -111,7 +111,7 @@ def _divergence_array_worker(
     axis: int,
     divergence_function: DivergenceFunction,
     **kwargs,
-) -> Union[Tuple[int, float], Tuple[int, float, float]]:
+) -> tuple[int, float] | tuple[int, float, float]:
     return index, divergence_function(  # type: ignore
         p=p.take(indices=index, axis=axis),
         q=q.take(indices=index, axis=axis),

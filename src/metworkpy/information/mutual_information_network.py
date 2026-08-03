@@ -5,15 +5,12 @@ Functions for computing the Mutual Information Network for a Metabolic Model"""
 from __future__ import annotations
 
 import itertools
+from collections.abc import Hashable, Iterable
 from typing import (
-    cast,
-    Hashable,
-    Iterable,
     Literal,
-    Optional,
-    Tuple,
     TypeVar,
     Union,
+    cast,
 )
 
 # External Imports
@@ -28,7 +25,6 @@ from numpy.typing import ArrayLike
 # Local Imports
 from .mutual_information_functions import mutual_information
 
-
 # region Main Function
 T = TypeVar("T", np.ndarray, pd.DataFrame, ArrayLike)
 
@@ -36,7 +32,7 @@ T = TypeVar("T", np.ndarray, pd.DataFrame, ArrayLike)
 def mi_network_adjacency_matrix(
     samples: T,
     **kwargs,
-) -> Union[T, Tuple[T, T]]:
+) -> T | tuple[T, T]:
     """
     Create a Mutual Information Network Adjacency matrix from flux samples.
     Uses kth nearest neighbor method for estimating mutual information.
@@ -78,13 +74,13 @@ def mi_pairwise(
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
     permutations: int = 500,
-    cutoff: Optional[float] = None,
-    cutoff_quantile: Optional[float] = None,
-    cutoff_significance: Optional[float] = None,
+    cutoff: float | None = None,
+    cutoff_quantile: float | None = None,
+    cutoff_significance: float | None = None,
     processes: int = -1,
     progress_bar: bool = False,
     **kwargs,
-) -> Union[T, Tuple[T, T]]:
+) -> T | tuple[T, T]:
     """
     Calculate all pairwise values of mutual information for columns in dataset
 
@@ -239,7 +235,7 @@ V = TypeVar("V", int, str)
 
 def _mi_single_pair(
     item1: ArrayLike, item2: ArrayLike, idx1: U, idx2: V, **kwargs
-) -> Tuple[U, V, Union[float, Tuple[float, float]]]:
+) -> tuple[U, V, float | tuple[float, float]]:
     """
     Calculate the mutual information for a single pair of features
 
@@ -265,26 +261,24 @@ def _mi_single_pair(
 
 # region Grouped Mutual Information
 
-IndexArray = np.ndarray[Tuple[int], np.dtype[np.intp]]
+IndexArray = np.ndarray[tuple[int], np.dtype[np.intp]]
 ResultIndex = Union[Hashable, np.intp]
 
 
 def mi_pairwise_grouped(
     dataset: T,
-    groups: Union[
-        Iterable[Union[Hashable, np.intp]],
-        dict[Hashable, Iterable[Union[Hashable, np.intp]]],
-    ],
+    groups: Iterable[Hashable | np.intp]
+    | dict[Hashable, Iterable[Hashable | np.intp]],
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
     permutations: int = 500,
-    cutoff: Optional[float] = None,
-    cutoff_quantile: Optional[float] = None,
-    cutoff_significance: Optional[float] = None,
+    cutoff: float | None = None,
+    cutoff_quantile: float | None = None,
+    cutoff_significance: float | None = None,
     processes: int = -1,
     progress_bar: bool = False,
     **kwargs,
-) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame]]:
+) -> pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]:
     """
     Calculate all pairwise values of mutual information between groups of columns
     in a dataset
@@ -421,16 +415,14 @@ def mi_pairwise_grouped(
 
 def create_grouped_mi_network(
     dataset: T,
-    groups: Union[
-        Iterable[Union[Hashable, np.intp]],
-        dict[Hashable, Iterable[Union[Hashable, np.intp]]],
-    ],
+    groups: Iterable[Hashable | np.intp]
+    | dict[Hashable, Iterable[Hashable | np.intp]],
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
     permutations: int = 500,
-    cutoff: Optional[float] = None,
-    cutoff_quantile: Optional[float] = None,
-    cutoff_significance: Optional[float] = None,
+    cutoff: float | None = None,
+    cutoff_quantile: float | None = None,
+    cutoff_significance: float | None = None,
     processes: int = -1,
     progress_bar: bool = False,
     **kwargs,
@@ -529,7 +521,7 @@ def _mi_grouped_single_pair(
     idx1: ResultIndex,
     idx2: ResultIndex,
     **kwargs,
-) -> tuple[ResultIndex, ResultIndex, Union[float, tuple[float, float]]]:
+) -> tuple[ResultIndex, ResultIndex, float | tuple[float, float]]:
     return idx1, idx2, mutual_information(data[:, g1], data[:, g2], **kwargs)
 
 

@@ -1,8 +1,8 @@
 # Imports
 # Standard Library Imports
 import pathlib
-import unittest
 import random
+import unittest
 
 # External Imports
 import cobra

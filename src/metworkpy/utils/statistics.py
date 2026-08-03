@@ -2,7 +2,8 @@
 Some helpful statistics methods
 """
 
-from typing import Hashable, Literal, NamedTuple
+from collections.abc import Hashable
+from typing import Literal, NamedTuple
 
 import numpy as np
 from scipy import stats

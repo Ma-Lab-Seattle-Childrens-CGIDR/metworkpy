@@ -1,8 +1,9 @@
 # Standard Library Imports
 from __future__ import annotations
+
 import ast
-from typing import Any, Optional, Union
 import warnings
+from typing import Any
 
 # External Imports
 import cobra
@@ -16,7 +17,7 @@ IMAT_FUNC_DICT = {"AND": min, "OR": max}
 def gene_to_rxn_weights(
     model: cobra.Model,
     gene_weights: pd.Series,
-    fn_dict: Optional[dict] = None,
+    fn_dict: dict | None = None,
     fill_val: Any = 0,
 ) -> pd.Series:
     """Convert a gene weights series to a reaction weights series using the
@@ -77,10 +78,8 @@ def gene_to_rxn_weights(
 
 
 def eval_gpr(
-    gpr: Optional[
-        Union[cobra.core.GPR, ast.Expression, list, ast.BoolOp, ast.Name]
-    ],
-    gene_weights: Union[pd.Series, dict],
+    gpr: cobra.core.GPR | ast.Expression | list | ast.BoolOp | ast.Name | None,
+    gene_weights: pd.Series | dict,
     fn_dict: dict,
     fill_val: Any = 0,
 ) -> Any:
@@ -113,14 +112,14 @@ def eval_gpr(
     elif isinstance(gpr, ast.BoolOp):
         op = gpr.op
         if isinstance(op, ast.Or):
-            return fn_dict["OR"](  # type: ignore
+            return fn_dict["OR"](
                 *[
                     eval_gpr(e, gene_weights, fn_dict, fill_val)  # type: ignore
                     for e in gpr.values
                 ]
             )
         elif isinstance(op, ast.And):
-            return fn_dict["AND"](  # type: ignore
+            return fn_dict["AND"](
                 *[
                     eval_gpr(e, gene_weights, fn_dict, fill_val)  # type: ignore
                     for e in gpr.values

@@ -1,5 +1,4 @@
 # Standard Library Imports
-from metworkpy.network import create_reaction_network
 import pathlib
 import unittest
 
@@ -9,17 +8,19 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
+from metworkpy.network import create_reaction_network
+from metworkpy.network.centrality import (
+    betweenness_centrality_bipartite_subset,
+    betweenness_centrality_subset,
+    closeness_centrality_subset,
+)
+from metworkpy.network.network_construction import (
+    bipartite_project,
+    create_metabolic_network,
+)
+
 # Local Imports
 from metworkpy.utils import read_model
-from metworkpy.network.network_construction import (
-    create_metabolic_network,
-    bipartite_project,
-)
-from metworkpy.network.centrality import (
-    closeness_centrality_subset,
-    betweenness_centrality_subset,
-    betweenness_centrality_bipartite_subset,
-)
 
 
 class TestCentralitySubset(unittest.TestCase):

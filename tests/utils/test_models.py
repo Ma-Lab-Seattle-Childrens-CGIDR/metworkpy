@@ -11,7 +11,6 @@ from cobra.core.configuration import Configuration  # type: ignore
 # Local imports
 import metworkpy.utils.models
 
-
 # Setup file paths
 BASE_PATH = pathlib.Path(__file__).parent.parent
 DATA_PATH = BASE_PATH / "data"

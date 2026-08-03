@@ -3,12 +3,12 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+
 import argparse
 import math
 import os.path
 import pathlib
 import sys
-from typing import Optional
 
 # External Imports
 import cobra
@@ -278,7 +278,7 @@ def _batch_sample(
     if os.path.exists(out_file):
         os.remove(out_file)
     samples_per_batch = math.ceil(samples / batches)
-    pqwriter: Optional[pq.ParquetWriter] = None
+    pqwriter: pq.ParquetWriter | None = None
     for sample in sampler.batch(samples_per_batch, batches):
         if validate:
             # Filter for only valid samples

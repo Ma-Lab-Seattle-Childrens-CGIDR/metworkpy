@@ -2,7 +2,7 @@ from importlib.metadata import version
 
 __author__ = "Braden Griebel"
 __version__ = version("metworkpy")
-__all__ = [
+__all__ = [  # noqa: RUF022
     "divergence",
     "gpr",
     "hyper",
@@ -35,15 +35,10 @@ __all__ = [
     "create_reaction_network",
     "create_metabolite_network",
     "create_gene_network",
-    "create_group_neighborhood_network",
-    "create_mutual_information_network",
     "create_group_distance_adjacency_matrix",
     "create_group_distance_network",
-    "get_network_group_clustering",
-    "get_network_group_linkage",
-    "get_distance_matrix",
-    "create_adjacency_matrix",
-    "node_target_density",
+    "create_group_neighborhood_network",
+    "create_mutual_information_network",
     "find_dense_clusters",
     # Utils
     "eval_gpr",
@@ -74,54 +69,17 @@ from metworkpy import (
     synleth,
     utils,
 )
-
-from metworkpy.utils import (
-    read_model,
-    write_model,
-    model_eq,
-    model_bounds_eq,
-    gene_to_reaction_list,
-    reaction_to_gene_list,
-    fisher_enrichment,
-    extended_mannwhitneyu_test,
-)
-
+from metworkpy.divergence import js_divergence, kl_divergence
+from metworkpy.examples import get_example_model
+from metworkpy.gpr import eval_gpr, gene_to_rxn_weights
+from metworkpy.hyper import HyperGraph
 from metworkpy.information import (
-    mutual_information,
     mi_network_adjacency_matrix,
+    mutual_information,
     variation_of_information,
 )
-
-from metworkpy.divergence import kl_divergence, js_divergence
-
-from metworkpy.examples import get_example_model
-
-from metworkpy.network import (
-    create_metabolic_network,
-    create_mutual_information_network,
-    create_adjacency_matrix,
-    node_target_density,
-    find_dense_clusters,
-    bipartite_project,
-    fuzzy_reaction_set,
-    fuzzy_reaction_intersection,
-    create_reaction_network,
-    create_metabolite_network,
-    create_gene_network,
-    create_group_neighborhood_network,
-    create_group_distance_adjacency_matrix,
-    create_group_distance_network,
-    get_network_group_clustering,
-    get_network_group_linkage,
-    get_distance_matrix,
-)
-
 from metworkpy.metabolites import (
-    find_metabolite_synthesis_network_reactions,
     find_metabolite_synthesis_network_genes,
+    find_metabolite_synthesis_network_reactions,
     metchange,
 )
-
-from metworkpy.gpr import eval_gpr, gene_to_rxn_weights
-
-from metworkpy.hyper import HyperGraph

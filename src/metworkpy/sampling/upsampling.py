@@ -3,12 +3,13 @@ Submodule for upsampling from a set of points in a convex polytope
 """
 
 # Standard Library Imports
-from typing import Optional, Union
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
 
 # External Imports
 from joblib import Parallel, delayed
-import numpy as np
-import pandas as pd
 
 # Local
 from metworkpy.utils.metworkpy_types import Array1D, Array2D
@@ -17,8 +18,8 @@ from metworkpy.utils.metworkpy_types import Array1D, Array2D
 def upsample(
     samples: pd.DataFrame,
     n_samples: int = 1_000,
-    processes: Optional[int] = None,
-    seed: Optional[Union[int, np.random.Generator]] = None,
+    processes: int | None = None,
+    seed: int | np.random.Generator | None = None,
 ) -> pd.DataFrame:
     """
     Perform upsampling of samples drawn from a convex polytope
@@ -80,7 +81,7 @@ def upsample(
 
 
 def _upsample_worker(
-    samples: Array2D, seed: Optional[Union[int, list[int]]]
+    samples: Array2D, seed: int | list[int] | None
 ) -> Array1D:
     rng = np.random.default_rng(seed)
     # Select the proportion of samples which will be used as corners in the

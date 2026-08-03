@@ -10,9 +10,10 @@ from importlib import resources
 # External Imports
 import cobra  # type: ignore
 
+from metworkpy import examples
+
 # Local Imports
 from metworkpy.utils import read_model
-from metworkpy import examples
 
 
 def get_example_model() -> cobra.Model:

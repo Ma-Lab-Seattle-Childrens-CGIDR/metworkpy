@@ -4,31 +4,30 @@ Sub-module for finding fuzzy sets of reactions
 
 # Standard Library Imports
 from __future__ import annotations
+
 import functools
 import math
+from collections.abc import Iterable
 from typing import (
-    cast,
     Any,
     Callable,
-    Iterable,
-    Optional,
-    Protocol,
-    Union,
     Literal,
+    Protocol,
+    cast,
 )
 
 # External Imports
 import cobra
-from joblib import Parallel, delayed
 import networkx as nx
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 from robustrankaggregpy.aggregate_ranks import (
     rank_matrix_from_df,
     rho_scores,
 )
-from scipy.stats import gmean, rv_discrete
 from scipy import stats
+from scipy.stats import gmean, rv_discrete
 
 # Local Imports
 from metworkpy.network.neighborhoods import (
@@ -152,7 +151,7 @@ def weight_fn_geom_series(distance: int, r: int = 2) -> float:
     """
     Weights distances using geometric series of 1/r^(n+1)
     """
-    return 1.0 / float(math.pow(2, distance + 1))
+    return 1.0 / float(math.pow(r, distance + 1))
 
 
 def weight_fn_distr(
@@ -268,6 +267,7 @@ def membership_distance_weighted_gene_density(
             lambda left, right: left | right,
             map(reaction_to_gene_dict.get, nodes),
         )
+        assert isinstance(gene_neighborhood, set)
 
         if len(gene_neighborhood - previous_genes) == 0:
             continue
@@ -409,6 +409,7 @@ def membership_knn_gene_distance(
             lambda left, right: left | right,
             map(reaction_to_gene_dict.get, nodes),
         )
+        assert isinstance(gene_neighborhood, set)
         neighbors_seen += len((gene_neighborhood & gene_set) - previous_genes)
         if not allow_repeats:
             previous_genes |= gene_neighborhood
@@ -503,7 +504,7 @@ def membership_gene_enrichment(
     gene_set: set[str],
     reaction_to_gene_dict: dict[str, set[str]],
     radius: int,
-    total_genes: Optional[int] = None,
+    total_genes: int | None = None,
 ) -> float:
     """
     Membership function which computes the membership by calculating the
@@ -553,11 +554,8 @@ def membership_gene_enrichment(
     if total_genes is None:
         total_genes = len(
             functools.reduce(
-                lambda x, y: x | y,
-                map(
-                    lambda r: reaction_to_gene_dict.get(r, set()),
-                    network.nodes,
-                ),
+                lambda x, y: x | y,  # ty: ignore[unsupported-operator]
+                (reaction_to_gene_dict.get(r, set()) for r in network.nodes),
                 set(),
             )
         )
@@ -594,13 +592,13 @@ MEMBERSHIP_FUNCTIONS = {
 
 
 def fuzzy_reaction_set(
-    metabolic_network: Union[nx.Graph, nx.DiGraph],
+    metabolic_network: nx.Graph | nx.DiGraph,
     metabolic_model: cobra.Model,
     gene_set: Iterable[str],
-    membership_fn: Union[str, FuzzyMembershipFunction] = "simple gene density",
-    scale: Optional[Union[bool, float]] = None,
+    membership_fn: str | FuzzyMembershipFunction = "simple gene density",
+    scale: bool | float | None = None,
     essential: bool = False,
-    processes: Optional[int] = None,
+    processes: int | None = None,
     **kwargs,
 ) -> pd.Series:
     """
@@ -681,12 +679,12 @@ def fuzzy_reaction_set(
         membership_fn = MEMBERSHIP_FUNCTIONS[membership_fn]  # type: ignore
 
     if not callable(membership_fn):
-        raise ValueError("Received invalid membership function")
+        raise TypeError("Received invalid membership function")
     # Convert directed graphs into undirected graphs
     if isinstance(metabolic_network, nx.DiGraph):
         metabolic_network = nx.to_undirected(metabolic_network)
     if not isinstance(metabolic_network, nx.Graph):
-        raise ValueError(
+        raise TypeError(
             f"metabolic_network must be a networkx Graph or "
             f"DiGraph but received {type(metabolic_network)}"
         )
@@ -700,18 +698,20 @@ def fuzzy_reaction_set(
     )
     # If the membership function is gene enrichment, pre-calculate the
     # number of genes in the network if needed
-    if membership_fn == membership_gene_enrichment:
-        if "total_genes" not in kwargs:
-            kwargs["total_genes"] = len(
-                functools.reduce(
-                    lambda x, y: x | y,
-                    map(
-                        lambda r: rxn_to_gene_dict.get(r, set()),
-                        metabolic_network.nodes,
-                    ),
-                    set(),
-                )
+    if (
+        membership_fn == membership_gene_enrichment
+        and "total_genes" not in kwargs
+    ):
+        kwargs["total_genes"] = len(
+            functools.reduce(
+                lambda x, y: x | y,  # ty: ignore[unsupported-operator]
+                (
+                    rxn_to_gene_dict.get(r, set())
+                    for r in metabolic_network.nodes
+                ),
+                set(),
             )
+        )
     # Create the results series
     rxn_set = pd.Series(0.0, index=pd.Index(metabolic_network.nodes))
     for rxn, membership in zip(
@@ -745,13 +745,11 @@ def fuzzy_reaction_set(
 
 def fuzzy_reaction_intersection(
     gene_sets: Iterable[Iterable[str]],
-    metabolic_network: Union[nx.Graph, nx.DiGraph],
+    metabolic_network: nx.Graph | nx.DiGraph,
     metabolic_model: cobra.Model,
-    intersection_fn: Union[
-        Callable[[pd.DataFrame], pd.Series],
-        Literal["mean", "min", "max", "geom", "rra"],
-    ],
-    intersection_fn_kwargs=Optional[dict[str, Any]],
+    intersection_fn: Callable[[pd.DataFrame], pd.Series]
+    | Literal["mean", "min", "max", "geom", "rra"],
+    intersection_fn_kwargs: dict[str, Any] | None = None,
     rank_method: Literal["average", "min", "max", "first", "dense"] = "max",
     **kwargs,
 ) -> pd.Series:
@@ -812,9 +810,9 @@ def fuzzy_reaction_intersection(
             )
         )
     rxn_set_df = pd.concat(rxn_set_list, axis=1)
+    if intersection_fn_kwargs is None:
+        intersection_fn_kwargs = {}
     if callable(intersection_fn):
-        if intersection_fn_kwargs is None:
-            intersection_fn_kwargs = {}
         rxn_intersect_series = intersection_fn(
             rxn_set_df, **intersection_fn_kwargs
         )

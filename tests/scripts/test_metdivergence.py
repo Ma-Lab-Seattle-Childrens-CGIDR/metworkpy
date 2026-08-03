@@ -1,6 +1,7 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+
 import argparse
 import importlib.util
 import pathlib
@@ -9,7 +10,7 @@ import unittest
 from unittest import mock, skipIf
 
 # External Imports
-import cobra  # type:ignore
+import cobra
 import pandas as pd
 
 # Local Imports
@@ -21,30 +22,10 @@ BASE_PATH = pathlib.Path(__file__).parent.parent
 
 
 class TestMetdivergenceMain(unittest.TestCase):
-    default_dict = {
-        "treatment_distribution_file": BASE_PATH
-        / "tmp_metdivergence"
-        / "treatment_distribution.csv",
-        "wildtype_distribution_file": BASE_PATH
-        / "tmp_metdivergence"
-        / "wildtype_distribution.csv",
-        "output_file": BASE_PATH
-        / "tmp_metdivergence"
-        / "metdivergence_results.csv",
-        "input_format": "csv",
-        "neighbors": 5,
-        "divergence_type": "js",
-        "metric": "euclidean",
-        "model_file": None,
-        "model_format": None,
-        "sheet_name": None,
-        "verbose": False,
-    }
-
     @classmethod
     def setUpClass(cls):
         # Configure cobra to use GLPK
-        cobra.core.Configuration.solver = "glpk"
+        cobra.core.Configuration.solver = "glpk"  # type: ignore
         # Get path references
         cls.data_path = BASE_PATH / "data"
         # Get the mode from the data directory
@@ -54,15 +35,21 @@ class TestMetdivergenceMain(unittest.TestCase):
         cls.tmp_path = pathlib.Path(cls.tmp_dir.name) / "tmp_metdivergence"
         cls.tmp_path.mkdir(exist_ok=True)
         # Setup paths in the default dict using the temporary directory
-        cls.default_dict["treatment_distribution_file"] = (
-            cls.tmp_path / "treatment_distribution.csv"
-        )
-        cls.default_dict["wildtype_distribution_file"] = (
-            cls.tmp_path / "wildtype_distribution.csv"
-        )
-        cls.default_dict["output_file"] = (
-            cls.tmp_path / "metdivergence_results.csv"
-        )
+        cls.default_dict = {
+            "treatment_distribution_file": cls.tmp_path
+            / "treatment_distribution.csv",
+            "wildtype_distribution_file": cls.tmp_path
+            / "wildtype_distribution.csv",
+            "output_file": cls.tmp_path / "metdivergence_results.csv",
+            "input_format": "csv",
+            "neighbors": 5,
+            "divergence_type": "js",
+            "metric": "euclidean",
+            "model_file": None,
+            "model_format": None,
+            "sheet_name": None,
+            "verbose": False,
+        }
 
     def setUp(self):
         self.test_model = self.model.copy()
@@ -78,6 +65,8 @@ class TestMetdivergenceMain(unittest.TestCase):
 
     def run_cli(self, **kwargs):
         namespace_dict = self.default_dict | kwargs
+        assert isinstance(namespace_dict["input_format"], str)
+        assert isinstance(namespace_dict["output_file"], pathlib.Path)
         # Create IMAT model for sampling
         gene_weights = metworkpy.utils.expr_to_imat_gene_weights(
             expression=self.imat_gene_expression.loc[["s1", "s2", "s3"], :],

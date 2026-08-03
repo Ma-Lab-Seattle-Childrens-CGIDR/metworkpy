@@ -5,7 +5,6 @@ import unittest
 import numpy as np
 import pandas as pd
 
-
 # Local Imports
 from metworkpy.information import variation_of_information_functions as voi
 

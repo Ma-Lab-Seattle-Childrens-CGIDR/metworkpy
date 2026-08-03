@@ -5,41 +5,39 @@ Functions for constructing networks based on genome scale metabolic models
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+
 import itertools
+from collections.abc import Hashable, Iterable
 from typing import (
-    cast,
     Callable,
-    Hashable,
-    Iterable,
     Literal,
-    Optional,
-    Union,
+    cast,
 )
 
 # External Imports
-import cobra  # type: ignore
+import cobra
+import networkx as nx
 import numpy as np
 import pandas as pd
-import networkx as nx
 from scipy import stats
 
 # Local Imports
 from metworkpy.information.mutual_information_network import (
     mi_pairwise,
 )
-from metworkpy.network.projection import bipartite_project
-from metworkpy.utils import reaction_to_gene_ids, reaction_to_gene_list
 from metworkpy.network.neighborhoods import (
     get_graph_neighborhood_group,
 )
+from metworkpy.network.projection import bipartite_project
+from metworkpy.utils import reaction_to_gene_ids, reaction_to_gene_list
 
 
 # region Main Function
 def create_mutual_information_network(
-    model: Optional[cobra.Model] = None,
+    model: cobra.Model | None = None,
     flux_samples: pd.DataFrame | np.ndarray | None = None,
     reaction_names: Iterable[str] | None = None,
-    cutoff_significance: Optional[float] = None,
+    cutoff_significance: float | None = None,
     n_samples: int = 10_000,
     reciprocal_weights: bool = False,
     processes: int = 1,
@@ -107,7 +105,7 @@ def create_mutual_information_network(
         if reaction_names is not None:
             sample_df.columns = pd.Index(reaction_names)
     else:
-        raise ValueError(
+        raise TypeError(
             f"Invalid type for flux samples, requires pandas DataFrame or "
             f"numpy ndarray, but "
             f"received {type(flux_samples)}"
@@ -190,7 +188,7 @@ def create_adjacency_matrix(
     reaction in the pFBA solution.
     """
     if not isinstance(model, cobra.Model):
-        raise ValueError(
+        raise TypeError(
             f"Model must be a cobra.Model, received a {type(model)} instead"
         )
     if threshold < 0.0:
@@ -326,7 +324,7 @@ def create_metabolic_network(
     else:
         out_network = nx.from_pandas_adjacency(
             adjacency_frame,
-            create_using=nx.Graph,  # type: ignore
+            create_using=nx.Graph,
         )
 
     # Remove any metabolites desired
@@ -344,7 +342,7 @@ def create_reaction_network(
     reciprocal_weights: bool = False,
     threshold: float = 0.0,
     projection_weight: str | Callable[[float, float], float] | None = None,
-    projection_weight_combine: Optional[Callable[[list[float]], float]] = None,
+    projection_weight_combine: Callable[[list[float]], float] | None = None,
     **kwargs,
 ):
     """
@@ -441,10 +439,8 @@ def create_metabolite_network(
     nodes_to_remove: list[str] | None = None,
     reciprocal_weights: bool = False,
     threshold: float = 0.0,
-    projection_weight: Optional[
-        Union[str, Callable[[float, float], float]]
-    ] = None,
-    projection_weight_combine: Optional[Callable[[list[float]], float]] = None,
+    projection_weight: str | Callable[[float, float], float] | None = None,
+    projection_weight_combine: Callable[[list[float]], float] | None = None,
     **kwargs,
 ):
     """
@@ -538,7 +534,7 @@ def create_gene_network(
     directed: bool,
     nodes_to_remove: list[str] | None,
     essential: bool,
-) -> Union[nx.Graph, nx.DiGraph]:
+) -> nx.Graph | nx.DiGraph:
     """
     Create a gene connectivity network from the metabolic model,
     see notes for details
@@ -606,7 +602,7 @@ def create_gene_network(
     )
     # Create the new network
     if not directed:
-        gene_network: Union[nx.Graph, nx.DiGraph] = nx.Graph()
+        gene_network: nx.Graph | nx.DiGraph = nx.Graph()
     else:
         gene_network = nx.DiGraph()
     gene_network.add_nodes_from(gene_list)
@@ -635,18 +631,12 @@ def create_gene_network(
 
 
 def create_group_neighborhood_network(
-    network: Union[nx.Graph, nx.DiGraph],
+    network: nx.Graph | nx.DiGraph,
     groups: dict[Hashable, Iterable[Hashable]],
     max_distance: int = 1,
-    weighted: Optional[
-        Literal[
-            "count",
-            "proportion",
-            "enrichment",
-        ]
-    ] = None,
+    weighted: Literal["count", "proportion", "enrichment"] | None = None,
     directed: bool = False,
-) -> Union[nx.Graph, nx.DiGraph]:
+) -> nx.Graph | nx.DiGraph:
     """
     Create a group connectivity network, see notes for details
 
@@ -863,9 +853,9 @@ def create_group_neighborhood_network(
 
 
 def create_group_distance_adjacency_matrix(
-    network: Union[nx.Graph, nx.DiGraph],
+    network: nx.Graph | nx.DiGraph,
     groups: dict[Hashable, Iterable[Hashable]],
-    weight: Optional[str] = None,
+    weight: str | None = None,
     linkage: Literal["mean", "min", "max"] = "mean",
     directed: bool = False,
 ) -> pd.DataFrame:
@@ -906,7 +896,7 @@ def create_group_distance_adjacency_matrix(
     the set of pairwise distances between two groups of nodes.
     """
     # Compute the pairwise distances
-    distance_dict = dict(nx.shortest_path_length(network))
+    distance_dict = dict(nx.shortest_path_length(network, weight=weight))
     # Convert the groups into sets
     group_sets = {s: set(m) for s, m in groups.items()}
     # Get the set of all nodes in the network
@@ -921,13 +911,13 @@ def create_group_distance_adjacency_matrix(
         g2_nodes = group_sets[g2] & network_node_set
         if isinstance(network, nx.Graph):
             # Undirected case
-            adj_mat.loc[g1, g2] = _get_group_distance(
+            adj_mat.loc[g1, g2] = _get_group_distance(  # type: ignore
                 distance_dict=distance_dict,
                 group1=g1_nodes,
                 group2=g2_nodes,
                 linkage=linkage,
             )
-            adj_mat.loc[g2, g1] = adj_mat.loc[g1, g2]
+            adj_mat.loc[g2, g1] = adj_mat.loc[g1, g2]  # type: ignore
         if isinstance(network, nx.DiGraph):
             # Directed Case
             d1 = _get_group_distance(
@@ -943,21 +933,21 @@ def create_group_distance_adjacency_matrix(
                 linkage=linkage,
             )
             if directed:
-                adj_mat.loc[g1, g2] = d1
-                adj_mat.loc[g2, g2] = d2
+                adj_mat.loc[g1, g2] = d1  # type: ignore
+                adj_mat.loc[g2, g2] = d2  # type: ignore
             else:
-                adj_mat.loc[g1, g2] = min(d1, d2)
-                adj_mat.loc[g2, g1] = min(d1, d2)
+                adj_mat.loc[g1, g2] = min(d1, d2)  # type: ignore
+                adj_mat.loc[g2, g1] = min(d1, d2)  # type: ignore
     return adj_mat
 
 
 def create_group_distance_network(
-    network: Union[nx.Graph, nx.DiGraph],
+    network: nx.Graph | nx.DiGraph,
     groups: dict[Hashable, Iterable[Hashable]],
-    weight: Optional[str] = None,
+    weight: str | None = None,
     linkage: Literal["mean", "min", "max"] = "mean",
     directed: bool = False,
-) -> Union[nx.Graph, nx.DiGraph]:
+) -> nx.Graph | nx.DiGraph:
     """
     Create an network for the distances between the `groups`
 
@@ -1085,7 +1075,7 @@ def get_top_metabolite_pairs(
     assert isinstance(stoich_mat, pd.DataFrame), (
         "Cobra returned incorrect stoichiometric matrix type"
     )
-    for rxn, met_series in stoich_mat.items():
+    for _, met_series in stoich_mat.items():  # noqa: PERF102
         for met1, met2 in itertools.combinations(
             met_series[met_series > 0].index, 2
         ):
@@ -1099,7 +1089,7 @@ def get_top_metabolite_pairs(
         met_pair_freq.drop([m1, m2], axis=1, inplace=True)
         met_pair_freq.drop([m1, m2], axis=0, inplace=True)
         top_met_pair_list.append((m1, m2))
-    return top_met_pair_list
+    return top_met_pair_list  # type: ignore
 
 
 # endregion Main Function
@@ -1107,8 +1097,8 @@ def get_top_metabolite_pairs(
 
 # region Helpers
 def _enforce_threshold(
-    data: Union[pd.DataFrame, pd.Series], threshold: float
-) -> Union[pd.DataFrame, pd.Series]:
+    data: pd.DataFrame | pd.Series, threshold: float
+) -> pd.DataFrame | pd.Series:
     data[(data >= -threshold) & (data <= threshold)] = 0.0
     return data
 
@@ -1270,8 +1260,8 @@ def _create_adj_matrix_d_w_stoich(
     # Combine the blocks
     return pd.concat(
         [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),
-            pd.concat([met_rxn_block, met_met_block], axis=1),
+            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),  # ty: ignore[no-matching-overload]
+            pd.concat([met_rxn_block, met_met_block], axis=1),  # ty: ignore[no-matching-overload]
         ],
         axis=0,
     )
@@ -1307,8 +1297,8 @@ def _create_adj_matrix_d_w_fva(
     # Combine the blocks
     return pd.concat(
         [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),
-            pd.concat([met_rxn_block, met_met_block], axis=1),
+            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),  # ty: ignore[no-matching-overload]
+            pd.concat([met_rxn_block, met_met_block], axis=1),  # ty: ignore[no-matching-overload]
         ],
         axis=0,
     )
@@ -1373,8 +1363,8 @@ def _create_adj_matrix_ud_w_stoich(
     # Combine the blocks
     return pd.concat(
         [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),
-            pd.concat([met_rxn_block, met_met_block], axis=1),
+            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),  # ty: ignore[no-matching-overload]
+            pd.concat([met_rxn_block, met_met_block], axis=1),  # ty: ignore[no-matching-overload]
         ],
         axis=0,
     )
@@ -1413,8 +1403,8 @@ def _create_adj_matrix_ud_w_fva(
     # Combine the blocks
     return pd.concat(
         [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),
-            pd.concat([met_rxn_block, met_met_block], axis=1),
+            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),  # ty: ignore[no-matching-overload]
+            pd.concat([met_rxn_block, met_met_block], axis=1),  # ty: ignore[no-matching-overload]
         ],
         axis=0,
     )

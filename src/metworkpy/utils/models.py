@@ -2,6 +2,7 @@
 
 # Standard Library Imports
 from __future__ import annotations
+
 import pathlib
 
 # External Imports
@@ -98,7 +99,7 @@ def write_model(
     elif file_type == "yaml":
         from cobra.io import save_yaml_model
 
-        save_yaml_model(model, model_path)
+        save_yaml_model(model, str(model_path))
     elif file_type == "json":
         from cobra.io import save_json_model
 
@@ -265,7 +266,7 @@ def model_bounds_eq(
         index=model2.reactions.list_attr("id"),
     )
     # Check if the bounds are the same
-    return (
+    return bool(
         np.isclose(model1_lb, model2_lb, **kwargs).all()
         and np.isclose(model1_ub, model2_ub, **kwargs).all()
     )
@@ -313,9 +314,7 @@ def _check_dictlist_eq(
     """
     if not _check_dictlist_subset(dictlist1, dictlist2):
         return False
-    if not _check_dictlist_subset(dictlist2, dictlist1):
-        return False
-    return True
+    return _check_dictlist_subset(dictlist2, dictlist1)
 
 
 def _check_optlang_container_subset(
@@ -360,9 +359,7 @@ def _check_optlang_container_eq(
     """
     if not _check_optlang_container_subset(cont1, cont2):
         return False
-    if not _check_optlang_container_subset(cont2, cont1):
-        return False
-    return True
+    return _check_optlang_container_subset(cont2, cont1)
 
 
 def _check_reaction_eq(

@@ -1,33 +1,35 @@
 # Imports
+from __future__ import annotations
+
 # Standard library imports
 import itertools
 import pathlib
-from typing import Optional
 import unittest
 
 # External Imports
 import cobra
-from cobra.core.configuration import Configuration
 import networkx as nx
 import pandas as pd
+from cobra.core.configuration import Configuration
+
+from metworkpy.information import mi_network_adjacency_matrix
+from metworkpy.network.network_construction import (
+    _create_adj_matrix_d_uw,
+    _create_adj_matrix_d_w_fva,
+    _create_adj_matrix_d_w_pfba,
+    _create_adj_matrix_d_w_stoich,
+    _create_adj_matrix_ud_uw,
+    _create_adj_matrix_ud_w_fva,
+    _create_adj_matrix_ud_w_pfba,
+    _create_adj_matrix_ud_w_stoich,
+    create_adjacency_matrix,
+    create_group_neighborhood_network,
+    create_metabolic_network,
+    create_mutual_information_network,
+)
 
 # Local Imports
 from metworkpy.utils.models import read_model
-from metworkpy.network.network_construction import (
-    _create_adj_matrix_d_uw,
-    _create_adj_matrix_ud_uw,
-    _create_adj_matrix_d_w_fva,
-    _create_adj_matrix_ud_w_fva,
-    _create_adj_matrix_d_w_pfba,
-    _create_adj_matrix_ud_w_pfba,
-    _create_adj_matrix_d_w_stoich,
-    _create_adj_matrix_ud_w_stoich,
-    create_adjacency_matrix,
-    create_metabolic_network,
-    create_mutual_information_network,
-    create_group_neighborhood_network,
-)
-from metworkpy.information import mi_network_adjacency_matrix
 
 
 # region Metabolic Network
@@ -39,9 +41,9 @@ def setup(cls):
 
 
 class TestAdjMatUdUw(unittest.TestCase):
-    test_model: Optional[cobra.Model] = None
-    tiny_model: Optional[cobra.Model] = None
-    data_path: Optional[pathlib.Path] = None
+    test_model: cobra.Model | None = None
+    tiny_model: cobra.Model | None = None
+    data_path: pathlib.Path | None = None
 
     @classmethod
     def setUpClass(cls):
@@ -625,7 +627,7 @@ class TestCreateNetwork(unittest.TestCase):
             model=self.test_model, weighted=False, directed=True
         )
         self.assertIsInstance(test_network, nx.DiGraph)
-        for start, stop, data in test_network.edges(data=True):
+        for _, _, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
         tiny_network = create_metabolic_network(
             model=self.tiny_model, weighted=False, directed=True
@@ -641,7 +643,7 @@ class TestCreateNetwork(unittest.TestCase):
             model=self.test_model, weighted=False, directed=False
         )
         self.assertIsInstance(test_network, nx.Graph)
-        for start, stop, data in test_network.edges(data=True):
+        for _, _, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
         tiny_network = create_metabolic_network(
             model=self.tiny_model, weighted=False, directed=False
@@ -659,7 +661,7 @@ class TestCreateNetwork(unittest.TestCase):
             weight_by="stoichiometry",
         )
         self.assertIsInstance(test_network, nx.DiGraph)
-        for start, stop, data in test_network.edges(data=True):
+        for _, _, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
         tiny_network = create_metabolic_network(
             model=self.tiny_model,
@@ -681,7 +683,7 @@ class TestCreateNetwork(unittest.TestCase):
             weight_by="stoichiometry",
         )
         self.assertIsInstance(test_network, nx.Graph)
-        for start, stop, data in test_network.edges(data=True):
+        for _, _, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 1)
         tiny_network = create_metabolic_network(
             model=self.tiny_model,
@@ -702,7 +704,7 @@ class TestCreateNetwork(unittest.TestCase):
             weight_by="fva",
         )
         self.assertIsInstance(test_network, nx.DiGraph)
-        for start, stop, data in test_network.edges(data=True):
+        for _, _, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 50)
         tiny_network = create_metabolic_network(
             model=self.tiny_model,
@@ -724,7 +726,7 @@ class TestCreateNetwork(unittest.TestCase):
             weight_by="fva",
         )
         self.assertIsInstance(test_network, nx.Graph)
-        for start, stop, data in test_network.edges(data=True):
+        for _, _, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 50)
         tiny_network = create_metabolic_network(
             model=self.tiny_model,

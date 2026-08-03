@@ -113,7 +113,7 @@ class TestMainMI(unittest.TestCase):
             y_dist1_index = x
             y_dist2_index = ~x
 
-            y[y_dist1_index] = generator.uniform(-1.0, 1.0, size=np.sum(x))
+            y[y_dist1_index] = generator.uniform(-1.0, 1.0, size=np.sum(x))  # type: ignore
             y[y_dist2_index] = generator.uniform(0, 2, size=np.sum(~x))
 
             mi_theory = -0.5 * (
@@ -237,7 +237,7 @@ class TestMainMI(unittest.TestCase):
             metric_y=np.inf,
         )
         assert isinstance(res, tuple)
-        mi_res, pvalue = res
+        _, pvalue = res
         self.assertLess(pvalue, 0.05)
 
 
@@ -462,7 +462,7 @@ class TestDiscCont(unittest.TestCase):
             y_dist1_index = x
             y_dist2_index = ~x
 
-            y[y_dist1_index] = generator.uniform(-1.0, 1.0, size=np.sum(x))
+            y[y_dist1_index] = generator.uniform(-1.0, 1.0, size=np.sum(x))  # type: ignore
             y[y_dist2_index] = generator.uniform(0, 2, size=np.sum(~x))
 
             mi_theory = -0.5 * (
