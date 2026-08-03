@@ -2,29 +2,30 @@
 import pathlib
 import unittest
 
-# External Imports
-from cobra.core.configuration import Configuration  # type: ignore
 import numpy as np
 import pandas as pd
 
+# External Imports
+from cobra.core.configuration import Configuration  # type: ignore
+
 import metworkpy.imat
+from metworkpy.imat import compute_imat_objective
+from metworkpy.imat.imat_functions import _get_rxn_imat_binary_variable_name
+from metworkpy.imat.model_creation import (
+    _active_bounds,
+    _inactive_bounds,
+    _milp_eval,
+    _parse_method,
+    fva_model,
+    imat_constraint_model,
+    milp_model,
+    simple_bounds_model,
+    subset_model,
+)
 
 # Local Imports
 from metworkpy.utils import read_model
-from metworkpy.imat.imat_functions import _get_rxn_imat_binary_variable_name
-from metworkpy.imat.model_creation import (
-    imat_constraint_model,
-    simple_bounds_model,
-    subset_model,
-    fva_model,
-    milp_model,
-    _parse_method,
-    _inactive_bounds,
-    _active_bounds,
-    _milp_eval,
-)
 from metworkpy.utils.models import _check_objective_eq, model_eq
-from metworkpy.imat import compute_imat_objective
 
 
 def setup(cls):

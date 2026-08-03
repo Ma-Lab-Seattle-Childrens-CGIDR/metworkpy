@@ -2,37 +2,39 @@
 
 # Imports
 # Standard Library Imports
+from __future__ import annotations
+
 from functools import partial
 from typing import (
     Any,
     Callable,
     Literal,
-    Optional,
-    Protocol,
-    Union,
     NamedTuple,
+    Protocol,
 )
 
 # External Imports
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
+from metworkpy.divergence._data_validation import (
+    _validate_discrete,
+    _validate_samples,
+)
+from metworkpy.utils import permutation_test
+
 # Local Imports
 from metworkpy.utils._arguments import _parse_metric
-from metworkpy.divergence._data_validation import (
-    _validate_samples,
-    _validate_discrete,
-)
 from metworkpy.utils._jitter import _jitter_single
-from metworkpy.utils import permutation_test
+from metworkpy.utils.metworkpy_types import Array2D
 
 
 class ContinuousDivergenceFunction(Protocol):
     def __call__(
         self,
-        p: NDArray[float],
-        q: NDArray[float],
-        n_neighbors: Optional[int],
+        p: Array2D,
+        q: Array2D,
+        n_neighbors: int | None,
         epsilon_mult: float,
         distance_metric: float,
         clip: bool,
@@ -52,16 +54,16 @@ def _wrap_divergence_functions(
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
     permutations: int = 500,
-    permutation_rng: Optional[Union[np.random.Generator, int]] = None,
+    permutation_rng: np.random.Generator | int | None = None,
     permutation_estimation_method: Literal[
         "kernel", "empirical"
     ] = "empirical",
     discrete: bool = False,
-    jitter: Optional[float] = None,
-    jitter_seed: Optional[int] = None,
+    jitter: float | None = None,
+    jitter_seed: int | None = None,
     clip: bool = False,
     **kwargs,
-) -> Union[float, DivergenceResult]:
+) -> float | DivergenceResult:
     """Calculate the divergence between two distributions represented by samples p and q
 
     Parameters
@@ -115,11 +117,10 @@ def _wrap_divergence_functions(
         The divergence between p and q, or if calculate_pvalue is True,
         returns a named tuple of divergence and p-value.
     """
-    if "distance_metric" in kwargs:
-        if not isinstance(kwargs["distance_metric"], float):
-            kwargs["distance_metric"] = _parse_metric(
-                kwargs["distance_metric"]
-            )
+    if "distance_metric" in kwargs and not isinstance(
+        kwargs["distance_metric"], float
+    ):
+        kwargs["distance_metric"] = _parse_metric(kwargs["distance_metric"])
     p, q = _validate_samples(p, q)
     if jitter and not discrete:
         rng = np.random.default_rng(jitter_seed)
@@ -129,6 +130,8 @@ def _wrap_divergence_functions(
         "permutation_type": "independent",
         "n_resamples": permutations,
         "alternative": alternative,
+        "rng": permutation_rng,
+        "estimation_method": permutation_estimation_method,
         "axis": 0,
     }
     if discrete:
@@ -147,7 +150,7 @@ def _wrap_divergence_functions(
                 p,
                 q,
                 discrete_method,
-                **permutation_test_kwargs,  # type:ignore
+                **permutation_test_kwargs,
             )
             return DivergenceResult(divergence=divergence, pvalue=pvalue)
     # Continuous
@@ -157,6 +160,6 @@ def _wrap_divergence_functions(
         p,
         q,
         partial(continuous_method, clip=clip, **kwargs),
-        **permutation_test_kwargs,  # type:ignore
+        **permutation_test_kwargs,
     )
     return DivergenceResult(divergence=divergence, pvalue=pvalue)

@@ -3,14 +3,14 @@
 import pathlib
 import unittest
 
-# External Imports
+import metworkpy.utils
 
+# External Imports
 # Local Imports
 from metworkpy.divergence.ko_divergence_functions import (
-    ko_divergence,
     _convert_target_network,
+    ko_divergence,
 )
-import metworkpy.utils
 from metworkpy.utils.models import read_model
 
 

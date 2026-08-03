@@ -3,7 +3,8 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import Literal, Optional, Tuple, Union
+
+from typing import Literal
 
 # External Imports
 import numpy as np
@@ -14,13 +15,13 @@ from scipy.special import digamma
 
 # Local Imports
 from metworkpy.divergence._main_wrapper import (
-    _wrap_divergence_functions,
     DivergenceResult,
+    _wrap_divergence_functions,
 )
 from metworkpy.divergence._pairwise_divergence import (
-    _divergence_array,
-    ArrayInput,
     Array1D,
+    ArrayInput,
+    _divergence_array,
 )
 
 
@@ -31,17 +32,17 @@ def js_divergence(
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
     permutations: int = 500,
-    permutation_rng: Optional[Union[np.random.Generator, int]] = None,
+    permutation_rng: np.random.Generator | int | None = None,
     permutation_estimation_method: Literal[
         "kernel", "empirical"
     ] = "empirical",
     n_neighbors: int = 5,
     discrete: bool = False,
-    jitter: Optional[float] = None,
-    jitter_seed: Optional[int] = None,
-    distance_metric: Union[float, str] = "euclidean",
+    jitter: float | None = None,
+    jitter_seed: int | None = None,
+    distance_metric: float | str = "euclidean",
     clip: bool = False,
-) -> Union[float, DivergenceResult]:
+) -> float | DivergenceResult:
     """Calculate the Jensen-Shannon divergence between two distributions represented by samples p and q
 
     Parameters
@@ -136,7 +137,7 @@ def js_divergence_array(
     axis: int = 1,
     processes: int = 1,
     **kwargs,
-) -> Union[Array1D, Tuple[Array1D, Array1D]]:
+) -> Array1D | tuple[Array1D, Array1D]:
     """Calculate the Jensen-Shannon divergence between arrays along the
     specified axis.
 
@@ -194,7 +195,7 @@ def js_divergence_array(
 def _js_cont(
     p: np.ndarray,
     q: np.ndarray,
-    n_neighbors: Optional[int] = 5,
+    n_neighbors: int | None = 5,
     epsilon_mult: float = 1.0,  # Doesn't do anything, just for compatibility with KL methods
     distance_metric: float = 2.0,
     clip: bool = False,

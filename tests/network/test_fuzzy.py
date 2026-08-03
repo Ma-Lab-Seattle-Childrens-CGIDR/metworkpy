@@ -1,20 +1,21 @@
 # Standard Library Imports
+from __future__ import annotations
+
 import unittest
-from typing import Optional
 
 # External Imports
 import networkx as nx
 import pandas as pd
 
 # Local Imports
-from metworkpy import fuzzy_reaction_set, fuzzy_reaction_intersection
+from metworkpy import fuzzy_reaction_intersection, fuzzy_reaction_set
 from metworkpy.examples import get_example_model
 from metworkpy.network import create_reaction_network
 
 
 class TestFuzzyReactionSet(unittest.TestCase):
     model = get_example_model()
-    network: Optional[nx.Graph] = None
+    network: nx.Graph | None = None
 
     @classmethod
     def setUpClass(cls):
@@ -247,7 +248,7 @@ class TestFuzzyReactionSet(unittest.TestCase):
 
 class TestFuzzyIntersection(unittest.TestCase):
     model = get_example_model()
-    network: Optional[nx.Graph] = None
+    network: nx.Graph | None = None
 
     @classmethod
     def setUpClass(cls):

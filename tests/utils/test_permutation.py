@@ -14,8 +14,12 @@ class TestPermutationTest(unittest.TestCase):
         # basic checks
         # Abusing the behavior of default lists for remembering
         # previously passed arrays
+        prev_x_list = []
+        prev_y_list = []
+
         def test_stat_func(
-            x: np.ndarray, y: np.ndarray, prev_x_list=[], prev_y_list=[]
+            x: np.ndarray,
+            y: np.ndarray,
         ):
             np.testing.assert_array_equal(x.shape, np.array([4, 2]))
             np.testing.assert_array_equal(y.shape, np.array([4, 2]))
@@ -28,7 +32,7 @@ class TestPermutationTest(unittest.TestCase):
             if len(prev_y_list) > 0:
                 prev_y = prev_y_list[-1]
                 # Ensure y is different
-                assert np.sum((y != prev_y)) > 0
+                assert np.sum(y != prev_y) > 0
             prev_x_list.append(x.copy())
             prev_y_list.append(y.copy())
             return 0.0
@@ -47,19 +51,22 @@ class TestPermutationTest(unittest.TestCase):
     def test_independent(self):
         test_x = np.arange(8).reshape((4, 2))
         test_y = np.arange(10).reshape((5, 2)) * 10
+        prev_x_list = []
+        prev_y_list = []
 
         def test_stat_func(
-            x: np.ndarray, y: np.ndarray, prev_x_list=[], prev_y_list=[]
+            x: np.ndarray,
+            y: np.ndarray,
         ):
             np.testing.assert_array_equal(x.shape, np.array([4, 2]))
             np.testing.assert_array_equal(y.shape, np.array([5, 2]))
             # If there is a previous x,y check that are both different
             if len(prev_x_list) > 0:
                 # Ensure x is different
-                assert np.sum((x != prev_x_list[-1])) > 0
+                assert np.sum(x != prev_x_list[-1]) > 0
             if len(prev_y_list) > 0:
                 # Ensure y is different
-                assert np.sum((y != prev_y_list[-1])) > 0
+                assert np.sum(y != prev_y_list[-1]) > 0
             prev_x_list.append(x.copy())
             prev_y_list.append(y.copy())
             return 0.0

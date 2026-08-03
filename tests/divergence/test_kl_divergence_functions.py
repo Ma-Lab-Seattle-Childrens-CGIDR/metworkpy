@@ -1,5 +1,4 @@
 # Standard Library Imports
-from metworkpy import kl_divergence
 import unittest
 
 # External Imports
@@ -8,9 +7,10 @@ from scipy.stats import multivariate_normal
 
 # Local Imports
 import metworkpy.divergence.kl_divergence_functions
+from metworkpy import kl_divergence
 from metworkpy.divergence.kl_divergence_functions import (
-    kl_divergence_array,
     _kl_cont_adaptive,
+    kl_divergence_array,
 )
 
 

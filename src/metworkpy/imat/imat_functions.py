@@ -6,7 +6,7 @@ model, and running iMAT, as well as sampling from an iMAT model using corner-sam
 from __future__ import annotations
 
 import hashlib
-from typing import Union, Literal
+from typing import Literal
 
 # External Imports
 import cobra
@@ -24,7 +24,7 @@ ALMOST_ZERO = 5e-17
 # region: Main iMat Function
 def imat(
     model: cobra.Model,
-    rxn_weights: Union[pd.Series, dict],
+    rxn_weights: pd.Series | dict,
     epsilon: float = IMAT_DEFAULTS.epsilon,
     threshold: float = IMAT_DEFAULTS.threshold,
 ) -> cobra.Solution:
@@ -65,7 +65,7 @@ def imat(
 # region: Main iMAT Sampling function
 def imat_sampling(
     model: cobra.Model,
-    rxn_weights: Union[pd.Series, dict],
+    rxn_weights: pd.Series | dict,
     epsilon: float = IMAT_DEFAULTS.epsilon,
     threshold: float = IMAT_DEFAULTS.threshold,
     **kwargs,
@@ -237,7 +237,7 @@ def compute_imat_objective(
 # region: iMAT Helper Functions
 def add_imat_constraints_(
     model: cobra.Model,
-    rxn_weights: Union[pd.Series, dict],
+    rxn_weights: pd.Series | dict,
     epsilon: float = IMAT_DEFAULTS.epsilon,
     threshold: float = IMAT_DEFAULTS.threshold,
 ) -> cobra.Model:
@@ -311,7 +311,7 @@ def add_imat_constraints(
 
 
 def add_imat_objective_(
-    model: cobra.Model, rxn_weights: Union[pd.Series, dict]
+    model: cobra.Model, rxn_weights: pd.Series | dict
 ) -> None:
     """Add the IMAT objective to the model (updates the model in place).
     Model must already have iMAT constraints added.
@@ -333,12 +333,16 @@ def add_imat_objective_(
         # Get the forward and reverse variables from the model
         forward_variable = model.solver.variables[
             _get_rxn_imat_binary_variable_name(
-                rxn, expression_weight="high", which="positive"
+                rxn,  # type: ignore
+                expression_weight="high",
+                which="positive",
             )
         ]
         reverse_variable = model.solver.variables[
             _get_rxn_imat_binary_variable_name(
-                rxn, expression_weight="high", which="negative"
+                rxn,  # type: ignore
+                expression_weight="high",
+                which="negative",
             )
         ]
         # Adds the two variables to the rh list which will be used for sum
@@ -346,7 +350,9 @@ def add_imat_objective_(
     for rxn, weight in rl.items():  # For each lowly expressed reaction
         variable = model.solver.variables[
             _get_rxn_imat_binary_variable_name(
-                rxn, expression_weight="low", which="positive"
+                rxn,  # type: ignore
+                expression_weight="low",
+                which="positive",
             )
         ]
         # Note: Only one variable for lowly expressed reactions
@@ -358,7 +364,7 @@ def add_imat_objective_(
 
 
 def add_imat_objective(
-    model: cobra.Model, rxn_weights: Union[pd.Series, dict]
+    model: cobra.Model, rxn_weights: pd.Series | dict
 ) -> cobra.Model:
     """Add the IMAT objective to the model (doesn't change passed model).
     Model must already have iMAT constraints added.
@@ -532,7 +538,6 @@ def _get_rxn_imat_binary_variable_name(
     ValueError
         If expression_weight is not 'high' or 'low', or which is not 'positive' or 'negative
     """
-    initial_name: str | None = None
     if expression_weight == "high":
         if (which != "positive") and (which != "negative"):
             raise ValueError(

@@ -1,13 +1,14 @@
 """Simple helper functions for parsing arguments."""
 
 # Standard Library Imports
+from __future__ import annotations
+
 import re
-from typing import Dict, List, Union
 
 import numpy as np
 
 
-def _parse_str_args_list(arg: str, arg_list: List[str]) -> str:
+def _parse_str_args_list(arg: str, arg_list: list[str]) -> str:
     """Function to decide which string argument from a list of arguments is trying to be
     passed
 
@@ -37,7 +38,7 @@ def _parse_str_args_list(arg: str, arg_list: List[str]) -> str:
     )
 
 
-def _parse_str_args_dict(arg: str, arg_dict: Dict[str, List]) -> str:
+def _parse_str_args_dict(arg: str, arg_dict: dict[str, list]) -> str:
     """Function to decide which group of arguments given as values in a dictionary the
     argument matches, returns the key for that group.
 
@@ -101,7 +102,7 @@ def _match_abbr(word: str, *args, **kwargs) -> re.Pattern:
     return re.compile(pattern, *args, **kwargs)
 
 
-def _parse_metric(metric: Union[str, float]) -> float:
+def _parse_metric(metric: str | float) -> float:
     if isinstance(metric, int):
         metric = float(metric)
     if isinstance(metric, float):

@@ -30,7 +30,7 @@ Issues = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/issues"
 Changelog = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-cplex = ["cplex>=22.1.1.1"]
+cplex = ["cplex>=22.1.0.0"]
 gurobi = ["gurobipy>=11.0.0"]
 excel = ["openpyxl>=3.1.4"]
 hybrid = ["highspy>=1.10.0", "osqp>=1.0.3"]
@@ -79,3 +79,33 @@ filterwarnings = [
 # Setup ruff
 [tool.ruff]
 line-length = 79
+indent-width = 4
+exclude = [
+  ".bzr",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".git-rewrite",
+  ".hg",
+  ".ipynb_checkpoints",
+  ".mypy_cache",
+  ".nox",
+  ".pants.d",
+  ".pyenv",
+  ".pytest_cache",
+  ".pytype",
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  ".vscode",
+  "__pypackages__",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+  "node_modules",
+  "site-packages",
+  "venv",
+  "*.ipynb",
+]

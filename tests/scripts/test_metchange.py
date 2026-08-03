@@ -26,29 +26,6 @@ BASE_PATH = pathlib.Path(__file__).parent.parent
 
 
 class TestRun(unittest.TestCase):
-    default_dict = {
-        "model_file": BASE_PATH / "data" / "test_model.json",
-        "gene_expression_file": BASE_PATH
-        / "data"
-        / "test_model_gene_expression_metchange.csv",
-        "wildtype": "0:5",
-        "sample_groups": "",
-        "output_file": None,
-        "model_format": None,
-        "metabolites_list": None,
-        "metabolites_file": None,
-        "sample_group_names": None,
-        "quantile_cutoff": 0.2,
-        "objective_tolerance": 5e-2,
-        "aggregation_method": "median",
-        "transpose": False,
-        "subset": False,
-        "verbose": False,
-        "extra_info": False,
-        "solver": "glpk",
-        "sep": ",",
-    }
-
     @classmethod
     def setUpClass(cls):
         # Configure cobra to default to GLPK
@@ -67,8 +44,28 @@ class TestRun(unittest.TestCase):
         )
         # Get the original model
         cls.model = metworkpy.read_model(cls.data_path / "test_model.json")
-        # Add path to default dict
-        cls.default_dict["output_file"] = cls.tmp_path / "metchange_res.csv"
+        cls.default_dict = {
+            "model_file": BASE_PATH / "data" / "test_model.json",
+            "gene_expression_file": BASE_PATH
+            / "data"
+            / "test_model_gene_expression_metchange.csv",
+            "wildtype": "0:5",
+            "sample_groups": "",
+            "output_file": cls.tmp_path / "metchange_res.csv",
+            "model_format": None,
+            "metabolites_list": None,
+            "metabolites_file": None,
+            "sample_group_names": None,
+            "quantile_cutoff": 0.2,
+            "objective_tolerance": 5e-2,
+            "aggregation_method": "median",
+            "transpose": False,
+            "subset": False,
+            "verbose": False,
+            "extra_info": False,
+            "solver": "glpk",
+            "sep": ",",
+        }
 
     def setUp(self):
         self.test_model = self.model.copy()
@@ -100,6 +97,12 @@ class TestRun(unittest.TestCase):
 
     def match_cli(self, **kwargs):
         namespace_dict = self.default_dict | kwargs
+        assert self.model is not None
+        assert isinstance(namespace_dict["wildtype"], str)
+        assert isinstance(namespace_dict["aggregation_method"], str)
+        assert isinstance(namespace_dict["sample_groups"], str)
+        assert isinstance(namespace_dict["quantile_cutoff"], float)
+        assert isinstance(namespace_dict["objective_tolerance"], float)
         with mock.patch(
             "argparse.ArgumentParser.parse_args",
             return_value=argparse.Namespace(**namespace_dict),
@@ -108,12 +111,12 @@ class TestRun(unittest.TestCase):
             # Test that the expected file is created
             self.assertTrue(
                 os.path.exists(
-                    argparse.ArgumentParser.parse_args().output_file
+                    argparse.ArgumentParser.parse_args().output_file  # type: ignore
                 )
             )
             # Read the results in
             metchange_results_cli = pd.read_csv(
-                argparse.ArgumentParser.parse_args().output_file,
+                argparse.ArgumentParser.parse_args().output_file,  # type: ignore
                 index_col=0,
                 header=0,
             )

@@ -1,5 +1,4 @@
 # Standard Library Imports
-from metworkpy.imat.imat_functions import imat_sampling
 import importlib.util
 import pathlib
 import unittest
@@ -12,7 +11,8 @@ from cobra.core.configuration import Configuration
 
 # Local Imports
 from metworkpy.imat import imat_functions
-from metworkpy.utils.models import read_model, model_eq, _check_expression_eq
+from metworkpy.imat.imat_functions import imat_sampling
+from metworkpy.utils.models import _check_expression_eq, model_eq, read_model
 
 
 def setup(cls):

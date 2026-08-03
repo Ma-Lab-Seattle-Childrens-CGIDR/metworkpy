@@ -9,8 +9,9 @@ between a continuous and discrete distribution.
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+
 from functools import partial
-from typing import cast, Literal, Optional, Tuple, Union
+from typing import Literal, cast
 
 # External Imports
 import numpy as np
@@ -34,16 +35,16 @@ def mutual_information(
     calculate_pvalue: bool = False,
     alternative: Literal["less", "greater", "two-sided"] = "greater",
     permutations: int = 500,
-    permutation_rng: Optional[Union[np.random.Generator, int]] = None,
+    permutation_rng: np.random.Generator | int | None = None,
     permutation_estimation_method: Literal[
         "kernel", "empirical"
     ] = "empirical",
-    jitter: Union[None, float] = None,
-    jitter_seed: Union[None, int] = None,
-    metric_x: Union[str, float] = "euclidean",
-    metric_y: Union[str, float] = "euclidean",
+    jitter: None | float = None,
+    jitter_seed: None | int = None,
+    metric_x: str | float = "euclidean",
+    metric_y: str | float = "euclidean",
     clip: bool = False,
-) -> Union[float, Tuple[float, float]]:
+) -> float | tuple[float, float]:
     """
     Calculate the mutual information between two samples from continuous
     or discrete distributions
@@ -191,7 +192,7 @@ def mutual_information(
                     x,
                     y,
                     mi_func,
-                    **permutation_test_kwargs,  # type: ignore
+                    **permutation_test_kwargs,
                 )
         if discrete_y:
             if not calculate_pvalue:
@@ -204,7 +205,7 @@ def mutual_information(
                     y,
                     x,
                     mi_func,
-                    **permutation_test_kwargs,  # type: ignore
+                    **permutation_test_kwargs,
                 )
     elif not (discrete_x or discrete_y):  # if both are continuous
         mi_func = partial(
@@ -224,7 +225,7 @@ def mutual_information(
                 x,
                 y,
                 mi_func,
-                **permutation_test_kwargs,  # type: ignore
+                **permutation_test_kwargs,
             )
     elif discrete_x and discrete_y:
         mi_func = partial(_mi_disc_disc, clip=clip)
@@ -235,7 +236,7 @@ def mutual_information(
                 x,
                 y,
                 mi_func,
-                **permutation_test_kwargs,  # type: ignore
+                **permutation_test_kwargs,
             )
     else:
         raise ValueError(
@@ -597,7 +598,7 @@ def _validate_sample(sample: ArrayLike) -> np.ndarray:
         raise ValueError("Sample must have a maximum of 2 axes")
     # If 1D, change to (n_samples,1)
     if len(sample.shape) == 1:
-        sample = sample.reshape(-1, 1)
+        sample = sample.reshape(-1, 1)  # type: ignore
     return sample
 
 
@@ -607,8 +608,8 @@ def _validate_samples(x: ArrayLike, y: ArrayLike):
         y = _validate_sample(y)
     except ValueError as err:
         raise ValueError(
-            f"Both samples arrays must have a maximum of 2 axes, but x has {len(x.shape)}"
-            f"axes and y has {len(x.shape)} axes"
+            f"Both samples arrays must have a maximum of 2 axes, but x has {len(x.shape)}"  # type: ignore
+            f"axes and y has {len(x.shape)} axes"  # type: ignore
         ) from err
     if x.shape[0] != y.shape[0]:
         raise ValueError(
@@ -620,7 +621,7 @@ def _validate_samples(x: ArrayLike, y: ArrayLike):
 
 def _check_discrete(sample, is_discrete):
     if not isinstance(is_discrete, bool):
-        raise ValueError("discrete_* arguments must be boolean")
+        raise TypeError("discrete_* arguments must be boolean")
     if is_discrete:
         if (
             len(sample.shape) == 1

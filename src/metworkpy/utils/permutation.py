@@ -3,7 +3,9 @@ Functions for performing permutation tests
 """
 
 # imports
-from typing import Callable, Literal, Optional, Tuple, Union
+from __future__ import annotations
+
+from typing import Callable, Literal
 
 import numpy as np
 from scipy import stats
@@ -19,8 +21,8 @@ def permutation_test(
     n_resamples=500,
     alternative: Literal["less", "greater", "two-sided"] = "two-sided",
     estimation_method: Literal["kernel", "empirical"] = "empirical",
-    rng: Optional[Union[np.random.Generator, int]] = None,
-) -> Tuple[float, float]:
+    rng: np.random.Generator | int | None = None,
+) -> tuple[float, float]:
     """
     Perform a permutation test for a sample statistic
 

@@ -31,7 +31,7 @@ class TestFindConnectedComponents:
         # Assert that there are 3 connected components
         assert len(components) == 3, "There is not the expected 3 components"
         # Now count the size of the components
-        assert set([len(it) for it in components]) == {2, 3, 4}, (
+        assert {len(it) for it in components} == {2, 3, 4}, (
             "Components are not of the expected size"
         )
 

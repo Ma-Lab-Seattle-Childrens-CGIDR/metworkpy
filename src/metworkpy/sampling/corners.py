@@ -3,23 +3,26 @@ Submodule implementing methods for performing Corner Based Sampling
 """
 
 # Standard Library Imports
-from typing import Any, Optional, Union
+from __future__ import annotations
+
+from typing import Any
 
 # External Imports
 import cobra
-from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
+from cobra.exceptions import OptimizationError
+from joblib import Parallel, delayed
 
 
 def corner_sampling(
     model: cobra.Model,
     n_samples: int = 1_000,
-    reaction_list: Optional[list[str]] = None,
-    processes: Optional[int] = None,
+    reaction_list: list[str] | None = None,
+    processes: int | None = None,
     fva_scale: bool = True,
-    seed: Optional[Union[int, np.random.Generator]] = None,
-    fva_kwargs: Optional[dict[str, Any]] = None,
+    seed: int | np.random.Generator | None = None,
+    fva_kwargs: dict[str, Any] | None = None,
 ) -> pd.DataFrame:
     """
     Perform Corner Based sampling of a Metabolic Model
@@ -141,10 +144,10 @@ def corner_sampling(
 def _corner_sampling_worker(
     model: cobra.Model,  # Model to sample from
     reaction_list: list[str],  # List of reactions to consider for objective
-    fva_max: Optional[pd.Series],  # Maximum fva to divide weights by
+    fva_max: pd.Series | None,  # Maximum fva to divide weights by
     fva_scale: bool,
     seed: list[int],  # List so that the seed can include the worker ID
-) -> Optional[pd.Series]:
+) -> pd.Series | None:
     # Create an RNG from the seed
     rng = np.random.default_rng(seed)
     # Decide how many reactions from the reaction list to consider
@@ -164,6 +167,6 @@ def _corner_sampling_worker(
         m.objective_direction = rng.choice(["max", "min"], 1, replace=False)[0]
         try:
             fluxes = m.optimize().fluxes
-        except Exception:
+        except OptimizationError:
             return None
     return fluxes

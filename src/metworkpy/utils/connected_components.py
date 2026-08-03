@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections import defaultdict
-from typing import TypeVar, Protocol
+from typing import Protocol, TypeVar
 
 
 # Define the type for the nodes

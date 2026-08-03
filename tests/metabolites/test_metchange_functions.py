@@ -10,12 +10,12 @@ import pandas as pd
 from cobra.core.configuration import Configuration
 
 from metworkpy.metabolites.metchange_functions import (
-    metchange,
     add_metchange_objective_constraint_,
+    metchange,
 )
 
 # Local Imports
-from metworkpy.utils import read_model, model_eq
+from metworkpy.utils import model_eq, read_model
 
 
 def setup(cls):

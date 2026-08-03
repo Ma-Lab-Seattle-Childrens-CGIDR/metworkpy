@@ -3,6 +3,7 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+
 import argparse
 import os.path
 import pathlib
@@ -16,11 +17,11 @@ import pandas as pd
 # Local Imports
 import metworkpy
 from metworkpy.scripts._script_utils import (
-    _parse_samples,
-    _parse_quantile,
     _parse_aggregation_method,
-    _parse_sample_groups_and_names,
     _parse_format_to_extension,
+    _parse_quantile,
+    _parse_sample_groups_and_names,
+    _parse_samples,
 )
 
 

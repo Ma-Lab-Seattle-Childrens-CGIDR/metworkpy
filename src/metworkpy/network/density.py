@@ -3,14 +3,10 @@
 # Standard Library Imports
 from __future__ import annotations
 
+from collections.abc import Hashable, Iterable
 from typing import (
     Callable,
-    Hashable,
-    Iterable,
     Literal,
-    Optional,
-    Tuple,
-    Union,
 )
 from warnings import warn
 
@@ -35,12 +31,10 @@ from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
 def node_target_density(
     network: nx.Graph | nx.DiGraph,
     targets: list[Hashable] | dict[Hashable, float | int] | pd.Series,
-    nodes: Optional[Iterable[Hashable]] = None,
+    nodes: Iterable[Hashable] | None = None,
     radius: int = 3,
-    node_filter: Optional[
-        Union[Callable[[Hashable], bool], set[Hashable]]
-    ] = None,
-    processes: Optional[int] = None,
+    node_filter: Callable[[Hashable], bool] | set[Hashable] | None = None,
+    processes: int | None = None,
 ) -> pd.Series:
     """
     Find the target density for different nodes in the graph. See note for
@@ -94,7 +88,7 @@ def node_target_density(
         # copy of original graph
         network = network.to_undirected()
     if not isinstance(network, nx.Graph):
-        raise ValueError(
+        raise TypeError(
             f"Network must be a networkx network, but received {type(network)}"
         )
     if isinstance(targets, list):
@@ -131,13 +125,13 @@ def node_target_density(
 
 
 def gene_target_density(
-    metabolic_network: Union[nx.Graph, nx.DiGraph],
+    metabolic_network: nx.Graph | nx.DiGraph,
     metabolic_model: cobra.Model,
-    gene_targets: Union[pd.Series, list, dict],
-    nodes: Optional[Iterable[Hashable]] = None,
+    gene_targets: pd.Series | list | dict,
+    nodes: Iterable[Hashable] | None = None,
     radius: int = 3,
     essential: bool = False,
-    processes: Optional[int] = None,
+    processes: int | None = None,
 ) -> pd.Series:
     """
     Determine the density of gene targets in the neighborhood of a nodes
@@ -184,7 +178,7 @@ def gene_target_density(
     if isinstance(metabolic_network, nx.DiGraph):
         metabolic_network = metabolic_network.to_undirected()
     if not isinstance(metabolic_network, nx.Graph):
-        raise ValueError(
+        raise TypeError(
             f"Metabolic network must be a networkx Graph but received a "
             f"{type(metabolic_network)}"
         )
@@ -213,15 +207,15 @@ def gene_target_density(
 
 
 def gene_target_enrichment(
-    metabolic_network: Union[nx.Graph, nx.DiGraph],
+    metabolic_network: nx.Graph | nx.DiGraph,
     metabolic_model: cobra.Model,
-    gene_targets: Union[set[str], list[str]],
-    nodes: Optional[Iterable[Hashable]] = None,
+    gene_targets: set[str] | list[str],
+    nodes: Iterable[Hashable] | None = None,
     metric: Literal["odds-ratio", "p-value"] = "p-value",
     alternative: Literal["two-sided", "less", "greater"] = "greater",
     radius: int = 3,
     essential: bool = False,
-    processes: Optional[int] = None,
+    processes: int | None = None,
 ) -> pd.Series:
     """
     Determine the enrichment of gene targets in the neighborhood of a reaction
@@ -274,14 +268,14 @@ def gene_target_enrichment(
     if isinstance(metabolic_network, nx.DiGraph):
         metabolic_network = metabolic_network.to_undirected()
     if not isinstance(metabolic_network, nx.Graph):
-        raise ValueError(
+        raise TypeError(
             f"Metabolic network must be a networkx Graph but received a "
             f"{type(metabolic_network)}"
         )
     if isinstance(gene_targets, list):
         gene_targets = set(gene_targets)
     if not isinstance(gene_targets, set):
-        raise ValueError(
+        raise TypeError(
             f"Gene targets must be a list or a set but received a "
             f"{type(gene_targets)}"
         )
@@ -310,6 +304,7 @@ def gene_target_enrichment(
             radius=radius,
             rxn_to_gene_set_dict=rxn_to_gene_set_dict,
             total_genes=total_genes,
+            alternative=alternative,
         )
         for node in nodes
     ):
@@ -421,7 +416,7 @@ def _node_density_worker(
     targets: pd.Series,
     radius: int,
     node_filter: Callable[[Hashable], bool],
-) -> Tuple[Hashable, float]:
+) -> tuple[Hashable, float]:
     """
     Calculate the density of targets in a neighborhood
     """
@@ -431,7 +426,7 @@ def _node_density_worker(
             get_graph_neighborhood(network=network, radius=radius, node=node),
         )
     )
-    return node, targets[
+    return node, targets[  # ty: ignore[invalid-argument-type]
         [idx for idx in neighborhood if idx in targets.index]
     ].sum() / len(neighborhood)
 
@@ -442,7 +437,7 @@ def _gene_density_worker(
     gene_targets: pd.Series,
     radius: int,
     rxn_to_gene_set_dict: dict[str, set[str]],
-) -> Tuple[str, float]:
+) -> tuple[str, float]:
     """
     Calculate the density of gene targets in a neighborhood
     """
@@ -467,7 +462,7 @@ def _gene_enrichment_worker(
     rxn_to_gene_set_dict: dict[str, set[str]],
     total_genes: int,
     alternative: str = "greater",
-) -> Tuple[str, float, float]:
+) -> tuple[str, float, float]:
     """
     Calculate the enrichment of gene targets in a neighborhood
 

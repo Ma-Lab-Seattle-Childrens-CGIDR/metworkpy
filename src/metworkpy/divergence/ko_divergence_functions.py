@@ -3,19 +3,20 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from typing import cast, Any, Iterable, Literal, Optional, Union, Tuple
+
 import warnings
+from collections.abc import Iterable
+from typing import Any, Literal
 
 # External Imports
-import cobra  # type: ignore
-from cobra.manipulation import knock_out_model_genes  # type: ignore
+import cobra
 import numpy as np
 import pandas as pd
-import tqdm  # type: ignore
+import tqdm
+from cobra.manipulation import knock_out_model_genes
 
 # Local Imports
 from metworkpy.divergence.group_divergence import calculate_divergence_grouped
-
 
 # region Main Function
 
@@ -28,17 +29,17 @@ from metworkpy.divergence.group_divergence import calculate_divergence_grouped
 def ko_divergence(
     model: cobra.Model,
     target_networks: list[str] | dict[str, list[str]],
-    genes_to_ko: Optional[Iterable[str]] = None,
+    genes_to_ko: Iterable[str] | None = None,
     divergence_type: Literal["js", "kl"] = "kl",
     calculate_pvalue: bool = False,
     sample_count: int = 1000,
     progress_bar: bool = False,
     use_unperturbed_as_true: bool = True,
-    sampler_seed: Optional[int | np.random.Generator] = None,
-    sampler_kwargs: Optional[dict[str, Any]] = None,
+    sampler_seed: int | np.random.Generator | None = None,
+    sampler_kwargs: dict[str, Any] | None = None,
     processes: int = 1,
     **kwargs,
-) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame]]:
+) -> pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]:
     """Determine the impacts of gene knock-outs on different target reaction or gene networks
 
     Parameters
@@ -110,7 +111,7 @@ def ko_divergence(
     elif isinstance(target_networks, dict):
         pass
     else:
-        raise ValueError(
+        raise TypeError(
             f"target_gene_network must be a list or a dict, but received a {type(target_networks)}"
         )
     for key, target_list in target_networks.items():
@@ -176,7 +177,7 @@ def ko_divergence(
             **kwargs,
         )
         if not calculate_pvalue:
-            ko_div_df.loc[gene_to_ko] = grouped_div_res
+            ko_div_df.loc[gene_to_ko] = grouped_div_res  # type: ignore
         else:
             div, pvalue = grouped_div_res
             ko_div_df.loc[gene_to_ko] = div
@@ -201,7 +202,7 @@ def _convert_target_network(
             res_list.append(val)
         else:
             try:
-                gene: cobra.Gene = cast(cobra.Gene, model.genes.get_by_id(val))
+                gene: cobra.Gene = model.genes.get_by_id(val)
                 res_list += [r.id for r in gene.reactions]
             except KeyError:
                 warnings.warn(

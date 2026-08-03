@@ -11,12 +11,12 @@ from scipy import stats
 
 # Local Imports
 from metworkpy import read_model
-from metworkpy.network import create_metabolic_network, bipartite_project
+from metworkpy.network import bipartite_project, create_metabolic_network
 from metworkpy.network.density import (
-    node_target_density,
     find_dense_clusters,
     gene_target_density,
     gene_target_enrichment,
+    node_target_density,
 )
 
 

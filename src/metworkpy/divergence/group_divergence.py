@@ -4,7 +4,10 @@ dataframes for groups of columns
 """
 
 # Standard Library Imports
-from typing import Hashable, Literal, Optional, Tuple, Union
+from __future__ import annotations
+
+from collections.abc import Hashable
+from typing import Literal
 from warnings import warn
 
 # External Imports
@@ -13,11 +16,13 @@ import joblib  # type: ignore   # Missing stubs
 import numpy as np
 import pandas as pd
 
+from metworkpy.network.neighborhoods import graph_neighborhoods
+from metworkpy.network.network_construction import create_reaction_network
+
+from .js_divergence_functions import js_divergence
+
 # Local Imports
 from .kl_divergence_functions import kl_divergence
-from .js_divergence_functions import js_divergence
-from metworkpy.network.network_construction import create_reaction_network
-from metworkpy.network.neighborhoods import graph_neighborhoods
 
 
 def calculate_divergence_grouped(
@@ -28,7 +33,7 @@ def calculate_divergence_grouped(
     calculate_pvalue: bool = False,
     processes: int = 1,
     **kwargs,
-) -> Union[pd.Series, Tuple[pd.Series, pd.Series]]:
+) -> pd.Series | tuple[pd.Series, pd.Series]:
     """
     Calculate the divergence between data in two dataframes for a set of
     groups of columns
@@ -120,7 +125,7 @@ def calculate_reaction_neighborhood_divergence(
     dataset2: pd.DataFrame,
     divergence_type: Literal["kl", "js"] = "kl",
     directed: bool = False,
-    nodes_to_remove: Optional[list[str]] = None,
+    nodes_to_remove: list[str] | None = None,
     radius: int = 2,
     calculate_pvalue: bool = False,
     processes: int = 1,

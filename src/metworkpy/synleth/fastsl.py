@@ -3,18 +3,18 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from collections import deque
+
 import concurrent.futures
 import multiprocessing
 import multiprocessing.queues
-from multiprocessing.managers import ListProxy, DictProxy
-from typing import Iterable
+from collections import deque
+from collections.abc import Iterable
+from multiprocessing.managers import DictProxy, ListProxy
 
 # External Imports
 import cobra
-from cobra.manipulation import knock_out_model_genes
 import numpy as np
-
+from cobra.manipulation import knock_out_model_genes
 
 # Local Imports
 
@@ -286,7 +286,7 @@ def _process_gene_set_serial(
     # could produce the same gene sets
     frozen_gene_set = frozenset(gene_set)
     if frozen_gene_set in processed_set:
-        return None
+        return
     processed_set.add(frozen_gene_set)
     with model as m:
         knock_out_model_genes(m, list(gene_set))
@@ -295,7 +295,7 @@ def _process_gene_set_serial(
             results_queue.append(gene_set)
         else:
             if len(gene_set) >= max_depth:
-                return None
+                return
             potentially_active_genes = _get_potentially_active_genes(
                 model=m,
                 pfba_fraction_of_optimum=pfba_fraction_of_optimum,

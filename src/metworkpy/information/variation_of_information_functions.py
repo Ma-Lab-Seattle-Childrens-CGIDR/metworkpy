@@ -7,7 +7,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from scipy import stats
 
-from .mutual_information_functions import _validate_samples, _check_discrete
+from .mutual_information_functions import _check_discrete, _validate_samples
 
 
 def variation_of_information(

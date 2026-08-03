@@ -1,19 +1,19 @@
 # Standard Library Imports
-import random
 import os
 import pathlib
+import random
 import unittest
 
 # External Imports
 import cobra
-from cobra.core.configuration import Configuration
 import pandas as pd
+from cobra.core.configuration import Configuration
 
 # Local Imports
 from metworkpy.gpr.gpr_functions import (
+    IMAT_FUNC_DICT,
     eval_gpr,
     gene_to_rxn_weights,
-    IMAT_FUNC_DICT,
 )
 from metworkpy.utils import read_model
 

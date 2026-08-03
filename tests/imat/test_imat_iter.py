@@ -1,19 +1,19 @@
 # Standard Library Imports
-from metworkpy.imat import ImatIterReactionActivities
 import pathlib
-from typing import Literal
 import unittest
+from typing import Literal
 
 # External Imports
 import cobra
-from cobra.core.configuration import Configuration
 import numpy as np
 import pandas as pd
+from cobra.core.configuration import Configuration
+
+from metworkpy import gene_to_rxn_weights, model_bounds_eq, read_model
+from metworkpy.gpr.gpr_functions import IMAT_FUNC_DICT
 
 # Local Imports
-import metworkpy.imat.imat_iter as imat_iter
-from metworkpy import read_model, model_bounds_eq, gene_to_rxn_weights
-from metworkpy.gpr.gpr_functions import IMAT_FUNC_DICT
+from metworkpy.imat import ImatIterReactionActivities, imat_iter
 
 
 # Helper setup class for all tests below

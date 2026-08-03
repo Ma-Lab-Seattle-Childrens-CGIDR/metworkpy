@@ -7,13 +7,13 @@ import pandas as pd
 
 # Local imports
 from metworkpy.utils.expression_utils import (
-    count_to_rpkm,
-    count_to_fpkm,
-    count_to_tpm,
-    rpkm_to_tpm,
-    fpkm_to_tpm,
     count_to_cpm,
+    count_to_fpkm,
+    count_to_rpkm,
+    count_to_tpm,
     expr_to_imat_gene_weights,
+    fpkm_to_tpm,
+    rpkm_to_tpm,
 )
 
 
