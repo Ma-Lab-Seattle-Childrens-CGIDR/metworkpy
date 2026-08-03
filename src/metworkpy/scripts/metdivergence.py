@@ -3,6 +3,7 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+
 import argparse
 import importlib.util
 import sys
@@ -231,7 +232,6 @@ def main_run(arg_list: list[str] | None = None):
     if args.verbose:
         print("Writing results to output file")
     div_res.to_csv(args.output_file)
-    return None
 
 
 def _read_distributions(

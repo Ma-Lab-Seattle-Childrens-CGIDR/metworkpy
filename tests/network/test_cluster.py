@@ -3,25 +3,27 @@ Test the cluster submodule
 """
 
 # Standard Library Imports
+from __future__ import annotations
+
 import unittest
-from typing import Optional
 
 # External Imports
 import networkx as nx
 import numpy as np
 
+from metworkpy.examples import get_example_model
+
 # Local Imports
 from metworkpy.network import (
+    create_gene_network,
     get_network_group_clustering,
     get_network_group_linkage,
 )
-from metworkpy.examples import get_example_model
-from metworkpy.network import create_gene_network
 
 
 class TestGroupNetworkCluster(unittest.TestCase):
     model = get_example_model()
-    network: Optional[nx.Graph] = None
+    network: nx.Graph | None = None
 
     @classmethod
     def setUpClass(cls):
@@ -114,7 +116,7 @@ class TestGroupNetworkCluster(unittest.TestCase):
 
 class TestGroupNetworkLinkage(unittest.TestCase):
     model = get_example_model()
-    network: Optional[nx.Graph] = None
+    network: nx.Graph | None = None
 
     @classmethod
     def setUpClass(cls):

@@ -42,9 +42,11 @@ Submodule containing functions for finding centrality
 of nodes in a network
 """
 
-from collections.abc import Iterable
+from __future__ import annotations
+
 import functools
-from typing import cast, Hashable, Optional, Union
+from collections.abc import Hashable, Iterable
+from typing import cast
 
 import networkx as nx
 from networkx.algorithms.centrality.betweenness import (
@@ -56,12 +58,12 @@ from networkx.algorithms.centrality.betweenness import (
 
 
 def closeness_centrality_subset(
-    G: Union[nx.Graph, nx.DiGraph],
-    targets: Optional[Iterable[Hashable]] = None,
-    u: Optional[Hashable] = None,
-    distance: Optional[Hashable] = None,
+    G: nx.Graph | nx.DiGraph,
+    targets: Iterable[Hashable] | None = None,
+    u: Hashable | None = None,
+    distance: Hashable | None = None,
     wf_improved: bool = True,
-) -> Union[float, dict[Hashable, float]]:
+) -> float | dict[Hashable, float]:
     r"""Compute closeness centrality for nodes, considering only paths
     to a subset of other nodes.
 
@@ -196,8 +198,8 @@ def closeness_centrality_subset(
 
 
 def betweenness_centrality_subset(
-    G: Union[nx.Graph, nx.DiGraph],
-    targets: Optional[Iterable[Hashable]] = None,
+    G: nx.Graph | nx.DiGraph,
+    targets: Iterable[Hashable] | None = None,
     normalized=True,
     weight=None,
 ):
@@ -292,9 +294,9 @@ def betweenness_centrality_subset(
 
 
 def betweenness_centrality_bipartite_subset(
-    G: Union[nx.Graph, nx.DiGraph],
+    G: nx.Graph | nx.DiGraph,
     node_partition: Iterable[Hashable],
-    targets: Optional[Iterable[Hashable]] = None,
+    targets: Iterable[Hashable] | None = None,
     normalized=True,
     weight=None,
 ):
@@ -398,7 +400,7 @@ def betweenness_centrality_bipartite_subset(
 
 
 def _common_neighbors(
-    G: Union[nx.Graph, nx.DiGraph], n1: Hashable, n2: Hashable
+    G: nx.Graph | nx.DiGraph, n1: Hashable, n2: Hashable
 ) -> set[Hashable]:
     if G.is_directed():
         assert isinstance(G, nx.DiGraph)
@@ -414,7 +416,7 @@ def _common_neighbors(
 # Sigma[v] is a count of shortest paths from source to v
 # delta[v] is the dependency of source on v \in V (starts at 0.0)
 def _accumulate_bipartite_subset(
-    G: Union[nx.Graph, nx.DiGraph],
+    G: nx.Graph | nx.DiGraph,
     betweenness_dict: dict[Hashable, float],
     S,  # Nodes on paths
     P,  # Predecessors

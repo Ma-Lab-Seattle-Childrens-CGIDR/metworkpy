@@ -3,15 +3,15 @@ Functions for performing clustering on a network
 """
 
 # Standard imports
+from __future__ import annotations
+
 import itertools
+from collections.abc import Hashable, Iterable
 from typing import (
-    cast,
-    Hashable,
-    Iterable,
     Literal,
     NamedTuple,
-    Optional,
     Union,
+    cast,
 )
 
 # External imports
@@ -49,11 +49,9 @@ class GroupClusteringResult(NamedTuple):
 
 
 def get_network_group_clustering(
-    network: Union[nx.Graph, nx.DiGraph],
-    groups: Union[
-        dict[Hashable, Iterable[Hashable]], Iterable[Iterable[Hashable]]
-    ],
-    n_clusters: Optional[int] = None,
+    network: nx.Graph | nx.DiGraph,
+    groups: dict[Hashable, Iterable[Hashable]] | Iterable[Iterable[Hashable]],
+    n_clusters: int | None = None,
     linkage: Literal["mean", "min", "max"] = "mean",
 ) -> GroupClusteringResult:
     """Perform agglomerative clustering on groups of nodes in a network
@@ -134,7 +132,7 @@ def get_network_group_clustering(
         )
         cluster_dist_arr[c1, c2] = dist
         cluster_dist_arr[c2, c1] = dist
-    for iter in range(0, n_init_clusters - n_clusters):
+    for iter in range(n_init_clusters - n_clusters):
         # Find the minimum distance between clusters
         to_merge = (-1, -1)
         min_dist = np.inf
@@ -180,7 +178,7 @@ def get_network_group_clustering(
 
 
 def get_network_group_linkage(
-    network: Union[nx.Graph, nx.DiGraph],
+    network: nx.Graph | nx.DiGraph,
     groups: Iterable[Iterable[Hashable]],
     linkage: Literal["mean", "min", "max"] = "mean",
 ):
@@ -268,7 +266,7 @@ def _max_linkage(
 
 
 def get_distance_matrix(
-    network: Union[nx.Graph, nx.DiGraph], **kwargs
+    network: nx.Graph | nx.DiGraph, **kwargs
 ) -> pd.DataFrame:
     """
     Get a matrix of the shortest path distances between each pair of

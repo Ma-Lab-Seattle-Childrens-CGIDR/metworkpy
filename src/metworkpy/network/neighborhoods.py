@@ -2,9 +2,11 @@
 
 # Standard Library Imports
 from __future__ import annotations
+
 import functools
 import operator
-from typing import cast, Hashable, Iterator, Union
+from collections.abc import Hashable, Iterator
+from typing import cast
 
 # External Imports
 import cobra
@@ -129,11 +131,9 @@ def graph_gene_neighborhood_iter(
         Tuple of node and gene ids in neighborhood
     """
     rxn_to_gene_set_dict = get_reaction_to_gene_translation_dict(
-        model=model, essential=False
+        model=model, essential=essential
     )
-    for node, neighborhood in graph_neighborhood_iter(
-        network=network, radius=radius
-    ):
+    for node in network:
         yield (
             node,
             _graph_gene_neighborhood(
@@ -149,7 +149,7 @@ def graph_gene_neighborhood_iter(
 
 
 def get_graph_neighborhood(
-    network: Union[nx.Graph, nx.DiGraph], radius: int, node: Hashable
+    network: nx.Graph | nx.DiGraph, radius: int, node: Hashable
 ) -> set[Hashable]:
     """
     Get the neighborhood around a node in the network
@@ -177,7 +177,7 @@ def get_graph_neighborhood(
 
 
 def get_graph_neighborhood_group(
-    network: Union[nx.Graph, nx.DiGraph], radius: int, nodes: set[Hashable]
+    network: nx.Graph | nx.DiGraph, radius: int, nodes: set[Hashable]
 ) -> set[Hashable]:
     """
     Get the neighborhood of a group of nodes, that is all nodes reachable
@@ -199,11 +199,9 @@ def get_graph_neighborhood_group(
     """
     return functools.reduce(
         operator.or_,
-        map(
-            lambda n: get_graph_neighborhood(
-                network=network, radius=radius, node=n
-            ),
-            nodes,
+        (
+            get_graph_neighborhood(network=network, radius=radius, node=n)
+            for n in nodes
         ),
         set(),
     )

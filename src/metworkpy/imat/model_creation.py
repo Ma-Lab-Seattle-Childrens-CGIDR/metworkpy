@@ -2,7 +2,7 @@
 
 # Standard Library Imports
 from __future__ import annotations
-from typing import Optional, Union
+
 import warnings
 
 # External Imports
@@ -12,10 +12,10 @@ import pandas as pd
 
 # Local Imports
 from metworkpy.imat.imat_functions import (
-    imat,
+    ALMOST_ZERO,
     add_imat_constraints,
     add_imat_objective_,
-    ALMOST_ZERO,
+    imat,
 )
 from metworkpy.utils import _arguments
 from metworkpy.utils.metworkpy_defaults import IMAT_DEFAULTS
@@ -26,8 +26,8 @@ from metworkpy.utils.metworkpy_defaults import IMAT_DEFAULTS
 # region: Main Model Creation Function
 def generate_model(
     model: cobra.Model,
-    rxn_weights: Union[pd.Series, dict],
-    imat_solution: Optional[cobra.Solution] = None,
+    rxn_weights: pd.Series | dict,
+    imat_solution: cobra.Solution | None = None,
     method: str = "imat_restrictions",
     epsilon: float = IMAT_DEFAULTS.epsilon,
     threshold: float = IMAT_DEFAULTS.threshold,
@@ -197,7 +197,7 @@ def simple_bounds_model(
     rxn_weights: dict | pd.Series,
     epsilon: float,
     threshold: float,
-    imat_solution: Optional[cobra.Solution] = None,
+    imat_solution: cobra.Solution | None = None,
     **kwargs,
 ):
     """Generate a context specific model by setting bounds on reactions based on
@@ -278,7 +278,7 @@ def subset_model(
     rxn_weights: dict | pd.Series,
     epsilon: float,
     threshold: float,
-    imat_solution: Optional[cobra.Solution] = None,
+    imat_solution: cobra.Solution | None = None,
     **kwargs,
 ):
     """Generate a context specific model by knocking out reactions found to
@@ -330,7 +330,7 @@ def subset_model(
         # Force reaction to be below threshold
         reaction.bounds = _inactive_bounds(
             *reaction.bounds,
-            threshold=threshold,  # type: ignore
+            threshold=threshold,
         )
     return updated_model
 

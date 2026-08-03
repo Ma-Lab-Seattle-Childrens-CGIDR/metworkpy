@@ -3,26 +3,27 @@
 # Imports
 from __future__ import annotations
 
+import hashlib
+import warnings
+
 # Standard Library Imports
 from collections.abc import Iterable
-import hashlib
-from typing import Literal, Optional
-import warnings
+from typing import Literal
 
 # External Imports
 import cobra
-from cobra.exceptions import OptimizationError
 import numpy as np
 import pandas as pd
 import sympy
+from cobra.exceptions import OptimizationError
 from scipy import stats
 from tqdm import tqdm
 
 # Local Imports
 from metworkpy.utils import (
-    reaction_to_gene_list,
-    get_reaction_to_gene_translation_dict,
     fisher_enrichment,
+    get_reaction_to_gene_translation_dict,
+    reaction_to_gene_list,
 )
 
 
@@ -31,7 +32,7 @@ def find_metabolite_synthesis_network_reactions(
     model: cobra.Model,
     method: Literal["pfba", "gfba", "essential"] = "pfba",
     return_type: Literal["dict", "DataFrame"] = "DataFrame",
-    metabolites: Optional[Iterable[str]] = None,
+    metabolites: Iterable[str] | None = None,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
@@ -204,7 +205,7 @@ def find_metabolite_synthesis_network_genes(
     model: cobra.Model,
     method: Literal["pfba", "gfba", "essential"] = "pfba",
     return_type: Literal["DataFrame", "dict"] = "DataFrame",
-    metabolites: Optional[Iterable[str]] = None,
+    metabolites: Iterable[str] | None = None,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
@@ -413,7 +414,7 @@ def find_metabolite_synthesis_network_genes(
 
 def find_metabolite_consuming_network_reactions(
     model: cobra.Model,
-    metabolites: Optional[Iterable[str]] = None,
+    metabolites: Iterable[str] | None = None,
     return_type: Literal["DataFrame", "dict"] = "DataFrame",
     reaction_proportion: float = 0.05,
     add_sinks: bool = False,
@@ -538,7 +539,7 @@ def find_metabolite_consuming_network_reactions(
 
 def find_metabolite_consuming_network_genes(
     model: cobra.Model,
-    metabolites: Optional[Iterable[str]] = None,
+    metabolites: Iterable[str] | None = None,
     return_type: Literal["DataFrame", "dict"] = "DataFrame",
     reaction_proportion: float = 0.05,
     add_sinks: bool = False,

@@ -3,16 +3,16 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-from functools import reduce
+
 import hashlib
-from typing import Optional, Iterable
+from collections.abc import Iterable
+from functools import reduce
 
 # External Imports
 import cobra
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
 
 # Local Imports
 
@@ -23,7 +23,7 @@ from tqdm import tqdm
 def metchange(
     model: cobra.Model,
     reaction_weights: dict[str, float] | pd.Series,
-    metabolites: Optional[Iterable[str]] = None,
+    metabolites: Iterable[str] | None = None,
     objective_tolerance: float = 0.05,
     progress_bar: bool = False,
 ) -> pd.Series:

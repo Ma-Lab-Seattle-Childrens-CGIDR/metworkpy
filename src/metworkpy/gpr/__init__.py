@@ -1,3 +1,3 @@
-from .gpr_functions import gene_to_rxn_weights, eval_gpr
+from .gpr_functions import eval_gpr, gene_to_rxn_weights
 
-__all__ = ["gene_to_rxn_weights", "eval_gpr"]
+__all__ = ["eval_gpr", "gene_to_rxn_weights"]

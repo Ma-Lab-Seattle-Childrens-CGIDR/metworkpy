@@ -3,6 +3,7 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+
 import argparse
 import itertools
 import pathlib
@@ -15,10 +16,11 @@ import pandas as pd
 
 # Local Imports
 import metworkpy
+
 from ._script_utils import (
-    _parse_samples,
     _parse_aggregation_method,
     _parse_sample_groups_and_names,
+    _parse_samples,
 )
 
 
@@ -399,7 +401,7 @@ def run(arg_list: list[str] | None = None) -> None:
     metchange_res = metchange_res.transpose()
     if not args.extra_info:
         metchange_res.to_csv(out_file)
-        return None
+        return
     # Add additional information
     name = []
     formula = []
@@ -416,7 +418,7 @@ def run(arg_list: list[str] | None = None) -> None:
     metchange_res["compartment"] = compartment
     metchange_res["charge"] = charge
     metchange_res.to_csv(out_file)
-    return None
+    return
 
 
 if __name__ == "__main__":

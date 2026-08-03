@@ -3,7 +3,9 @@ Functions for analyzing the variable components of the
 optimal growth solutions
 """
 
-from typing import Hashable, Optional, Union
+from __future__ import annotations
+
+from collections.abc import Hashable
 
 import cobra
 import networkx as nx
@@ -13,7 +15,7 @@ from metworkpy.network.network_construction import create_metabolic_network
 
 def find_variable_components(
     model: cobra.Model,
-    network: Optional[Union[nx.Graph, nx.DiGraph]] = None,
+    network: nx.Graph | nx.DiGraph | None = None,
     tolerance: float = 1e-7,
     directed: bool = False,
     strongly_connected: bool = False,

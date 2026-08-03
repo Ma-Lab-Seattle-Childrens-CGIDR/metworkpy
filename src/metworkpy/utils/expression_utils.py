@@ -3,28 +3,28 @@ data, and converting it into qualitative weights
 """
 
 from __future__ import annotations
+
 from collections.abc import Iterable
 
 # Standard library imports
-from typing import cast, Callable, Union, Optional
+from typing import Callable, cast
 from warnings import warn
 
 # External imports
 import numpy as np
-from numpy.typing import ArrayLike
 import pandas as pd
-
+from numpy.typing import ArrayLike
 
 # Local imports
 
 
 # region IMAT weights function
 def expr_to_imat_gene_weights(
-    expression: Union[pd.Series, pd.DataFrame],
-    quantile: Union[float, tuple[float, float]] = 0.15,
+    expression: pd.Series | pd.DataFrame,
+    quantile: float | tuple[float, float] = 0.15,
     aggregator: Callable[[ArrayLike], float] = np.median,
-    subset: Optional[Iterable] = None,
-    sample_axis: Union[int, str] = 0,
+    subset: Iterable | None = None,
+    sample_axis: int | str = 0,
 ) -> pd.Series:
     """Convert gene expression data to qualitative gene weights
 
@@ -211,11 +211,11 @@ def count_to_rpkm(
     fl_genes = set(feature_length.index)
     # Get the library size before dropping genes
     per_million = count.sum(axis=1) / 1e6
-    if not (count_genes == fl_genes):
+    if count_genes != fl_genes:
         warn(
             "Different genes in count dataframe and feature length series, dropping any not in common"
         )
-        genes = sorted(list(count_genes.intersection(fl_genes)))
+        genes = sorted(count_genes.intersection(fl_genes))
         count = cast(pd.DataFrame, count[genes])
         feature_length = feature_length[genes]
     rpm = count.divide(per_million, axis=0)

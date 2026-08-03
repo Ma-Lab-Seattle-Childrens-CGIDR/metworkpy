@@ -3,8 +3,10 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+
 import itertools
-from typing import Callable, Iterable, Optional, Union
+from collections.abc import Iterable
+from typing import Callable
 
 # External Imports
 import networkx as nx
@@ -21,9 +23,9 @@ from metworkpy.utils._arguments import _parse_str_args_dict
 def bipartite_project(
     network: nx.Graph | nx.DiGraph,
     node_set: Iterable,
-    directed: Optional[bool] = None,
+    directed: bool | None = None,
     weight: str | Callable[[float, float], float] | None = None,
-    weight_combine: Optional[Callable[[list[float]], float]] = None,
+    weight_combine: Callable[[list[float]], float] | None = None,
     weight_attribute: str = "weight",
     reciprocal: bool = False,
 ) -> nx.Graph | nx.DiGraph:
@@ -68,9 +70,12 @@ def bipartite_project(
     nx.Graph | nx.DiGraph
         Projected network
     """
-    if directed is not None:
-        if not directed and isinstance(network, nx.DiGraph):
-            network = network.to_undirected(reciprocal=reciprocal)
+    if (
+        directed is not None
+        and not directed
+        and isinstance(network, nx.DiGraph)
+    ):
+        network = network.to_undirected(reciprocal=reciprocal)
     if weight is None:
         return projected_graph(network, nodes=node_set)
     if weight_combine is None:
@@ -92,14 +97,14 @@ def bipartite_project(
             network=network,
             node_set=node_set,
             weight=weight,
-            weight_combine=weight_combine,  # type: ignore
+            weight_combine=weight_combine,
             attr=weight_attribute,
         )
     return _unirected_projection(
         network=network,
         node_set=node_set,
         weight=weight,
-        weight_combine=weight_combine,  # type: ignore
+        weight_combine=weight_combine,
         attr=weight_attribute,
     )
 
@@ -152,7 +157,7 @@ def _directed_projection(
 
 # region Undirected Projection
 def _unirected_projection(
-    network: Union[nx.Graph, nx.DiGraph],
+    network: nx.Graph | nx.DiGraph,
     node_set: Iterable,
     weight: Callable[[float, float], float],
     weight_combine: Callable[[list[float]], float],

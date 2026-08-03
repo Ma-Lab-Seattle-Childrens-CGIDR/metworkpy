@@ -13,11 +13,11 @@ from cobra.manipulation import knock_out_model_genes
 # Local Imports
 import metworkpy
 from metworkpy.synleth.fastsl import (
+    _filter_supersets,
     _get_potentially_active_genes,
     _is_essential,
     _rxns_to_genes,
     find_synthetic_lethal_genes,
-    _filter_supersets,
 )
 
 BASE_PATH = pathlib.Path(__file__).parent.parent.absolute()

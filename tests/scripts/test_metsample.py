@@ -1,6 +1,7 @@
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+
 import argparse
 import importlib.util
 import os
@@ -10,7 +11,7 @@ import unittest
 from unittest import mock, skipIf
 
 # External Imports
-import cobra  # type: ignore
+import cobra
 import pandas as pd
 
 # Local Imports
@@ -22,35 +23,30 @@ BASE_PATH = pathlib.Path(__file__).parent.parent
 
 
 class TestMetsampleRun(unittest.TestCase):
-    default_dict = {
-        "model_file": BASE_PATH / "data" / "test_model.json",
-        "num_samples": 10,
-        "output_file": "",  # This will be set in the setup method
-        "output_format": "csv",
-        "method": "optgp",
-        "model_format": "json",
-        "processes": 1,
-        "thinning": 100,
-        "seed": None,
-        "validate": False,
-        "batches": None,
-        "verbose": False,
-    }
-
     @classmethod
     def setUpClass(cls):
         # Configure cobra to use GLPK
-        cobra.core.Configuration.solver = "glpk"
+        cobra.core.Configuration.solver = "glpk"  # type: ignore
         # Get path references, make temporary folder
         cls.data_path = BASE_PATH / "data"
         # Get the model
         cls.model = metworkpy.read_model(cls.data_path / "test_model.json")
         # Get a temporary directory
         cls.tmp_dir = tempfile.TemporaryDirectory()
-        # Set the path in the default dict
-        cls.default_dict["output_file"] = (
-            pathlib.Path(cls.tmp_dir.name) / "sample_res.csv"
-        )
+        cls.default_dict = {
+            "model_file": BASE_PATH / "data" / "test_model.json",
+            "num_samples": 10,
+            "output_file": pathlib.Path(cls.tmp_dir.name) / "sample_res.csv",
+            "output_format": "csv",
+            "method": "optgp",
+            "model_format": "json",
+            "processes": 1,
+            "thinning": 100,
+            "seed": None,
+            "validate": False,
+            "batches": None,
+            "verbose": False,
+        }
 
     @classmethod
     def tearDownClass(cls):

@@ -1,8 +1,9 @@
 """Utility functions for command line scripts"""
 
 from __future__ import annotations
+
 import re
-from typing import Callable, Optional
+from typing import Callable
 
 import numpy as np
 from numpy._typing import ArrayLike
@@ -36,7 +37,7 @@ def _parse_samples(samples_str: str) -> list[int]:
 
 
 def _parse_sample_groups_and_names(
-    groups_str: str, names_str: Optional[str] = None
+    groups_str: str, names_str: str | None = None
 ) -> tuple[list[list[int]], list[str]]:
     """Parse a sample groups specification string to a list of sample groups, and parse a group names specification
         string to

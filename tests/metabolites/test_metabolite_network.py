@@ -1,9 +1,9 @@
 # Imports
 # Standard Library Imports
-import pathlib
-from typing import Optional
-import unittest
+from __future__ import annotations
 
+import pathlib
+import unittest
 
 import cobra
 import numpy as np
@@ -14,13 +14,13 @@ from cobra.core.configuration import Configuration
 
 # Local Imports
 from metworkpy.metabolites.metabolite_network import (
-    find_metabolite_synthesis_network_reactions,
-    find_metabolite_synthesis_network_genes,
-    find_metabolite_consuming_network_reactions,
-    find_metabolite_consuming_network_genes,
-    add_metabolite_objective_,
     add_metabolite_absorb_reaction_,
+    add_metabolite_objective_,
     eliminate_maintenance_requirements_,
+    find_metabolite_consuming_network_genes,
+    find_metabolite_consuming_network_reactions,
+    find_metabolite_synthesis_network_genes,
+    find_metabolite_synthesis_network_reactions,
 )
 from metworkpy.utils.models import model_eq, read_model
 
@@ -32,7 +32,7 @@ def setup(cls):
 
 
 class TestMetaboliteObjective(unittest.TestCase):
-    model: Optional[cobra.Model] = None
+    model: cobra.Model | None = None
     data_path = None
 
     @classmethod

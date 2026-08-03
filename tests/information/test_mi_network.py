@@ -8,13 +8,14 @@ import numpy as np
 import pandas as pd
 import scipy
 
+import metworkpy.information.mutual_information_functions as mi
+
 # Local Imports
 from metworkpy.information.mutual_information_network import (
+    create_grouped_mi_network,
     mi_network_adjacency_matrix,
     mi_pairwise_grouped,
-    create_grouped_mi_network,
 )
-import metworkpy.information.mutual_information_functions as mi
 
 
 class TestMiNetwork(unittest.TestCase):
@@ -244,11 +245,11 @@ class TestMINetworkGrouped(unittest.TestCase):
             processes=1,
         )
         assert isinstance(result_network, nx.Graph)
-        for g in groups.keys():
+        for g in groups:
             self.assertTrue(g in result_network.nodes)
         # For each edge, check that a p-value attribute is present
-        for i in groups.keys():
-            for j in groups.keys():
+        for i in groups:
+            for j in groups:
                 if i == j:
                     continue
                 self.assertTrue("weight" in result_network[i][j])

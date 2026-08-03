@@ -2,28 +2,28 @@
 
 # Standard Library Imports
 from __future__ import annotations
-import warnings
 
+import warnings
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import NamedTuple, Union, Literal, Optional, Any
+from typing import Any, Literal, NamedTuple
 
 # External Imports
 import cobra
-from cobra.exceptions import OptimizationError
-from docrep import DocstringProcessor
 import numpy as np
 import optlang
 import pandas as pd
 import tqdm
+from cobra.exceptions import OptimizationError
+from docrep import DocstringProcessor
 
 from metworkpy.imat import model_creation
 
 # Local Imports
 from metworkpy.imat.imat_functions import (
-    add_imat_objective_,
-    add_imat_constraints_,
     _get_rxn_imat_binary_variable_name,
+    add_imat_constraints_,
+    add_imat_objective_,
 )
 from metworkpy.utils.metworkpy_defaults import IMAT_DEFAULTS
 
@@ -133,16 +133,16 @@ class ImatIterBase(ABC):
     def __init__(
         self,
         model: cobra.Model,
-        rxn_weights: Union[pd.Series, dict],
+        rxn_weights: pd.Series | dict,
         iter_method: Literal["icut", "maxdist", "corner"] = "icut",
-        max_iter: Optional[int] = IMAT_DEFAULTS.max_iter,
+        max_iter: int | None = IMAT_DEFAULTS.max_iter,
         epsilon: float = IMAT_DEFAULTS.epsilon,
         threshold: float = IMAT_DEFAULTS.threshold,
         objective_tolerance: float = IMAT_DEFAULTS.objective_tolerance,
-        reaction_list: Optional[list[str]] = None,
+        reaction_list: list[str] | None = None,
         fva_scale: bool = True,
-        fva_kwargs: Optional[dict[str, Any]] = None,
-        seed: Union[None, int, np.random.Generator] = None,
+        fva_kwargs: dict[str, Any] | None = None,
+        seed: None | int | np.random.Generator = None,
     ):
         self.in_model = model
         self._imat_model = (
@@ -241,7 +241,7 @@ class ImatIterBase(ABC):
         """
         return list(self._rxn_weights[self._rxn_weights < 0.0].index)
 
-    def _get_high_expr_pos_variables(self) -> dict[str, optlang.Variable]:  # type: ignore ## Checked on import earlier
+    def _get_high_expr_pos_variables(self) -> dict[str, optlang.Variable]:
         """Get a dict of all the y_pos variables for high expression reactions, keyed by reaction id
 
         Returns
@@ -259,7 +259,7 @@ class ImatIterBase(ABC):
             )
         return high_expr_pos_variables
 
-    def _get_high_expr_neg_variables(self) -> dict[str, optlang.Variable]:  # type: ignore ## Checked on import earlier
+    def _get_high_expr_neg_variables(self) -> dict[str, optlang.Variable]:
         """Get a dict of all the y_neg variables for high expression reactions, keyed by reaction id
 
         Returns
@@ -277,7 +277,7 @@ class ImatIterBase(ABC):
             )
         return high_expr_neg_variables
 
-    def _get_low_expr_variables(self) -> dict[str, optlang.Variable]:  # type: ignore ## Checked on import earlier
+    def _get_low_expr_variables(self) -> dict[str, optlang.Variable]:
         """Get a dict of all the y_pos variables for low expression reactions, keyed by reaction id
 
         Returns
@@ -297,7 +297,7 @@ class ImatIterBase(ABC):
 
     def _get_high_expr_variables(
         self,
-    ) -> dict[str, dict[str, optlang.Variable]]:  # type: ignore ## Checked on import earlier
+    ) -> dict[str, dict[str, optlang.Variable]]:
         """Get a nested dict of all the variables associated with high expression reactions, keyed by reaction id,
         and then by 'pos'/'neg' for positive and negative variables respectively
 
@@ -338,7 +338,7 @@ class ImatIterBase(ABC):
         have primal values.
         """
         # Create a pandas series to hold the state
-        reaction_activities = pd.Series(
+        reaction_activities = pd.Series(  # type: ignore
             ReactionActivity.Other, index=self._rxn_weights.index
         )
         # Go through all high expression reactions
@@ -365,7 +365,7 @@ class ImatIterBase(ABC):
                 reaction_activities[rxn] = ReactionActivity.Inactive
         return reaction_activities
 
-    def _get_all_binary_variables(self) -> list[optlang.Variable]:  # type: ignore ## Checked on import earlier
+    def _get_all_binary_variables(self) -> list[optlang.Variable]:
         """Get all the binary variables associated with the underlying iMAT model
 
         Returns
@@ -417,9 +417,8 @@ class ImatIterBase(ABC):
         if np.isnan(model_objective):
             raise StopIteration
         # Check if the number of iterations has exceeded max_iter
-        if self._max_iter is not None:
-            if self._counter >= self._max_iter:
-                raise StopIteration
+        if self._max_iter is not None and self._counter >= self._max_iter:
+            raise StopIteration
         # Update the counter of iterations
         self._counter += 1
 
@@ -791,8 +790,8 @@ class ImatIter:
 def imat_iter_flux_sample(
     *args,
     n_samples: int = 1_000,
-    sampler: Optional[type[cobra.sampling.HRSampler]] = None,
-    sampler_kwargs: Optional[dict[str, Any]] = None,
+    sampler: type[cobra.sampling.HRSampler] | None = None,
+    sampler_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> pd.DataFrame[float]:
     """
@@ -865,7 +864,7 @@ def imat_iter_flux_sample(
 def imat_iter_essential(
     *args,
     essential_proportion: float = 0.1,
-    processes: Optional[int] = None,
+    processes: int | None = None,
     progress_bar: bool = False,
     **kwargs,
 ) -> pd.DataFrame:
