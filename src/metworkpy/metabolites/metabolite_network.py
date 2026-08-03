@@ -416,6 +416,7 @@ def find_metabolite_consuming_network_reactions(
     metabolites: Optional[Iterable[str]] = None,
     return_type: Literal["DataFrame", "dict"] = "DataFrame",
     reaction_proportion: float = 0.05,
+    add_sinks: bool = False,
     check_reverse: bool = True,
     progress_bar: bool = False,
     **kwargs,
@@ -437,6 +438,11 @@ def find_metabolite_consuming_network_reactions(
         if the maximum flux for a reaction drops below reaction_proportion * maximum flux
         when a metabolite is forced into a sink psuedo-reaction then that reaction
         will be considered to be a consumer of a metabolite.
+    add_sinks : bool, default=False
+        Whether to add sinks for all metabolites in the model. This stops
+        reactions from being included in consumption networks when they
+        don't consume the metabolite, but their metabolite products don't have
+        anywhere to go when finding the consumption network for another metabolite.
     check_reverse : bool, default=True
         Whether to check for metabolite consumption in reverse reactions,
         i.e. whether to check if a metabolite or its derivatives is a
@@ -470,6 +476,8 @@ def find_metabolite_consuming_network_reactions(
     with model as m:
         # Remove maintenance reactions to avoid issues with infeasibility
         eliminate_maintenance_requirements_(m)
+        if add_sinks:
+            add_all_metabolite_sinks_(m)
         # Perform FVA for the model
         fva_results = (
             cobra.flux_analysis.variability.flux_variability_analysis(
@@ -480,6 +488,9 @@ def find_metabolite_consuming_network_reactions(
         with model as m:
             # Remove maintenance reactions to avoid issues with infeasibility
             eliminate_maintenance_requirements_(m)
+            # Add all metabolite sinks if desired
+            if add_sinks:
+                add_all_metabolite_sinks_(m)
             # Add the absorbing reaction
             add_metabolite_absorb_reaction_(m, metabolite)
             try:
@@ -530,6 +541,7 @@ def find_metabolite_consuming_network_genes(
     metabolites: Optional[Iterable[str]] = None,
     return_type: Literal["DataFrame", "dict"] = "DataFrame",
     reaction_proportion: float = 0.05,
+    add_sinks: bool = False,
     essential: bool = False,
     progress_bar: bool = False,
     **kwargs,
@@ -552,6 +564,11 @@ def find_metabolite_consuming_network_genes(
         if the maximum flux for a reaction drops below reaction_proportion * maximum flux
         when a metabolite is forced into a sink psuedo-reaction then that reaction
         will be considered to be a consumer of a metabolite.
+    add_sinks : bool, default=False
+        Whether to add sinks for all metabolites in the model. This stops
+        reactions from being included in consumption networks when they
+        don't consume the metabolite, but their metabolite products don't have
+        anywhere to go when finding the consumption network for another metabolite.
     essential : bool
         Whether to only include genes which are essential for the reactions that consume the
         metabolite or its derivatives
@@ -580,6 +597,7 @@ def find_metabolite_consuming_network_genes(
         model=model,
         reaction_proportion=reaction_proportion,
         progress_bar=progress_bar,
+        add_sinks=add_sinks,
         **kwargs,
     )
     for metabolite in metabolite_reaction_network.columns:
@@ -685,17 +703,9 @@ def add_metabolite_objective_(model: cobra.Model, metabolite: str) -> str:
     If used within a model context everything this function alters
     will be reset upon leaving the context
     """
-    metabolite_hash = hashlib.md5(metabolite.encode("utf-8")).hexdigest()[-8:]
-    metabolite_sink_rxn_id = f"{metabolite}_sink_objective_{metabolite_hash}"
-    metabolite_sink_rxn = cobra.Reaction(
-        id=metabolite_sink_rxn_id,
-        name=f"{metabolite} sink reaction",
-        lower_bound=0.0,
+    metabolite_sink_rxn_id = add_metabolite_sink_(
+        model=model, metabolite=metabolite
     )
-    met_obj = model.metabolites.get_by_id(metabolite)
-    assert isinstance(met_obj, cobra.Metabolite)
-    metabolite_sink_rxn.add_metabolites({met_obj: -1.0})
-    model.add_reactions([metabolite_sink_rxn])
     model.objective = metabolite_sink_rxn_id
     model.objective_direction = "max"
     return metabolite_sink_rxn_id
@@ -805,6 +815,44 @@ def eliminate_maintenance_requirements_(model: cobra.Model):
             rxn.upper_bound = 0.0
         else:
             pass
+
+
+def _get_metabolite_sink_id(metabolite: str) -> str:
+    """Get an ID for a sink reaction involving a metabolite"""
+    metabolite_hash = hashlib.md5(metabolite.encode("utf-8")).hexdigest()[-8:]
+    return f"{metabolite}_sink_reaction_{metabolite_hash}"
+
+
+def add_metabolite_sink_(model: cobra.Model, metabolite: str) -> str:
+    """
+    Add a metabolite sink reaction to the model
+    """
+    # Get the id for the reaction to add
+    met_sink_id = _get_metabolite_sink_id(metabolite)
+    # Check if this is already in the model
+    if met_sink_id in model.reactions:
+        return met_sink_id
+    met_sink_rxn = cobra.Reaction(
+        id=met_sink_id, name=f"{metabolite} sink reaction", lower_bound=0.0
+    )
+    # Get the metabolite object
+    met_obj = model.metabolites.get_by_id(metabolite)
+    assert isinstance(met_obj, cobra.Metabolite), (
+        "Failed to get metabolite from Model!"
+    )
+    # Add the metabolite sink to the reaction
+    met_sink_rxn.add_metabolites({met_obj: -1.0})
+    model.add_reactions([met_sink_rxn])
+    # Return the ID
+    return met_sink_id
+
+
+def add_all_metabolite_sinks_(model: cobra.Model):
+    """
+    Add a sink for every metabolite in the model
+    """
+    for met_id in model.metabolites.list_attr("id"):
+        add_metabolite_sink_(model, met_id)
 
 
 # endregion Helper Functions

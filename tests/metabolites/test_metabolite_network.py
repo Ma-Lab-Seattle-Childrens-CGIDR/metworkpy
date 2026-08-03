@@ -1,10 +1,13 @@
 # Imports
 # Standard Library Imports
 import pathlib
+from typing import Optional
 import unittest
+
 
 import cobra
 import numpy as np
+import pandas as pd
 
 # External Imports
 from cobra.core.configuration import Configuration
@@ -23,13 +26,13 @@ from metworkpy.utils.models import model_eq, read_model
 
 
 def setup(cls):
-    Configuration().solver = "glpk"  # Use GLPK solver for testing
+    Configuration().solver = "hybrid"  # Use OSQP/HiGHS solver for testing
     cls.data_path = pathlib.Path(__file__).parent.parent.absolute() / "data"
     cls.model = read_model(cls.data_path / "test_model.xml")
 
 
 class TestMetaboliteObjective(unittest.TestCase):
-    model: cobra.Model = None
+    model: Optional[cobra.Model] = None
     data_path = None
 
     @classmethod
@@ -37,12 +40,13 @@ class TestMetaboliteObjective(unittest.TestCase):
         setup(cls)
 
     def test_adding_metabolite_objective(self):
+        assert self.model is not None
         original_model = self.model.copy()
         with self.model as m:
             add_metabolite_objective_(m, "F_c")
             self.assertEqual(
                 str(self.model.objective.expression),
-                "1.0*F_c_sink_objective_cd67707b - 1.0*F_c_sink_objective_cd67707b_reverse_e263c",
+                "1.0*F_c_sink_reaction_cd67707b - 1.0*F_c_sink_reaction_cd67707b_reverse_855eb",
             )
             self.assertAlmostEqual(m.slim_optimize(), 50)
         self.assertTrue(model_eq(self.model, original_model))
@@ -57,6 +61,7 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
         setup(cls)
 
     def test_find_metabolite_network_reactions(self):
+        assert self.model is not None
         # Test Essential Method
         original_model = self.model.copy()
         ess_met_net = find_metabolite_synthesis_network_reactions(
@@ -64,6 +69,7 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
         )
         self.assertTrue(model_eq(self.model, original_model))
         ess_f = ess_met_net["F_c"]
+        assert isinstance(ess_f, pd.Series)
         self.assertEqual(ess_f.dtype, "bool")
         for rxn in [
             "R_A_e_ex",
@@ -83,12 +89,14 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
             self.assertFalse(ess_f[rxn])
 
     def test_find_metabolite_network_reactions_pfba(self):
+        assert self.model is not None
         original_model = self.model.copy()
         pfba_met_net = find_metabolite_synthesis_network_reactions(
             model=self.model, method="pfba", pfba_proportion=1.0
         )
         self.assertTrue(model_eq(self.model, original_model))
         pfba_f = pfba_met_net["F_c"]
+        assert isinstance(pfba_f, pd.Series)
         self.assertEqual(pfba_f.dtype, "float")
 
         for rxn in ["R_A_e_ex", "R_B_e_ex", "R_C_e_ex"]:
@@ -108,6 +116,7 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
             self.assertAlmostEqual(pfba_f[rxn], 0.0)
 
     def test_find_metabolite_network_genes_essential(self):
+        assert self.model is not None
         # Test essential method
         ess_met_net = find_metabolite_synthesis_network_genes(
             model=self.model, method="essential", essential_proportion=0.05
@@ -127,6 +136,7 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
             self.assertFalse(ess_f[rxn])
 
     def test_find_metabolite_network_genes_pfba(self):
+        assert self.model is not None
         # Test pfba method
         pfba_met_net = find_metabolite_synthesis_network_genes(
             model=self.model, method="pfba", pfba_proportion=1.0
@@ -155,6 +165,7 @@ class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
         setup(cls)
 
     def test_find_metabolite_consuming_network_reactions(self):
+        assert self.model is not None
         original_model = self.model.copy()
         consuming_network = find_metabolite_consuming_network_reactions(
             model=self.model, reaction_proportion=0.05, progress_bar=False
@@ -169,13 +180,37 @@ class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
             "R_F_exp",
             "R_G_e_ex",
             "R_F_e_ex",
-            "R_A_e_ex",  # Reverse uses the metabolite
-            "R_A_imp",  # Reverse uses the metabolite
+            "R_A_e_ex",  # Can't run without metabolite
+            "R_A_imp",  # Due to the products not having anywhere to go
+        ]
+        actual_network_rxns = list(b_network[b_network].index)
+        self.assertCountEqual(expected_network_rxns, actual_network_rxns)
+
+    def test_find_metabolite_consuming_network_reactions_add_sinks(self):
+        assert self.model is not None
+        original_model = self.model.copy()
+        consuming_network = find_metabolite_consuming_network_reactions(
+            model=self.model,
+            reaction_proportion=0.05,
+            add_sinks=True,
+            progress_bar=False,
+        )
+        self.assertTrue(model_eq(self.model, original_model))
+        b_network = consuming_network["B_c"]
+        expected_network_rxns = [
+            "r_A_B_D_E",
+            "r_C_E_F",
+            "r_D_G",
+            "R_G_exp",
+            "R_F_exp",
+            "R_G_e_ex",
+            "R_F_e_ex",
         ]
         actual_network_rxns = list(b_network[b_network].index)
         self.assertCountEqual(expected_network_rxns, actual_network_rxns)
 
     def test_find_metabolite_consuming_network_reactions_ignore_reverse(self):
+        assert self.model is not None
         original_model = self.model.copy()
         consuming_network = find_metabolite_consuming_network_reactions(
             model=self.model,
@@ -199,6 +234,7 @@ class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
         self.assertCountEqual(expected_network_rxns, actual_network_rxns)
 
     def test_find_metabolite_consuming_network_genes(self):
+        assert self.model is not None
         original_model = self.model.copy()
         consuming_network = find_metabolite_consuming_network_genes(
             model=self.model, reaction_proportion=0.05, progress_bar=False
@@ -216,7 +252,29 @@ class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
         actual_network_rxns = list(b_network[b_network].index)
         self.assertCountEqual(expected_network_rxns, actual_network_rxns)
 
+    def test_find_metabolite_consuming_network_genes_add_sinks(self):
+        assert self.model is not None
+        original_model = self.model.copy()
+        consuming_network = find_metabolite_consuming_network_genes(
+            model=self.model,
+            reaction_proportion=0.05,
+            add_sinks=True,
+            progress_bar=False,
+        )
+        self.assertTrue(model_eq(self.model, original_model))
+        b_network = consuming_network["B_c"]
+        expected_network_rxns = [
+            "g_A_B_D_E",
+            "g_C_E_F",
+            "g_D_G",
+            "g_G_exp",
+            "g_F_exp",
+        ]
+        actual_network_rxns = list(b_network[b_network].index)
+        self.assertCountEqual(expected_network_rxns, actual_network_rxns)
+
     def test_find_metabolite_consuming_network_genes_ignore_reverse(self):
+        assert self.model is not None
         original_model = self.model.copy()
         consuming_network = find_metabolite_consuming_network_genes(
             model=self.model, reaction_proportion=0.05, progress_bar=False
@@ -248,6 +306,7 @@ class TestHelperFunctions(unittest.TestCase):
         cls.model = read_model(cls.data_path / "textbook_model.xml")
 
     def test_add_absorbing_reaction(self):
+        assert self.model is not None
         test_model = self.model.copy()
         for metabolite in test_model.metabolites:
             with test_model as m:
@@ -271,6 +330,7 @@ class TestHelperFunctions(unittest.TestCase):
             )
 
     def test_add_absorbing_reaction_no_maintenance(self):
+        assert self.model is not None
         test_model = self.model.copy()
         initial_max_objective = test_model.slim_optimize()
         for metabolite in test_model.metabolites:

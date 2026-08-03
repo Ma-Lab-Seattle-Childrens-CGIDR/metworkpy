@@ -81,7 +81,6 @@ def expr_to_imat_gene_weights(
         expression = expression.apply(aggregator, axis=sample_axis)
     if not subset:
         quantiles = np.quantile(expression, quantile)
-        print(f"Quantiles type: {type(quantiles)} Value: {quantiles}")
         assert isinstance(quantiles, Iterable)
         low, high = quantiles
         gene_weights = expression.map(

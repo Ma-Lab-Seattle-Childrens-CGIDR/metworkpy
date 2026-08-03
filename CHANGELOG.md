@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version DEV](#version-dev)
   - [Version 0.10.0](#version-0100)
   - [Version 0.9.0](#version-090)
   - [Version 0.8.0](#version-080)
@@ -17,6 +18,16 @@
   - [Version 0.2.7](#version-027)
 
 <!--toc:end-->
+
+## Version DEV
+
+- Add parameter to metabolite consuming networks which allows for adding sinks
+  to the other metabolites in the model to avoid issues with reactions being
+  including in the metabolite consuming network due to them not being able to
+  run due to a product not being able to be consumed, even if they are not a
+  direct or indirect consumer of the metabolite of interest itself. Turned off
+  by default for now, since it is not backwards compatible, but this may change
+  in the future.
 
 ## Version 0.10.0
 

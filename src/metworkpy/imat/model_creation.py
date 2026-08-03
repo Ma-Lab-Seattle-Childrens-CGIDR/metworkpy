@@ -15,6 +15,7 @@ from metworkpy.imat.imat_functions import (
     imat,
     add_imat_constraints,
     add_imat_objective_,
+    ALMOST_ZERO,
 )
 from metworkpy.utils import _arguments
 from metworkpy.utils.metworkpy_defaults import IMAT_DEFAULTS
@@ -30,6 +31,7 @@ def generate_model(
     method: str = "imat_restrictions",
     epsilon: float = IMAT_DEFAULTS.epsilon,
     threshold: float = IMAT_DEFAULTS.threshold,
+    constrain_all_reactions: bool = False,
     objective_tolerance: float = IMAT_DEFAULTS.objective_tolerance,
     **kwargs,
 ):
@@ -55,11 +57,18 @@ def generate_model(
     threshold : float
         The threshold value to use for iMAT (default: 1e-1). Represents
         the maximum flux for a reaction to be considered off.
+    constrain_all_reactions : bool,default=False
+        Whether to (potentially) constrain all the reactions in the model,
+        or only those with a non-zero weight. Passed to the `fva_model` or
+        `milp_model` functions if they are the selected method.
     objective_tolerance : float
         The tolerance for the objective value (used for
         imat_restrictions and fva methods). The objective will be
         restricted to be within objective_tolerance*objective_value of
         the optimal objective value. (default: 5e-2)
+    kwargs
+        Keyword arugments are passed to the underlying model generation
+        functions (check `See Also`).
 
     Returns
     -------
@@ -77,11 +86,11 @@ def generate_model(
     method = _parse_method(method)
     if method == "imat_constraint":
         return imat_constraint_model(
-            model,
-            rxn_weights,
-            epsilon,
-            threshold,
-            objective_tolerance,
+            model=model,
+            rxn_weights=rxn_weights,
+            epsilon=epsilon,
+            threshold=threshold,
+            objective_tolerance=objective_tolerance,
             **kwargs,
         )
     elif method == "simple_bounds":
@@ -104,15 +113,23 @@ def generate_model(
         )
     elif method == "fva":
         return fva_model(
-            model,
-            rxn_weights,
-            epsilon,
-            threshold,
-            objective_tolerance,
+            model=model,
+            rxn_weights=rxn_weights,
+            epsilon=epsilon,
+            threshold=threshold,
+            objective_tolerance=objective_tolerance,
+            constrain_all_reactions=constrain_all_reactions,
             **kwargs,
         )
     elif method == "milp":
-        return milp_model(model, rxn_weights, epsilon, threshold, **kwargs)
+        return milp_model(
+            model=model,
+            rxn_weights=rxn_weights,
+            epsilon=epsilon,
+            threshold=threshold,
+            constrain_all_reactions=constrain_all_reactions,
+            **kwargs,
+        )
     else:
         raise ValueError(
             f"Invalid method: {method}. Valid methods are: 'simple_bounds', \
@@ -324,6 +341,7 @@ def fva_model(
     epsilon,
     threshold,
     objective_tolerance,
+    constrain_all_reactions: bool = False,
     warn_tolerance: bool = True,
     **kwargs,
 ):
@@ -342,6 +360,12 @@ def fva_model(
     threshold : float
         The threshold value to use for iMAT (default: 1e-1). Represents
         the maximum flux for a reaction to be considered off.
+    constrain_all_reactions : bool,default=False
+        Whether to (potentially) constrain all the reactions in the model,
+        or only those with a non-zero weight. If True, then every reaction
+        will be evaluated and constrained using flux variability analysis.
+        If False, then only the reactions with a non-zero weight will be
+        evaluated.
     objective_tolerance : float
         The tolerance for the objective value. The objective will be
         restricted to be within objective_tolerance*objective_value of
@@ -373,7 +397,10 @@ def fva_model(
     updated_model = model.copy()
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
     add_imat_objective_(imat_model, rxn_weights)
-    reactions = rxn_weights[~np.isclose(rxn_weights, 0)].index.tolist()
+    if not constrain_all_reactions:
+        reactions = rxn_weights[rxn_weights.abs() > ALMOST_ZERO].index.tolist()
+    else:
+        reactions = model.reactions.list_attr("id")
     fva_res = cobra.flux_analysis.flux_variability_analysis(
         imat_model,
         fraction_of_optimum=(1 - objective_tolerance),
@@ -406,7 +433,14 @@ def fva_model(
     return updated_model
 
 
-def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
+def milp_model(
+    model,
+    rxn_weights,
+    epsilon,
+    threshold,
+    constrain_all_reactions: bool = False,
+    **kwargs,
+):
     """Generate a context specific model by setting bounds on reactions based on
     a set of mixed integer linear programming problems.
 
@@ -422,6 +456,11 @@ def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
     threshold : float
         The threshold value to use for iMAT (default: 1e-1). Represents
         the maximum flux for a reaction to be considered off.
+    constrain_all_reactions : bool,default=False
+        Whether to (potentially) constrain all the reactions in the model,
+        or only those with a non-zero weight. If True, then every reaction
+        will be evaluated for if it should be active/inactive. If False,
+        then only the reactions with a non-zero weight will be evaluated.
 
     Returns
     -------
@@ -442,7 +481,10 @@ def milp_model(model, rxn_weights, epsilon, threshold, **kwargs):
     updated_model = model.copy()
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
     add_imat_objective_(imat_model, rxn_weights)
-    reactions = rxn_weights[~np.isclose(rxn_weights, 0)].index.tolist()
+    if not constrain_all_reactions:
+        reactions = rxn_weights[rxn_weights.abs() > ALMOST_ZERO].index.tolist()
+    else:
+        reactions = model.reactions.list_attr("id")
     milp_results = pd.DataFrame(
         np.nan,
         columns=["inactive", "forward", "reverse"],
