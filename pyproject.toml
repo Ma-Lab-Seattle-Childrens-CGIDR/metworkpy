@@ -30,7 +30,10 @@ Issues = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/issues"
 Changelog = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-cplex = ["cplex>=22.1.0.0"]
+cplex = [
+  "cplex>=22.1.0.0,<22.2.0.0 ; python_version=='3.9'",
+  "cplex>=22.2.0.0 ; python_version>'3.9'",
+]
 gurobi = ["gurobipy>=11.0.0"]
 excel = ["openpyxl>=3.1.4"]
 hybrid = ["highspy>=1.10.0", "osqp>=1.0.3"]
