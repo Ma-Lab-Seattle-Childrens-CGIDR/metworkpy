@@ -543,7 +543,7 @@ def create_gene_network(
     model : cobra.Model
         Cobra Model to create the network from
     directed : bool
-        Whether the network should be directed. It True,
+        Whether the network should be directed. If True,
         the network's edges direction will be decided by the
         directionality of the reaction network, and
         multiple genes associated with a single reaction
@@ -595,33 +595,95 @@ def create_gene_network(
         directed=directed,
         nodes_to_remove=nodes_to_remove,
     )
+    return reaction_to_gene_network(
+        model=model,
+        reaction_network=rxn_network,
+        directed=directed,
+        essential=essential,
+    )
+
+
+def reaction_to_gene_network(
+    model: cobra.Model,
+    reaction_network: nx.Graph | nx.DiGraph,
+    directed: bool,
+    essential: bool,
+) -> nx.Graph | nx.DiGraph:
+    """
+    Create a gene connectivity network from a reaction connectivity
+    network, see notes for details
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model to create the network from
+    reaction_network : nx.Graph or nx.DiGraph
+        The reaction network to convert into a gene network
+    directed : bool
+        Whether the network should be directed. If True,
+        the network's edges direction will be decided by the
+        directionality of the reaction network, and
+        multiple genes associated with a single reaction
+        will have two (reciprocal) edges connecting them.
+    essential : bool
+        Whether a gene should be required for a reaction to function
+        in order for that reaction to be used in assigning the
+        gene edges
+
+    Returns
+    -------
+    gene_network : nx.Graph or nx.DiGraph
+        Network connecting genes which are neighboring in the
+        reaction network together
+
+    Notes
+    -----
+    The gene network includes nodes for each gene associated with
+    a reaction in the network (whether or not essential is True).
+    Edges are added by connecting each gene associated with a reaction
+    to genes associated with all the neighboring reactions. If the
+    graph is directed, then gene nodes are connected to genes associated
+    with succcessor reactions. For genes associated with a single reaction
+    they are given edges between them (going both directions in the
+    case of directed graphs).
+
+    The essential parameter is to decide which genes are associated
+    with which reactions in order to determine which genes are neighbors
+    in the gene network. If True, genes will only be associated with
+    a reaction, when adding edges to the network, if they are required
+    for that reaction to function. All genes associated with reactions
+    in the network will still be added as nodes even if they are not
+    essential for any reactions in the network.
+    """
     # Create the new gene network
     gene_list = reaction_to_gene_list(
-        model=model, reaction_list=rxn_network.nodes, essential=False
+        model=model, reaction_list=reaction_network.nodes, essential=False
     )
     # Create the new network
     if not directed:
         gene_network: nx.Graph | nx.DiGraph = nx.Graph()
-    else:
+    elif directed and reaction_network.is_directed():
         gene_network = nx.DiGraph()
+    else:
+        gene_network = nx.Graph()
     gene_network.add_nodes_from(gene_list)
 
     # Add edges
-    for rxn in rxn_network.nodes:
-        rxn_gene_set = reaction_to_gene_ids(
+    for rxn in reaction_network.nodes:
+        reaction_gene_set = reaction_to_gene_ids(
             model=model, reaction=rxn, essential=essential
         )
         # This won't run at all if there are not at least 2 genes
-        for g1, g2 in itertools.combinations(rxn_gene_set, 2):
+        for g1, g2 in itertools.combinations(reaction_gene_set, 2):
             gene_network.add_edge(g1, g2)
             gene_network.add_edge(g2, g1)
         # Go through all neighboring reactions (successors for directed)
         # NOTE: For networkx DiGraphs, neighbors and successors are the same
         for g1, g2 in itertools.product(
-            rxn_gene_set,
+            reaction_gene_set,
             reaction_to_gene_list(
                 model=model,
-                reaction_list=rxn_network.neighbors(rxn),
+                reaction_list=reaction_network.neighbors(rxn),
                 essential=essential,
             ),
         ):
