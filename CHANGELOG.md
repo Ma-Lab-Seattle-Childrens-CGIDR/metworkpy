@@ -28,6 +28,14 @@
   direct or indirect consumer of the metabolite of interest itself. Turned off
   by default for now, since it is not backwards compatible, but this may change
   in the future.
+- BREAKING: Updated functions for network creation to allow for passing of
+  arbitrary reaction weights to allow for many alternative weighting strategies.
+  Also added a parameter for removing a specified number of highly connected
+  reaction nodes. Added another parameter allowing for specifying the return
+  type of the network adjacency matrix. Network creation now uses scipy Sparse
+  arrays for adjacency matrix, so memory usage should be significantly
+  reduced.Renamed parameter `tolerance` to `zero_threshold` for all network
+  creation methods.
 
 ## Version 0.10.0
 
