@@ -36,6 +36,12 @@
   arrays for adjacency matrix, so memory usage should be significantly
   reduced.Renamed parameter `tolerance` to `zero_threshold` for all network
   creation methods.
+- Add parameters to network construction functions
+  (`weight_by_metabolite_stoich`), to allow for selecting whether the reaction
+  weights should be multiplied by the metabolite stoichiometric coefficients.
+- Add parameters to network construction functions (`product_scale_fn`,
+  `reactant_scale_fn`), to allow for rescaling the reaction->metabolite and
+  metabolite->reaction edges prior to adjacency matrix/network construction.
 
 ## Version 0.10.0
 
