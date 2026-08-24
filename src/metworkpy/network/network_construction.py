@@ -153,6 +153,11 @@ def create_metabolic_network(
     | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
+    weight_by_metabolite_stoich: bool = True,
+    product_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    reactant_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
     nodes_to_remove: Iterable[str] | None = None,
     remove_top_metabolites: int | None = None,
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
@@ -178,6 +183,19 @@ def create_metabolic_network(
         See `Notes` for more information.
     directed : bool
         Whether the network should be directed
+    weight_by_metabolite_stoich: bool, default=true
+        whether the reaction weights should be multiplied by
+        a metabolite's stoichiometric coefficient to find
+        the edge weight between a reation and a metabolite
+        (or a metabolite and a reaction).
+    product_scale_fn, reactant_scale_fn : callable of coo_array to coo_array, optional
+        if provided function will be called on the reactant and product
+        edge weight arrays (both with columns for reactions and rows for
+        metabolites). the product array is all the weights of edges connecting a
+        reaction to a metabolite, and the reactant array represents all of the
+        edges connecting a metabolite to a reaction. these functions must return a
+        coo_array of the same dimension of the passed array. this allows for rescaling
+        or otherwise modifying the edge weights prior to network construction if that is desired.
     nodes_to_remove : Iterable of str, optional
         Iterable of nodes which will be removed from the network before it is returned
     remove_top_metabolites : int, optional
@@ -255,6 +273,9 @@ def create_metabolic_network(
             directed=directed,
             array_type="coo",
             zero_tolerance=zero_tolerance,
+            weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+            product_scale_fn=product_scale_fn,
+            reactant_scale_fn=reactant_scale_fn,
             **kwargs,
         ),
     )
@@ -301,6 +322,11 @@ def create_reaction_network(
     | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
+    weight_by_metabolite_stoich: bool = True,
+    product_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    reactant_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
     nodes_to_remove: Iterable[str] | None = None,
     remove_top_metabolites: int | None = None,
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
@@ -329,6 +355,19 @@ def create_reaction_network(
         See `Notes` for more information.
     directed : bool
         Whether the network should be directed
+    weight_by_metabolite_stoich: bool, default=True
+        Whether the reaction weights should be multiplied by
+        a metabolite's stoichiometric coefficient to find
+        the edge weight between a reation and a metabolite
+        (or a metabolite and a reaction).
+    product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
+        If provided function will be called on the reactant and product
+        edge weight arrays (both with columns for reactions and rows for
+        metabolites). The product array is all the weights of edges connecting a
+        reaction to a metabolite, and the reactant array represents all of the
+        edges connecting a metabolite to a reaction. These functions must return a
+        coo_array of the same dimension of the passed array. This allows for rescaling
+        or otherwise modifying the edge weights prior to network construction if that is desired.
     nodes_to_remove : Iterable of str, optional
         Iterable of nodes which will be removed from the network before it is returned
     remove_top_metabolites : int, optional
@@ -378,6 +417,9 @@ def create_reaction_network(
         remove_top_metabolites=remove_top_metabolites,
         weight_scale_fn=weight_scale_fn,
         zero_tolerance=zero_tolerance,
+        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
         **kwargs,
     )
     # Get the reaction nodes
@@ -411,6 +453,11 @@ def create_metabolite_network(
     | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
+    weight_by_metabolite_stoich: bool = True,
+    product_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    reactant_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
     nodes_to_remove: Iterable[str] | None = None,
     remove_top_metabolites: int | None = None,
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
@@ -488,6 +535,9 @@ def create_metabolite_network(
         remove_top_metabolites=remove_top_metabolites,
         weight_scale_fn=weight_scale_fn,
         zero_tolerance=zero_tolerance,
+        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
         **kwargs,
     )
     # Get the metabolite nodes
@@ -1070,6 +1120,11 @@ def create_adjacency_matrix(
     | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
+    weight_by_metabolite_stoich: bool = True,
+    product_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    reactant_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
     array_type: Literal[
         "dense", "frame", "bsr", "coo", "csc", "csr", "dia", "dok", "lil"
     ] = "frame",
@@ -1095,6 +1150,19 @@ def create_adjacency_matrix(
         See `Notes` for more information.
     directed : bool
         Whether the network should be directed
+    weight_by_metabolite_stoich: bool, default=True
+        Whether the reaction weights should be multiplied by
+        a metabolite's stoichiometric coefficient to find
+        the edge weight between a reation and a metabolite
+        (or a metabolite and a reaction).
+    product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
+        If provided function will be called on the reactant and product
+        edge weight arrays (both with columns for reactions and rows for
+        metabolites). The product array is all the weights of edges connecting a
+        reaction to a metabolite, and the reactant array represents all of the
+        edges connecting a metabolite to a reaction. These functions must return a
+        coo_array of the same dimension of the passed array. This allows for rescaling
+        or otherwise modifying the edge weights prior to network construction if that is desired.
     array_type : {'dense', 'frame', 'bsr', 'coo', 'csc', 'csr', 'dia', 'dok', 'lil'}, default='frame'
         The type to use for the adjacency matrix. "dense" will return a numpy.ndarray,
         "frame" will return a dataframe (indexed by reaction and metabolite ids). The other
@@ -1119,7 +1187,8 @@ def create_adjacency_matrix(
     Notes
     -----
     When creating a weighted network, for each (reaction, metabolite) edge the weight
-    is the reaction weight multiplied by the stoichiometric coefficient of the metabolite.
+    is the reaction weight  multiplied by the stoichiometric coefficient of the metabolite
+    (optionally, depending on `weihght_by_metabolite_stoich`).
     Each reaction is allowed a forward, and a reverse weight. The forward weights
     are used to connect reactions to their products, and the reverse weights are
     used to connect reactions to their reactants.
@@ -1127,6 +1196,8 @@ def create_adjacency_matrix(
     As an example, take a reaction named rxn1 with formula 2A + B -> 3C, a forward weight of
     2.5, and a reverse weight of 5.0. The reaction will connect to the A,B and C
     metabolites, and the edges will have weights 10.0, 5.0, and 7.5 respectively.
+    Or, if `weight_by_metabolite_stoich` is False, then the reaction connects to
+    A, B, and C with weights of 2.5, 2.5, and 5.0 respectively.
 
     For the weights parameter, these forward and reverse weights can be supplied
     directly as a tuple of (forward, reverse), where forward and reverse can be
@@ -1241,6 +1312,9 @@ def create_adjacency_matrix(
         reverse=reverse,
         directed=directed,
         weighted=weighted,
+        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
         zero_tolerance=zero_tolerance,
     )
     if array_type == "dense":
@@ -1280,6 +1354,11 @@ def _create_sparse_adjacency_matrix(
     reverse: sparse.sparray,
     directed: bool = True,
     weighted: bool = True,
+    weight_by_metabolite_stoich: bool = True,
+    product_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    reactant_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
     zero_tolerance: float = ALMOST_ZERO,
 ) -> sparse.coo_array:
     """
@@ -1302,6 +1381,19 @@ def _create_sparse_adjacency_matrix(
         Whether the adjacency matrix should be weighted. If False,
         all weights above `zero_tolerance` are set to 1, and
         all weights below `zero_tolerance` are set to 0.
+    weight_by_metabolite_stoich: bool, default=True
+        Whether the reaction weights should be multiplied by
+        a metabolite's stoichiometric coefficient to find
+        the edge weight between a reation and a metabolite
+        (or a metabolite and a reaction).
+    product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
+        If provided function will be called on the reactant and product
+        edge weight arrays (both with columns for reactions and rows for
+        metabolites). The product array is all the weights of edges connecting a
+        reaction to a metabolite, and the reactant array represents all of the
+        edges connecting a metabolite to a reaction. These functions must return a
+        coo_array of the same dimension of the passed array. This allows for rescaling
+        or otherwise modifying the edge weights prior to network construction if that is desired.
     zero_tolerance : float, default=1e-15
         Tolerance for values to be considered differently from 0. Weights
         whose absolute values are less than this will be set to 0.
@@ -1313,8 +1405,10 @@ def _create_sparse_adjacency_matrix(
     """
     # Get the sparse stoichiometric matrix
     stoichiometric_matrix = _create_stoichiometric_matrix(model=model)
-    if not weighted:
-        stoichiometric_matrix: sparse.coo_array = stoichiometric_matrix.sign()  # ty: ignore[unresolved-attribute]
+    if not weighted or not weight_by_metabolite_stoich:
+        stoichiometric_matrix: sparse.coo_array = stoichiometric_matrix.sign(  # ty: ignore[unresolved-attribute]
+            dtype=stoichiometric_matrix.dtype
+        )
     # Get the number of reactions, and metabolites
     n_met, n_rxns = stoichiometric_matrix.shape
     # Convert Forward and reverse to csr
@@ -1339,15 +1433,22 @@ def _create_sparse_adjacency_matrix(
     reactant_forward: sparse.coo_array = (reactant_array * forward).tocoo()
     product_reverse: sparse.coo_array = (reactant_array * reverse).tocoo()
 
+    # Create the reaction->metabolite, and the metabolite->reaction
+    # matrices, both of which will
+    product_array: sparse.coo_array = product_forward.maximum(product_reverse)
+    reactant_array: sparse.coo_array = reactant_forward.maximum(
+        reactant_reverse
+    )
+    if product_scale_fn is not None:
+        product_array = product_scale_fn(product_array)
+    if reactant_scale_fn is not None:
+        reactant_array = reactant_scale_fn(reactant_array)
+
     # Build the blocks of the matrix
     rxn_rxn_block = sparse.coo_array((n_rxns, n_rxns))
     met_met_block = sparse.coo_array((n_met, n_met))
-    met_rxn_block: sparse.coo_array = reactant_forward.maximum(
-        reactant_reverse
-    )
-    rxn_met_block: sparse.coo_array = product_forward.maximum(
-        product_reverse
-    ).T
+    met_rxn_block: sparse.coo_array = reactant_array
+    rxn_met_block: sparse.coo_array = product_array.T
 
     # Create the adjacency matrix
     adj_mat = sparse.vstack(
@@ -1358,9 +1459,7 @@ def _create_sparse_adjacency_matrix(
     ).tocoo()
 
     if not weighted:
-        # Convert all non-zero entries to 1.0
-        adj_mat[adj_mat >= zero_tolerance] = 1.0
-        adj_mat[adj_mat <= -zero_tolerance] = 1.0
+        adj_mat = adj_mat.sign(dtype=adj_mat.sign)
     # Convert all entries within zero_tolerance of zero to be 0
     adj_mat.data[
         (adj_mat.data < zero_tolerance) & (adj_mat.data > -zero_tolerance)
