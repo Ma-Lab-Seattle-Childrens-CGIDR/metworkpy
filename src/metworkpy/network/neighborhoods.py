@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import functools
 import operator
-from collections.abc import Hashable, Iterator
-from typing import cast
+from collections.abc import Hashable, Iterable, Iterator
+from typing import Callable, TypeVar, cast
 
 # External Imports
 import cobra
+import joblib
 import networkx as nx
 
 # Local Imports
@@ -225,3 +226,120 @@ def _graph_gene_neighborhood(
 
 
 # endregion Graph Neighborhoods
+
+
+########################
+### Neighborhood Map ###
+########################
+NodeType = TypeVar("NodeType")
+T = TypeVar("T")
+
+
+def neighborhood_map(
+    fn: Callable[set[NodeType], T],
+    network: nx.Graph | nx.DiGraph,
+    radius: float = 2,
+    nodes: Iterable[NodeType] | None = None,
+    node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
+    weight: str | None = None,
+    include_node: bool = True,
+    processes: int | None = None,
+) -> dict[NodeType, T]:
+    """
+    Map a function across neighborhoods in a network
+
+    Parameters
+    ----------
+    fn : Callable of set of node ids -> Any
+        Function to map over the neighborhoods of the network,
+        should accept a set of node ids and return a single value
+    network : nx.Graph or nx.DiGraph
+        The network to map over
+    radius : float
+        The size of the neighborhood to map over.
+        Any nodes within radius distance of the central node will be included
+        in the central nodes neighborhood. A radius of 0
+        means that only the central node will be included in the neighborhood
+        (assuming `include_node` is True, other it would just be the empty set).
+    nodes : Iterable of node id, optional
+        Nodes to use as neighborhood centers, other nodes will still be included
+        in neighborhoods but will not act as neighborhood centers.
+    node_filter : callable of node id->bool or set of node ids, optional
+        Filter nodes in the network to consider when finding neighborhoods.
+        If a Callable, should take node ids as the only argument and return
+        a bool, if True the node will be considered in neighborhoods,
+        if False it will not be. If a set, only nodes in the set will be included
+        in neighborhoods.
+    weight : str, optional
+        If provided indicates the edge parameter to be used as weights
+        when finding distances from a central node to
+        define a neighborhood. If None, all edges are treated as having a
+        weight of 1.
+    include_node : bool, default=True
+        Whether to include the central node in a neighborhood
+    processes : int, optional
+        The number of processes to use for parallel mapping of a
+        the function
+
+    Returns
+    -------
+    dict of node id to result
+        Dictionary of central nodes to the result of applying the passed function `fn`
+        to the neighborhood around it.
+    """
+    if callable(node_filter):
+        filter_set = {node for node in network if not node_filter(node)}  # ty: ignore[call-top-callable]
+    elif isinstance(node_filter, set):
+        filter_set = set(network.nodes) - node_filter
+    else:
+        filter_set = set()
+
+    if nodes is None:
+        nodes = network.nodes
+
+    map_res: dict[NodeType, T] = {}
+    for node_idx, ret_value in joblib.Parallel(
+        n_jobs=processes, return_as="generator_unordered"
+    )(
+        joblib.delayed(_neighborhood_map_worker)(
+            node=node,
+            fn=fn,
+            network=network,
+            radius=radius,
+            filter_set=filter_set,
+            weight=weight,
+            include_node=include_node,
+        )
+        for node in nodes
+    ):
+        map_res[node_idx] = ret_value
+
+    return map_res
+
+
+def _neighborhood_map_worker(
+    node: NodeType,
+    fn: Callable[set[NodeType], T],
+    network: nx.Graph | nx.DiGraph,
+    radius: float,
+    filter_set: set[str],
+    weight: str | None = None,
+    include_node: bool = True,
+) -> tuple[NodeType, T]:
+    # Find the neighborhood around the node
+    if include_node:
+        neighborhood: set[NodeType] = {node}
+    else:
+        neighborhood: set[NodeType] = set()
+    if weight is None:
+        for _, successors in nx.bfs_successors(
+            network, source=node, depth_limit=int(radius)
+        ):
+            neighborhood.update(successors)
+    else:
+        neighborhood.update(
+            nx.single_source_dijkstra_path_length(
+                network, source=node, cutoff=radius, weight=weight
+            ).keys()
+        )
+    return node, fn(neighborhood - filter_set)
