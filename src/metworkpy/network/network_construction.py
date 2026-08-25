@@ -1406,9 +1406,7 @@ def _create_sparse_adjacency_matrix(
     # Get the sparse stoichiometric matrix
     stoichiometric_matrix = _create_stoichiometric_matrix(model=model)
     if not weighted or not weight_by_metabolite_stoich:
-        stoichiometric_matrix: sparse.coo_array = stoichiometric_matrix.sign(  # ty: ignore[unresolved-attribute]
-            dtype=stoichiometric_matrix.dtype
-        )
+        stoichiometric_matrix: sparse.coo_array = stoichiometric_matrix.sign()  # ty: ignore[unresolved-attribute]
     # Get the number of reactions, and metabolites
     n_met, n_rxns = stoichiometric_matrix.shape
     # Convert Forward and reverse to csr
@@ -1459,7 +1457,7 @@ def _create_sparse_adjacency_matrix(
     ).tocoo()
 
     if not weighted:
-        adj_mat = adj_mat.sign(dtype=adj_mat.sign)
+        adj_mat = adj_mat.sign()
     # Convert all entries within zero_tolerance of zero to be 0
     adj_mat.data[
         (adj_mat.data < zero_tolerance) & (adj_mat.data > -zero_tolerance)
