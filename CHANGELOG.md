@@ -3,7 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
-  - [Version DEV](#version-dev)
+  - [Version 0.11.0](#version-0110)
   - [Version 0.10.0](#version-0100)
   - [Version 0.9.0](#version-090)
   - [Version 0.8.0](#version-080)
@@ -19,7 +19,7 @@
 
 <!--toc:end-->
 
-## Version DEV
+## Version 0.11.0
 
 - Add parameter to metabolite consuming networks which allows for adding sinks
   to the other metabolites in the model to avoid issues with reactions being
