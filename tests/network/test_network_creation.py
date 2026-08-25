@@ -9,19 +9,15 @@ import unittest
 # External Imports
 import cobra
 import networkx as nx
+import numpy as np
 import pandas as pd
 from cobra.core.configuration import Configuration
+from scipy import sparse
 
 from metworkpy.information import mi_network_adjacency_matrix
 from metworkpy.network.network_construction import (
-    _create_adj_matrix_d_uw,
-    _create_adj_matrix_d_w_fva,
-    _create_adj_matrix_d_w_pfba,
-    _create_adj_matrix_d_w_stoich,
-    _create_adj_matrix_ud_uw,
-    _create_adj_matrix_ud_w_fva,
-    _create_adj_matrix_ud_w_pfba,
-    _create_adj_matrix_ud_w_stoich,
+    _create_sparse_adjacency_matrix,
+    _create_stoichiometric_matrix,
     create_adjacency_matrix,
     create_group_neighborhood_network,
     create_metabolic_network,
@@ -50,9 +46,26 @@ class TestAdjMatUdUw(unittest.TestCase):
         setup(cls)
         assert isinstance(cls.test_model, cobra.Model)
         assert isinstance(cls.tiny_model, cobra.Model)
-        cls.adj_mat = _create_adj_matrix_ud_uw(cls.test_model, threshold=0.0)
-        cls.tiny_adj_mat = _create_adj_matrix_ud_uw(
-            cls.tiny_model, threshold=0.0
+        cls.adj_mat = _create_sparse_adjacency_matrix(
+            cls.test_model,
+            forward=sparse.coo_array(
+                np.ones((len(cls.test_model.reactions),))
+            ),
+            reverse=sparse.coo_array(
+                np.zeros((len(cls.test_model.reactions),))
+            ),
+            weighted=False,
+            directed=False,
+        )
+
+        cls.tiny_adj_mat = _create_sparse_adjacency_matrix(
+            cls.tiny_model,
+            forward=sparse.coo_array(
+                np.ones((len(cls.tiny_model.reactions),))
+            ),
+            reverse=sparse.coo_array([1, 1, 1, 0]),
+            weighted=False,
+            directed=False,
         )
         cls.tiny_known = pd.DataFrame(
             [
@@ -87,7 +100,7 @@ class TestAdjMatUdUw(unittest.TestCase):
                     "C",
                 ]
             ),
-            dtype=bool,
+            dtype=float,
         )
 
     def test_shape(self):
@@ -100,10 +113,12 @@ class TestAdjMatUdUw(unittest.TestCase):
         )
 
     def test_type(self):
-        self.assertIsInstance(self.adj_mat, pd.DataFrame)
+        self.assertIsInstance(self.adj_mat, sparse.coo_array)
 
     def test_known(self):
-        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
+        np.testing.assert_allclose(
+            self.tiny_adj_mat.todense(), self.tiny_known.to_numpy()
+        )
 
 
 class TestAdjMatDUw(unittest.TestCase):
@@ -117,8 +132,27 @@ class TestAdjMatDUw(unittest.TestCase):
         setup(cls)
         assert cls.test_model is not None
         assert cls.tiny_model is not None
-        cls.adj_mat = _create_adj_matrix_d_uw(cls.test_model, threshold=0)
-        cls.tiny_adj_mat = _create_adj_matrix_d_uw(cls.tiny_model, threshold=0)
+        cls.adj_mat = _create_sparse_adjacency_matrix(
+            cls.test_model,
+            forward=sparse.coo_array(
+                np.ones((len(cls.test_model.reactions),))
+            ),
+            reverse=sparse.coo_array(
+                np.zeros((len(cls.test_model.reactions),))
+            ),
+            weighted=False,
+            directed=True,
+        )
+
+        cls.tiny_adj_mat = _create_sparse_adjacency_matrix(
+            cls.tiny_model,
+            forward=sparse.coo_array(
+                np.ones((len(cls.tiny_model.reactions),))
+            ),
+            reverse=sparse.coo_array([1, 1, 1, 0]),
+            weighted=False,
+            directed=True,
+        )
         cls.tiny_known = pd.DataFrame(
             [
                 #  R_A_B_C R_A_ex R_B_ex R_C_ex A B C
@@ -152,7 +186,7 @@ class TestAdjMatDUw(unittest.TestCase):
                     "C",
                 ]
             ),
-            dtype=bool,
+            dtype=float,
         )
 
     def test_shape(self):
@@ -165,11 +199,13 @@ class TestAdjMatDUw(unittest.TestCase):
         )
 
     def test_type(self):
-        self.assertIsInstance(self.adj_mat, pd.DataFrame)
+        self.assertIsInstance(self.adj_mat, sparse.coo_array)
 
     def test_known(self):
         assert self.tiny_adj_mat is not None
-        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
+        np.testing.assert_allclose(
+            self.tiny_adj_mat.todense(), self.tiny_known.to_numpy()
+        )
 
 
 class TestAdjMatDWFVA(unittest.TestCase):
@@ -183,10 +219,12 @@ class TestAdjMatDWFVA(unittest.TestCase):
         assert cls.test_model is not None
         assert cls.tiny_model is not None
 
-        cls.adj_mat = _create_adj_matrix_d_w_fva(cls.test_model, threshold=0.0)
+        cls.adj_mat = create_adjacency_matrix(
+            cls.test_model, weight="fva", directed=True, array_type="frame"
+        )
 
-        cls.tiny_adj_mat = _create_adj_matrix_d_w_fva(
-            cls.tiny_model, threshold=0.0
+        cls.tiny_adj_mat = create_adjacency_matrix(
+            cls.tiny_model, weight="fva", directed=True, array_type="frame"
         )
 
         cls.tiny_known = pd.DataFrame(
@@ -227,6 +265,7 @@ class TestAdjMatDWFVA(unittest.TestCase):
 
     def test_shape(self):
         assert self.test_model is not None
+        assert isinstance(self.adj_mat, pd.DataFrame)
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
@@ -252,12 +291,11 @@ class TestAdjMatDWpFBA(unittest.TestCase):
         assert cls.test_model is not None
         assert cls.tiny_model is not None
 
-        cls.adj_mat = _create_adj_matrix_d_w_pfba(
-            cls.test_model, threshold=0.0
+        cls.adj_mat = create_adjacency_matrix(
+            cls.test_model, weight="pfba", directed=True, array_type="frame"
         )
-
-        cls.tiny_adj_mat = _create_adj_matrix_d_w_pfba(
-            cls.tiny_model, threshold=0.0
+        cls.tiny_adj_mat = create_adjacency_matrix(
+            cls.tiny_model, weight="pfba", directed=True, array_type="frame"
         )
 
         cls.tiny_known = pd.DataFrame(
@@ -298,6 +336,7 @@ class TestAdjMatDWpFBA(unittest.TestCase):
 
     def test_shape(self):
         assert self.test_model is not None
+        assert isinstance(self.adj_mat, pd.DataFrame)
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
@@ -323,11 +362,17 @@ class TestAdjMatDWStoichiometry(unittest.TestCase):
         setup(cls)
         assert cls.test_model is not None
         assert cls.tiny_model is not None
-        cls.adj_mat = _create_adj_matrix_d_w_stoich(
-            cls.test_model, threshold=0.0
+        cls.adj_mat = create_adjacency_matrix(
+            cls.test_model,
+            weight="stoichiometry",
+            directed=True,
+            array_type="frame",
         )
-        cls.tiny_adj_mat = _create_adj_matrix_d_w_stoich(
-            cls.tiny_model, threshold=0.0
+        cls.tiny_adj_mat = create_adjacency_matrix(
+            cls.tiny_model,
+            weight="stoichiometry",
+            directed=True,
+            array_type="frame",
         )
         cls.tiny_known = pd.DataFrame(
             [
@@ -367,6 +412,7 @@ class TestAdjMatDWStoichiometry(unittest.TestCase):
 
     def test_shape(self):
         assert self.test_model is not None
+        assert isinstance(self.adj_mat, pd.DataFrame)
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
@@ -392,11 +438,17 @@ class TestAdjMatUdWStoichiometry(unittest.TestCase):
         setup(cls)
         assert cls.test_model is not None
         assert cls.tiny_model is not None
-        cls.adj_mat = _create_adj_matrix_ud_w_stoich(
-            cls.test_model, threshold=0.0
+        cls.adj_mat = create_adjacency_matrix(
+            cls.test_model,
+            weight="stoichiometry",
+            directed=False,
+            array_type="frame",
         )
-        cls.tiny_adj_mat = _create_adj_matrix_ud_w_stoich(
-            cls.tiny_model, threshold=0.0
+        cls.tiny_adj_mat = create_adjacency_matrix(
+            cls.tiny_model,
+            weight="stoichiometry",
+            directed=False,
+            array_type="frame",
         )
         cls.tiny_known = pd.DataFrame(
             [
@@ -436,6 +488,7 @@ class TestAdjMatUdWStoichiometry(unittest.TestCase):
 
     def test_shape(self):
         assert self.test_model is not None
+        assert isinstance(self.adj_mat, pd.DataFrame)
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
@@ -461,12 +514,11 @@ class TestAdjMatUdWpFBA(unittest.TestCase):
         assert cls.test_model is not None
         assert cls.tiny_model is not None
 
-        cls.adj_mat = _create_adj_matrix_ud_w_pfba(
-            cls.test_model, threshold=0.0
+        cls.adj_mat = create_adjacency_matrix(
+            cls.test_model, weight="pfba", directed=False, array_type="frame"
         )
-
-        cls.tiny_adj_mat = _create_adj_matrix_ud_w_pfba(
-            cls.tiny_model, threshold=0.0
+        cls.tiny_adj_mat = create_adjacency_matrix(
+            cls.tiny_model, weight="pfba", directed=False, array_type="frame"
         )
 
         cls.tiny_known = pd.DataFrame(
@@ -507,6 +559,7 @@ class TestAdjMatUdWpFBA(unittest.TestCase):
 
     def test_shape(self):
         assert self.test_model is not None
+        assert isinstance(self.adj_mat, pd.DataFrame)
         num_metabolites = len(self.test_model.metabolites)
         num_rxns = len(self.test_model.reactions)
         self.assertTupleEqual(
@@ -530,85 +583,41 @@ class TestCreateAdjacencyMatrix(unittest.TestCase):
     def setUpClass(cls):
         setup(cls)
 
-    def test_undirected_unweighted(self):
+    def test_array_type(self):
         assert self.test_model is not None
-        adj_mat = create_adjacency_matrix(
-            model=self.test_model,
-            directed=False,
-            weighted=False,
-        )
-        adj_mat_known = _create_adj_matrix_ud_uw(
-            model=self.test_model, threshold=0.0
-        )
-        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
-
-    def test_directed_unweighted(self):
-        assert self.test_model is not None
-        adj_mat = create_adjacency_matrix(
-            model=self.test_model,
-            directed=True,
-            weighted=False,
-        )
-        adj_mat_known = _create_adj_matrix_d_uw(
-            model=self.test_model, threshold=0.0
-        )
-        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
-
-    def test_directed_weighted_flux(self):
-        assert self.test_model is not None
-        adj_mat = create_adjacency_matrix(
-            model=self.test_model,
-            directed=True,
-            weighted=True,
-            weight_by="fva",
-            threshold=0.0,
-        )
-        adj_mat_known = _create_adj_matrix_d_w_fva(
-            model=self.test_model, threshold=0.0
-        )
-        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
-
-    def test_directed_weighted_stoichiometry(self):
-        assert self.test_model is not None
-        adj_mat = create_adjacency_matrix(
-            model=self.test_model,
-            directed=True,
-            weighted=True,
-            weight_by="stoichiometry",
-            threshold=0.0,
-        )
-        adj_mat_known = _create_adj_matrix_d_w_stoich(
-            model=self.test_model, threshold=0.0
-        )
-        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
-
-    def test_undirected_weighted_flux(self):
-        assert self.test_model is not None
-        adj_mat = create_adjacency_matrix(
-            model=self.test_model,
-            directed=False,
-            weighted=True,
-            weight_by="fva",
-            threshold=0.0,
-        )
-        adj_mat_known = _create_adj_matrix_ud_w_fva(
-            model=self.test_model, threshold=0.0
-        )
-        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
-
-    def test_undirected_weighted_stoichiometry(self):
-        assert self.test_model is not None
-        adj_mat = create_adjacency_matrix(
-            model=self.test_model,
-            directed=False,
-            weighted=True,
-            weight_by="stoichiometry",
-            threshold=0.0,
-        )
-        adj_mat_known = _create_adj_matrix_ud_w_stoich(
-            model=self.test_model, threshold=0.0
-        )
-        pd.testing.assert_frame_equal(adj_mat_known, adj_mat)
+        for array_type, type_ in zip(
+            [
+                "dense",
+                "frame",
+                "bsr",
+                "coo",
+                "csc",
+                "csr",
+                "dia",
+                "dok",
+                "lil",
+            ],
+            [
+                np.ndarray,
+                pd.DataFrame,
+                sparse.bsr_array,
+                sparse.coo_array,
+                sparse.csc_array,
+                sparse.csr_array,
+                sparse.dia_array,
+                sparse.dok_array,
+                sparse.lil_array,
+            ],
+        ):
+            self.assertIsInstance(
+                create_adjacency_matrix(
+                    model=self.test_model,
+                    weight="stoichiometry",
+                    directed=True,
+                    array_type=array_type,  # type: ignore
+                ),
+                type_,
+            )
 
 
 class TestCreateNetwork(unittest.TestCase):
@@ -624,7 +633,7 @@ class TestCreateNetwork(unittest.TestCase):
         assert self.test_model is not None
         assert self.tiny_model is not None
         test_network = create_metabolic_network(
-            model=self.test_model, weighted=False, directed=True
+            model=self.test_model, weight=None, directed=True
         )
         self.assertIsInstance(test_network, nx.DiGraph)
         for _, _, data in test_network.edges(data=True):
@@ -640,7 +649,7 @@ class TestCreateNetwork(unittest.TestCase):
         assert self.test_model is not None
         assert self.tiny_model is not None
         test_network = create_metabolic_network(
-            model=self.test_model, weighted=False, directed=False
+            model=self.test_model, weight=None, directed=False
         )
         self.assertIsInstance(test_network, nx.Graph)
         for _, _, data in test_network.edges(data=True):
@@ -656,9 +665,8 @@ class TestCreateNetwork(unittest.TestCase):
         assert self.tiny_model is not None
         test_network = create_metabolic_network(
             model=self.test_model,
-            weighted=True,
+            weight="stoichiometry",
             directed=True,
-            weight_by="stoichiometry",
         )
         self.assertIsInstance(test_network, nx.DiGraph)
         for _, _, data in test_network.edges(data=True):
@@ -678,9 +686,8 @@ class TestCreateNetwork(unittest.TestCase):
         assert self.tiny_model is not None
         test_network = create_metabolic_network(
             model=self.test_model,
-            weighted=True,
+            weight="stoichiometry",
             directed=False,
-            weight_by="stoichiometry",
         )
         self.assertIsInstance(test_network, nx.Graph)
         for _, _, data in test_network.edges(data=True):
@@ -699,18 +706,16 @@ class TestCreateNetwork(unittest.TestCase):
         assert self.tiny_model is not None
         test_network = create_metabolic_network(
             model=self.test_model,
-            weighted=True,
+            weight="fva",
             directed=True,
-            weight_by="fva",
         )
         self.assertIsInstance(test_network, nx.DiGraph)
         for _, _, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 50)
         tiny_network = create_metabolic_network(
             model=self.tiny_model,
-            weighted=True,
+            weight="fva",
             directed=True,
-            weight_by="fva",
         )
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 50)
         with self.assertRaises(KeyError):
@@ -721,18 +726,16 @@ class TestCreateNetwork(unittest.TestCase):
         assert self.tiny_model is not None
         test_network = create_metabolic_network(
             model=self.test_model,
-            weighted=True,
+            weight="fva",
             directed=False,
-            weight_by="fva",
         )
         self.assertIsInstance(test_network, nx.Graph)
         for _, _, data in test_network.edges(data=True):
             self.assertEqual(data["weight"], 50)
         tiny_network = create_metabolic_network(
             model=self.tiny_model,
-            weighted=True,
+            weight="fva",
             directed=False,
-            weight_by="fva",
         )
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 50)
         self.assertEqual(tiny_network["R_C_ex"]["C"]["weight"], 50)
@@ -743,7 +746,7 @@ class TestCreateNetwork(unittest.TestCase):
         )  # ecoli core metabolism
         # Test for not directed, not weighted
         textbook_network = create_metabolic_network(
-            model=textbook_model, weighted=False, directed=False
+            model=textbook_model, weight=None, directed=False
         )
         self.assertTrue(nx.is_bipartite(textbook_network))
         self.assertTrue(
@@ -758,16 +761,15 @@ class TestCreateNetwork(unittest.TestCase):
         )
         # Test for directed, not weighted
         textbook_network = create_metabolic_network(
-            model=textbook_model, weighted=False, directed=True
+            model=textbook_model, weight=None, directed=True
         )
         self.assertTrue(nx.is_bipartite(textbook_network))
         # Can't check bipartite nodes for directed graphs
         # Test for not directed, weighted by stoichiometry
         textbook_network = create_metabolic_network(
             model=textbook_model,
-            weighted=True,
+            weight="stoichiometry",
             directed=False,
-            weight_by="stoichiometry",
         )
         self.assertTrue(nx.is_bipartite(textbook_network))
         self.assertTrue(
@@ -783,9 +785,8 @@ class TestCreateNetwork(unittest.TestCase):
         # Test for not directed, weighted by fva
         textbook_network = create_metabolic_network(
             model=textbook_model,
-            weighted=True,
+            weight="fva",
             directed=False,
-            weight_by="fva",
         )
         self.assertTrue(nx.is_bipartite(textbook_network))
         self.assertTrue(
@@ -801,9 +802,8 @@ class TestCreateNetwork(unittest.TestCase):
         # Test for not directed, weighted by pfba
         textbook_network = create_metabolic_network(
             model=textbook_model,
-            weighted=True,
+            weight="pfba",
             directed=False,
-            weight_by="pfba",
         )
         self.assertTrue(nx.is_bipartite(textbook_network))
         self.assertTrue(
@@ -819,17 +819,15 @@ class TestCreateNetwork(unittest.TestCase):
         # Test for directed, weighted by stoichiometry
         textbook_network = create_metabolic_network(
             model=textbook_model,
-            weighted=True,
+            weight="stoichiometry",
             directed=True,
-            weight_by="stoichiometry",
         )
         self.assertTrue(nx.is_bipartite(textbook_network))
         # Test for directed, weighted by stoichiometry
         textbook_network = create_metabolic_network(
             model=textbook_model,
-            weighted=True,
+            weight="fva",
             directed=True,
-            weight_by="fva",
         )
         self.assertTrue(nx.is_bipartite(textbook_network))
 
@@ -871,6 +869,278 @@ class TestCreateGroupConnectivityNetwork(unittest.TestCase):
 
 
 # endregion Metabolic Network
+
+
+class TestAdjMat(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        Configuration().solver = "glpk"
+        cls.data_path = (
+            pathlib.Path(__file__).parent.parent.absolute() / "data"
+        )
+        cls.test_model = read_model(cls.data_path / "test_model.xml")
+        cls.textbook_model = read_model(cls.data_path / "textbook_model.xml")
+
+        # Create a tiny model for use in testing here,
+        #
+        # RXN1: A+B -> C
+        # RXN2: C->D+E
+        cls.tiny_model = cobra.Model("tiny_model")
+        met_a = cobra.Metabolite(
+            "A",
+            "ch4",
+            "Metabolite A",
+        )
+        met_b = cobra.Metabolite(
+            "B",
+            "ch4",
+            "Metabolite B",
+        )
+        met_c = cobra.Metabolite(
+            "C",
+            "ch4",
+            "Metabolite C",
+        )
+        met_d = cobra.Metabolite(
+            "D",
+            "ch4",
+            "Metabolite D",
+        )
+        met_e = cobra.Metabolite(
+            "E",
+            "ch4",
+            "Metabolite E",
+        )
+
+        rxn1 = cobra.Reaction(
+            "rxn1", "Reaction 1", lower_bound=-1, upper_bound=10
+        )
+        rxn2 = cobra.Reaction(
+            "rxn2", "Reaction 2", lower_bound=0, upper_bound=10
+        )
+
+        rxn1.add_metabolites({met_a: -2.0, met_b: -1.0, met_c: 2})
+        rxn2.add_metabolites({met_c: -1.0, met_d: 3.0, met_e: 1.0})
+
+        cls.tiny_model.add_reactions([rxn1, rxn2])
+
+    def test_sparse_stoich_matrix(self):
+        # Catch fire with the test model
+        sparse_stoich = _create_stoichiometric_matrix(self.test_model)
+        self.assertIsInstance(sparse_stoich, sparse.coo_array)
+        self.assertEqual(
+            sparse_stoich.shape[0], len(self.test_model.metabolites)
+        )
+        self.assertEqual(
+            sparse_stoich.shape[1], len(self.test_model.reactions)
+        )
+
+        # Specific test with the tiny model
+        expected_tiny_model_stoich = sparse.coo_array(
+            (
+                [-2.0, -1.0, 2.0, -1.0, 3.0, 1.0],  # coefficients
+                (
+                    [0, 1, 2, 2, 3, 4],  # Rows
+                    [0, 0, 0, 1, 1, 1],  # Columns
+                ),
+            )
+        )
+
+        actual_tiny_model_stoich = _create_stoichiometric_matrix(
+            self.tiny_model
+        )
+
+        np.testing.assert_allclose(
+            actual_tiny_model_stoich.todense(),
+            expected_tiny_model_stoich.todense(),
+        )
+
+    def test_sparse_adj_wd(self):
+        # Test _create_sparse_adjacency_matrix for weighted and directed matrix
+
+        # All Irreversible
+        forward = sparse.coo_array(np.ones(len(self.tiny_model.reactions)))
+        reverse = sparse.coo_array(np.zeros(len(self.tiny_model.reactions)))
+
+        test_adj_stoich_all_irreversible = _create_sparse_adjacency_matrix(
+            self.tiny_model,
+            forward=forward,
+            reverse=reverse,
+            directed=True,
+            weighted=True,
+        )
+        self.assertIsInstance(
+            test_adj_stoich_all_irreversible, sparse.coo_array
+        )
+
+        expected_adj_stoich_all_irreversible = np.array(
+            [
+                # 1  2  A  B  C  D  E
+                [0, 0, 0, 0, 2, 0, 0],  # rxn1
+                [0, 0, 0, 0, 0, 3, 1],  # rxn2
+                [2, 0, 0, 0, 0, 0, 0],  # A
+                [1, 0, 0, 0, 0, 0, 0],  # B
+                [0, 1, 0, 0, 0, 0, 0],  # C
+                [0, 0, 0, 0, 0, 0, 0],  # D
+                [0, 0, 0, 0, 0, 0, 0],  # E
+            ]
+        )
+        np.testing.assert_allclose(
+            test_adj_stoich_all_irreversible.todense(),
+            expected_adj_stoich_all_irreversible,
+        )
+
+        # All Reversible
+        forward = sparse.coo_array(np.ones(len(self.tiny_model.reactions)))
+        reverse = sparse.coo_array(np.ones(len(self.tiny_model.reactions)))
+
+        test_adj_stoich_all_reversible = _create_sparse_adjacency_matrix(
+            self.tiny_model,
+            forward=forward,
+            reverse=reverse,
+            directed=True,
+            weighted=True,
+        )
+        self.assertIsInstance(test_adj_stoich_all_reversible, sparse.coo_array)
+
+        expected_adj_stoich_all_reversible = np.array(
+            [
+                # 1  2  A  B  C  D  E
+                [0, 0, 2, 1, 2, 0, 0],  # rxn1
+                [0, 0, 0, 0, 1, 3, 1],  # rxn2
+                [2, 0, 0, 0, 0, 0, 0],  # A
+                [1, 0, 0, 0, 0, 0, 0],  # B
+                [2, 1, 0, 0, 0, 0, 0],  # C
+                [0, 3, 0, 0, 0, 0, 0],  # D
+                [0, 1, 0, 0, 0, 0, 0],  # E
+            ]
+        )
+        # Expected should be symmetric
+        assert np.allclose(
+            expected_adj_stoich_all_reversible
+            - expected_adj_stoich_all_reversible.T,
+            0.0,
+        )
+        np.testing.assert_allclose(
+            test_adj_stoich_all_reversible.todense(),
+            expected_adj_stoich_all_reversible,
+        )
+
+    def test_sparse_adj_wud(self):
+        forward = sparse.coo_array(np.ones(len(self.tiny_model.reactions)))
+        reverse = sparse.coo_array(np.zeros(len(self.tiny_model.reactions)))
+
+        test_adj_stoich_all_irreversible = _create_sparse_adjacency_matrix(
+            self.tiny_model,
+            forward=forward,
+            reverse=reverse,
+            directed=False,
+            weighted=True,
+        )
+        self.assertIsInstance(
+            test_adj_stoich_all_irreversible, sparse.coo_array
+        )
+
+        expected_adj_stoich_all_irreversible = np.array(
+            [
+                # 1  2  A  B  C  D  E
+                [0, 0, 2, 1, 2, 0, 0],  # rxn1
+                [0, 0, 0, 0, 1, 3, 1],  # rxn2
+                [2, 0, 0, 0, 0, 0, 0],  # A
+                [1, 0, 0, 0, 0, 0, 0],  # B
+                [2, 1, 0, 0, 0, 0, 0],  # C
+                [0, 3, 0, 0, 0, 0, 0],  # D
+                [0, 1, 0, 0, 0, 0, 0],  # E
+            ]
+        )
+        np.testing.assert_allclose(
+            test_adj_stoich_all_irreversible.todense(),
+            expected_adj_stoich_all_irreversible,
+        )
+
+    def test_sparse_adj_uwd(self):
+        # All Irreversible
+        forward = sparse.coo_array(np.ones(len(self.tiny_model.reactions)))
+        reverse = sparse.coo_array(np.zeros(len(self.tiny_model.reactions)))
+
+        test_adj_stoich_all_irreversible = _create_sparse_adjacency_matrix(
+            self.tiny_model,
+            forward=forward,
+            reverse=reverse,
+            directed=True,
+            weighted=False,
+        )
+        self.assertIsInstance(
+            test_adj_stoich_all_irreversible, sparse.coo_array
+        )
+
+        expected_adj_stoich_all_irreversible = np.array(
+            [
+                # 1  2  A  B  C  D  E
+                [0, 0, 0, 0, 1, 0, 0],  # rxn1
+                [0, 0, 0, 0, 0, 1, 1],  # rxn2
+                [1, 0, 0, 0, 0, 0, 0],  # A
+                [1, 0, 0, 0, 0, 0, 0],  # B
+                [0, 1, 0, 0, 0, 0, 0],  # C
+                [0, 0, 0, 0, 0, 0, 0],  # D
+                [0, 0, 0, 0, 0, 0, 0],  # E
+            ]
+        )
+        np.testing.assert_allclose(
+            test_adj_stoich_all_irreversible.todense(),
+            expected_adj_stoich_all_irreversible,
+        )
+
+        # Test with larger model
+        sparse_adj = _create_sparse_adjacency_matrix(
+            model=self.textbook_model,
+            forward=sparse.coo_array(
+                np.ones((len(self.textbook_model.reactions),))
+            ),
+            reverse=sparse.coo_array(
+                np.zeros(len(self.textbook_model.reactions))
+            ),
+            weighted=False,
+            directed=True,
+        )
+        np.testing.assert_allclose(sparse_adj.data, 1.0)
+
+    def test_sparse_adj_uwud(self):
+        forward = sparse.coo_array(np.ones(len(self.tiny_model.reactions)))
+        reverse = sparse.coo_array(np.ones(len(self.tiny_model.reactions)))
+
+        test_adj_stoich_all_reversible = _create_sparse_adjacency_matrix(
+            self.tiny_model,
+            forward=forward,
+            reverse=reverse,
+            directed=False,
+            weighted=False,
+        )
+        self.assertIsInstance(test_adj_stoich_all_reversible, sparse.coo_array)
+
+        expected_adj_stoich_all_reversible = np.array(
+            [
+                # 1  2  A  B  C  D  E
+                [0, 0, 1, 1, 1, 0, 0],  # rxn1
+                [0, 0, 0, 0, 1, 1, 1],  # rxn2
+                [1, 0, 0, 0, 0, 0, 0],  # A
+                [1, 0, 0, 0, 0, 0, 0],  # B
+                [1, 1, 0, 0, 0, 0, 0],  # C
+                [0, 1, 0, 0, 0, 0, 0],  # D
+                [0, 1, 0, 0, 0, 0, 0],  # E
+            ]
+        )
+        # Expected should be symmetric
+        assert np.allclose(
+            expected_adj_stoich_all_reversible
+            - expected_adj_stoich_all_reversible.T,
+            0.0,
+        )
+        np.testing.assert_allclose(
+            test_adj_stoich_all_reversible.todense(),
+            expected_adj_stoich_all_reversible,
+        )
+
 
 # region Mutual Information Network
 

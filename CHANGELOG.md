@@ -3,7 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
-  - [Version DEV](#version-dev)
+  - [Version 0.11.0](#version-0110)
   - [Version 0.10.0](#version-0100)
   - [Version 0.9.0](#version-090)
   - [Version 0.8.0](#version-080)
@@ -19,7 +19,7 @@
 
 <!--toc:end-->
 
-## Version DEV
+## Version 0.11.0
 
 - Add parameter to metabolite consuming networks which allows for adding sinks
   to the other metabolites in the model to avoid issues with reactions being
@@ -28,6 +28,26 @@
   direct or indirect consumer of the metabolite of interest itself. Turned off
   by default for now, since it is not backwards compatible, but this may change
   in the future.
+- BREAKING: Updated functions for network creation to allow for passing of
+  arbitrary reaction weights to allow for many alternative weighting strategies.
+  Also added a parameter for removing a specified number of highly connected
+  reaction nodes. Added another parameter allowing for specifying the return
+  type of the network adjacency matrix. Network creation now uses scipy Sparse
+  arrays for adjacency matrix, so memory usage should be significantly
+  reduced.Renamed parameter `tolerance` to `zero_threshold` for all network
+  creation methods.
+- Add parameters to network construction functions
+  (`weight_by_metabolite_stoich`), to allow for selecting whether the reaction
+  weights should be multiplied by the metabolite stoichiometric coefficients.
+- Add parameters to network construction functions (`product_scale_fn`,
+  `reactant_scale_fn`), to allow for rescaling the reaction->metabolite and
+  metabolite->reaction edges prior to adjacency matrix/network construction.
+- New function (`neighborhood_map`) which applies a function to the
+  neighborhoods in a network in parallel.
+- New function (`gene_neighborhood_map`) which applies a function to gene
+  neighborhoods in a network in parallel.
+- New function (`combine_neighborhood_pvalues`) which accepts a mapping between
+  genes and p-values, and creates combined neighborhood p-values
 
 ## Version 0.10.0
 

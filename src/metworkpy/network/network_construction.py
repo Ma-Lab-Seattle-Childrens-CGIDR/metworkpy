@@ -19,7 +19,7 @@ import cobra
 import networkx as nx
 import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import sparse, stats
 
 # Local Imports
 from metworkpy.information.mutual_information_network import (
@@ -31,8 +31,14 @@ from metworkpy.network.neighborhoods import (
 from metworkpy.network.projection import bipartite_project
 from metworkpy.utils import reaction_to_gene_ids, reaction_to_gene_list
 
+ALMOST_ZERO = 1e-15
 
-# region Main Function
+
+##################################
+### Mutual Information Network ###
+##################################
+
+
 def create_mutual_information_network(
     model: cobra.Model | None = None,
     flux_samples: pd.DataFrame | np.ndarray | None = None,
@@ -132,247 +138,248 @@ def create_mutual_information_network(
     return mi_network
 
 
-def create_adjacency_matrix(
+# endregion Main Function
+
+
+####################################
+### Network Generation Functions ###
+####################################
+def create_metabolic_network(
     model: cobra.Model,
-    weighted: bool,
-    directed: bool,
-    weight_by: Literal["stoichiometry", "fva", "pfba"] = "stoichiometry",
-    threshold: float = 0.0,
+    weight: None
+    | Literal["stoichiometry", "fva", "pfba", "gfba"]
+    | np.typing.ArrayLike
+    | pd.Series
+    | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
+    | tuple[pd.Series, pd.Series] = None,
+    directed: bool = True,
+    weight_by_metabolite_stoich: bool = True,
+    product_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    reactant_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    nodes_to_remove: Iterable[str] | None = None,
+    remove_top_metabolites: int | None = None,
+    weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
+    zero_tolerance: float = ALMOST_ZERO,
     **kwargs,
-) -> pd.DataFrame:
+) -> nx.Graph | nx.DiGraph:
     """
-    Create an adjacency matrix representing the metabolic network of a provided
-    cobra Model
+    Create a bipartite metabolic network from provided
+    cobra Model, with nodes representing both reactions and metabolites
 
     Parameters
     ----------
     model : cobra.Model
         Cobra Model to create the network from
-    weighted : bool
-        Whether the network should be weighted
+    weight : {'stoichiometry', "fva", "pfba", "gfba"} or ArrayLike or Series or tuple of ArrayLike or Series, optional
+        The reaction weights to use for creating the adjacency matrix. If None the network represented
+        by the adjacency matrix will be unweighted (all values will be 0 or 1). If an ArrayLike or Series,
+        treated as reaction weights, with positive values being used for forward weights,
+        and negative values being used for reverse weights. If a tuple, treated as
+        (forward, reverse). For all array arguments, they should be a 1-D array (or
+        coercible to a 1-D array), with length equal to the number of reactions in the model.
+        Also, all weights (forward and reverse) should be positive.
+        See `Notes` for more information.
     directed : bool
         Whether the network should be directed
-    weight_by : {'fva', 'pfba', 'stoichiometry'}, default='stoichiometry'
-        String indicating if the network should be weighted by
-        'stoichiometry', 'fva', 'pfba' (see notes for more information).
-        Ignored if `weighted = False`
-    threshold : float
+    weight_by_metabolite_stoich: bool, default=true
+        whether the reaction weights should be multiplied by
+        a metabolite's stoichiometric coefficient to find
+        the edge weight between a reation and a metabolite
+        (or a metabolite and a reaction).
+    product_scale_fn, reactant_scale_fn : callable of coo_array to coo_array, optional
+        if provided function will be called on the reactant and product
+        edge weight arrays (both with columns for reactions and rows for
+        metabolites). the product array is all the weights of edges connecting a
+        reaction to a metabolite, and the reactant array represents all of the
+        edges connecting a metabolite to a reaction. these functions must return a
+        coo_array of the same dimension of the passed array. this allows for rescaling
+        or otherwise modifying the edge weights prior to network construction if that is desired.
+    nodes_to_remove : Iterable of str, optional
+        Iterable of nodes which will be removed from the network before it is returned
+    remove_top_metabolites : int, optional
+        Number of top most connected metabolites to remove. This can be useful to remove
+        common currency metabolites such as ATP, or solvent metabolites like H20.
+    weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
+        Optional function for scaling the weights, called with a 1-D numpy array of all the
+        weights in the network, and must return a 1-D numpy array of the same size.
+        This could be used to make the weights all fall in a specific range
+        (e.g. use a minmax scalar so they are all between 0 and 1),
+        or to invert the direction of the weights (so larger weights become smaller) by
+        taking the reciprocal of all the weights.
+    zero_tolerance : float
         Threshold, below which to consider a (absolute value of a) bound/flux
         to be 0
     kwargs
-        Passed to cobra's flux_variability_analysis function if the weight_by
-        is 'fva', or cobra's pfba function if the weight_by is 'pfba'
+        Passed to COBRApy functions depending on value of `weight`.
+
+            * `flux_variability_analysis <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/index.html#cobra.flux_analysis.flux_variability_analysis>`_ if `weight` is 'fva'
+            * `pfba <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/index.html#cobra.flux_analysis.pfba>`_ if `weight` is 'pfba'
+            * `geometric_fba <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/geometric/index.html#cobra.flux_analysis.geometric.geometric_fba>`_ if `weight` is 'gfba'
 
     Returns
     -------
-    pd.DataFrame
-        The adjacency matrix
+    nx.Graph or nx.DiGraph
+        The bipartite network constructed from the provided `cobra.Model`,
+        with nodes for reactions and metabolites (using the reaction/metabolite id
+        as the node id).
 
     Notes
     -----
-    When creating a weighted network, the options are to weight the edges based
-    on flux, or stoichiometry. If stoichiometry is chosen the edge weight will
-    correspond to the stoichiometric coefficient of the metabolite, in a given
-    reaction.
+    When creating a weighted network, for each (reaction, metabolite) edge the weight
+    is the reaction weight multiplied by the stoichiometric coefficient of the metabolite.
+    Each reaction is allowed a forward, and a reverse weight. The forward weights
+    are used to connect reactions to their products, and the reverse weights are
+    used to connect reactions to their reactants.
 
-    For 'fva' weighting, first flux variability analysis is performed. The edge
-    weight is determined by the maximum flux through a reaction in a particular
-    direction (forward if the metabolite is a product of the reaction,
-    reverse if the metabolite is a substrate) multiplied by the metabolite
-    stoichiometry. If the network is unweighted, the maximum of the absolute
-    value of the forward and the reverse flux is used instead.
+    As an example, take a reaction named rxn1 with formula 2A + B -> 3C, a forward weight of
+    2.5, and a reverse weight of 5.0. The reaction will connect to the A,B and C
+    metabolites, and the edges will have weights 10.0, 5.0, and 7.5 respectively.
 
-    For 'pfba' weighting, first parsimonious flux analysis is performed. The
-    edge weight between a reaction and metabolite is determined by the
-    stoichiometric coefficient of the metabolite multiplied by flux of the
-    reaction in the pFBA solution.
+    For the weights parameter, these forward and reverse weights can be supplied
+    directly as a tuple of (forward, reverse), where forward and reverse can be
+    either numpy arrays or pandas series (they should have length equal to the number
+    of reactions in the model). Alternatively, they can be supplied as a single
+    numpy array or series, where each reaction has only a forward or (exclusive) a
+    reverse weight. In this case positive values will be treated as the forward
+    weight, and negative values will be treated as reverse weights (but their
+    absolute value will be the actual weight value).
+
+    Another option is to use the stoichiometry directly as weights, this is equivalent
+    to supplying 1 for all forward weights for reactions which can run in the forward
+    direction, and 0 for all reactions that can't. Simmilarly for the reverse weights,
+    values of 1 for all reactions which can run in reverse, and 0 for all reactions
+    that can't.
+
+    Alternatively, several strategies of using flux to weight to edges can be employed,
+    specifically flux variability analysis (fva), parsimonious flux balance analysis (pfba),
+    or geometric flux balance analysis (gfba).
+
+    For fva, the maximum possible positive flux through a reaction is used as its forward
+    weight (reactions whose maximum flux is negative are given forward weights of 0), and
+    the minimum possible negative flux is used as its reverse weight.
+
+    For pfba, the resulting flux is used as the weights, with positive values
+    being used for forward weights, and negative values being used for reverse weights.
+    gfba is the same as pfba, except using geometric instead of parsimonious flux balance
+    analysis.
     """
-    if not isinstance(model, cobra.Model):
-        raise TypeError(
-            f"Model must be a cobra.Model, received a {type(model)} instead"
-        )
-    if threshold < 0.0:
-        raise ValueError(
-            f"Threshold must be greater than 0.0, but received {threshold}"
-        )
-    if directed:
-        if weighted:
-            if weight_by == "stoichiometry":
-                return _create_adj_matrix_d_w_stoich(
-                    model=model, threshold=threshold
-                )
-            elif weight_by == "fva":
-                return _create_adj_matrix_d_w_fva(
-                    model=model, threshold=threshold, **kwargs
-                )
-            elif weight_by == "pfba":
-                return _create_adj_matrix_d_w_pfba(
-                    model=model, threshold=threshold, **kwargs
-                )
-            else:
-                raise ValueError(
-                    f"weight_by must be stoichiometry, fva, or pfba but received {weight_by}"
-                )
-        else:
-            return _create_adj_matrix_d_uw(model=model, threshold=threshold)
-    else:
-        if weighted:
-            if weight_by == "stoichiometry":
-                return _create_adj_matrix_ud_w_stoich(
-                    model=model, threshold=threshold
-                )
-            elif weight_by == "fva":
-                return _create_adj_matrix_ud_w_fva(
-                    model=model, threshold=threshold, **kwargs
-                )
-            elif weight_by == "pfba":
-                return _create_adj_matrix_ud_w_pfba(
-                    model=model, threshold=threshold, **kwargs
-                )
-            else:
-                raise ValueError(
-                    f"weight_by must be stoichiometry, fva, or pfba but received {weight_by}"
-                )
-        else:
-            return _create_adj_matrix_ud_uw(model=model, threshold=threshold)
-
-
-def create_metabolic_network(
-    model: cobra.Model,
-    weighted: bool,
-    directed: bool,
-    weight_by: Literal["stoichiometry", "fva", "pfba"] = "stoichiometry",
-    nodes_to_remove: list[str] | None = None,
-    reciprocal_weights: bool = False,
-    threshold: float = 0.0,
-    **kwargs,
-) -> nx.Graph | nx.DiGraph:
-    """Create a metabolic network from a cobrapy Model
-
-    Parameters
-    ----------
-    model : cobra.Model
-        Cobra Model to create the network from
-    weighted : bool
-        Whether the network should be weighted
-    directed : bool
-        Whether the network should be directed
-    weight_by : {'fva', 'pfba', 'stoichiometry'}, default='stoichiometry'
-        String indicating if the network should be weighted by
-        'stoichiometry', 'fva', 'pfba' (see notes for more information).
-        Ignored if `weighted = False`
-    nodes_to_remove : list[str] | None
-        List of any metabolites or reactions that should be removed from
-        the final network. This can be used to remove metabolites that
-        participate in a large number of reactions, but are not desired
-        in downstream analysis such as water, or ATP, or pseudo
-        reactions like biomass. Each metabolite/reaction should be the
-        string ID associated with them in the cobra model.
-    reciprocal_weights : bool
-        Whether to use the reciprocal of the weights, useful if higher
-        flux should equate with lower weights in the final network (for
-        use with graph algorithms)
-    threshold : float
-        Threshold, below which to consider a bound to be 0
-    kwargs
-        Keyword arguments are passed to the cobra flux_variability_analysis method
-        when weight_by is flux
-
-    Returns
-    -------
-    nx.Graph | nx.DiGraph
-        A network representing the metabolic network from the provided
-        cobrapy model
-
-    Notes
-    -----
-    When creating a weighted network, the options are to weight the edges based
-    on flux, or stoichiometry. If stoichiometry is chosen the edge weight will
-    correspond to the stoichiometric coefficient of the metabolite, in a given
-    reaction.
-
-    For 'fva' weighting, first flux variability analysis is performed. The edge
-    weight is determined by the maximum flux through a reaction in a particular
-    direction (forward if the metabolite is a product of the reaction,
-    reverse if the metabolite is a substrate) multiplied by the metabolite
-    stoichiometry. If the network is unweighted, the maximum of the absolute
-    value of the forward and the reverse flux is used instead.
-
-    For 'pfba' weighting, first parsimonious flux analysis is performed. The
-    edge weight between a reaction and metabolite is determined by the
-    stoichiometric coefficient of the metabolite multiplied by flux of the
-    reaction in the pFBA solution.
-    """
-    adjacency_frame = create_adjacency_matrix(
-        model=model,
-        weighted=weighted,
-        directed=directed,
-        weight_by=weight_by,
-        threshold=threshold,
-        **kwargs,
+    adj_mat = cast(
+        sparse.coo_array,
+        create_adjacency_matrix(
+            model=model,
+            weight=weight,
+            directed=directed,
+            array_type="coo",
+            zero_tolerance=zero_tolerance,
+            weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+            product_scale_fn=product_scale_fn,
+            reactant_scale_fn=reactant_scale_fn,
+            **kwargs,
+        ),
     )
 
-    if reciprocal_weights:
-        adjacency_frame.data = np.reciprocal(adjacency_frame.data)
+    if weight_scale_fn is not None:
+        adj_mat.data = weight_scale_fn(adj_mat.data)
 
-    # Create the base network
-    if directed:
-        out_network = nx.from_pandas_adjacency(
-            adjacency_frame, create_using=nx.DiGraph
+    if remove_top_metabolites is not None:
+        mets_to_remove = set(
+            get_top_metabolites(model=model, n=remove_top_metabolites)
         )
     else:
-        out_network = nx.from_pandas_adjacency(
-            adjacency_frame,
-            create_using=nx.Graph,
-        )
+        mets_to_remove = set()
 
-    # Remove any metabolites desired
-    if nodes_to_remove:
-        out_network.remove_nodes_from(nodes_to_remove)
-    return out_network
+    if nodes_to_remove is not None:
+        nodes_to_remove = set(nodes_to_remove) | mets_to_remove
+    else:
+        nodes_to_remove = mets_to_remove
+
+    # Create the network
+    met_network = nx.from_scipy_sparse_array(
+        adj_mat, create_using=nx.DiGraph if directed else nx.Graph
+    )
+
+    met_network = nx.relabel_nodes(
+        met_network,
+        {
+            idx: node.id
+            for idx, node in enumerate(
+                itertools.chain(model.reactions, model.metabolites)
+            )
+        },
+    )
+    met_network.remove_nodes_from(nodes_to_remove)
+    return met_network
 
 
 def create_reaction_network(
     model: cobra.Model,
-    weighted: bool,
-    directed: bool,
-    weight_by: Literal["stoichiometry", "fva", "pfba"] = "stoichiometry",
-    nodes_to_remove: list[str] | None = None,
-    reciprocal_weights: bool = False,
-    threshold: float = 0.0,
+    weight: None
+    | Literal["stoichiometry", "fva", "pfba", "gfba"]
+    | np.typing.ArrayLike
+    | pd.Series
+    | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
+    | tuple[pd.Series, pd.Series] = None,
+    directed: bool = True,
+    weight_by_metabolite_stoich: bool = True,
+    product_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    reactant_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    nodes_to_remove: Iterable[str] | None = None,
+    remove_top_metabolites: int | None = None,
+    weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
     projection_weight: str | Callable[[float, float], float] | None = None,
     projection_weight_combine: Callable[[list[float]], float] | None = None,
+    zero_tolerance: float = ALMOST_ZERO,
     **kwargs,
 ):
     """
     Create a reaction connectivity network from the
-    metabolic model
+    metabolic model by projecting the bipartite metabolic network
+    onto the reaction nodes
 
     Parameters
     ----------
     model : cobra.Model
         Cobra Model to create the network from
-    weighted : bool
-        Whether the network should be weighted
+    weight : {'stoichiometry', "fva", "pfba", "gfba"} or ArrayLike or Series or tuple of ArrayLike or Series, optional
+        The reaction weights to use for creating the adjacency matrix. If None the network represented
+        by the adjacency matrix will be unweighted (all values will be 0 or 1). If an ArrayLike or Series,
+        treated as reaction weights, with positive values being used for forward weights,
+        and negative values being used for reverse weights. If a tuple, treated as
+        (forward, reverse). For all array arguments, they should be a 1-D array (or
+        coercible to a 1-D array), with length equal to the number of reactions in the model.
+        Also, all weights (forward and reverse) should be positive.
+        See `Notes` for more information.
     directed : bool
         Whether the network should be directed
-    weight_by : {'fva', 'pfba', 'stoichiometry'}, default='stoichiometry'
-        String indicating if the network should be weighted by
-        'stoichiometry', 'fva', 'pfba' (see notes for more information).
-        Ignored if `weighted = False`
-    nodes_to_remove : list[str] | None
-        List of any metabolites or reactions that should be removed from
-        the final network. This can be used to remove metabolites that
-        participate in a large number of reactions, but are not desired
-        in downstream analysis such as water, or ATP, or pseudo
-        reactions like biomass. Each metabolite/reaction should be the
-        string ID associated with them in the cobra model.
-    reciprocal_weights : bool
-        Whether to use the reciprocal of the weights, useful if higher
-        flux should equate with lower weights in the final network (for
-        use with graph algorithms)
-    threshold : float
-        Threshold, below which to consider a bound to be 0
+    weight_by_metabolite_stoich: bool, default=True
+        Whether the reaction weights should be multiplied by
+        a metabolite's stoichiometric coefficient to find
+        the edge weight between a reation and a metabolite
+        (or a metabolite and a reaction).
+    product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
+        If provided function will be called on the reactant and product
+        edge weight arrays (both with columns for reactions and rows for
+        metabolites). The product array is all the weights of edges connecting a
+        reaction to a metabolite, and the reactant array represents all of the
+        edges connecting a metabolite to a reaction. These functions must return a
+        coo_array of the same dimension of the passed array. This allows for rescaling
+        or otherwise modifying the edge weights prior to network construction if that is desired.
+    nodes_to_remove : Iterable of str, optional
+        Iterable of nodes which will be removed from the network before it is returned
+    remove_top_metabolites : int, optional
+        Number of top most connected metabolites to remove. This can be useful to remove
+        common currency metabolites such as ATP, or solvent metabolites like H20.
+    weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
+        Optional function for scaling the weights, called with a 1-D numpy array of all the
+        weights in the network, and must return a 1-D numpy array of the same size.
+        This could be used to make the weights all fall in a specific range
+        (e.g. use a minmax scalar so they are all between 0 and 1),
+        or to invert the direction of the weights (so larger weights become smaller) by
+        taking the reciprocal of all the weights.
     projection_weight : str | Callable[[float, float], float] | None
         How to weight the projected graph. If None, the projected graph
         will not be weighted. If "ratio", the edges will be weighted
@@ -388,6 +395,15 @@ def create_reaction_network(
         a list of possible weights, and returns a single final weight. Python
         builtin `max` and `min` can be used for this. If not provided,
         `max` is used.
+    zero_tolerance : float
+        Threshold, below which to consider a (absolute value of a) bound/flux
+        to be 0
+    kwargs
+        Passed to COBRApy functions depending on value of `weight`.
+
+            * `flux_variability_analysis <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/index.html#cobra.flux_analysis.flux_variability_analysis>`_ if `weight` is 'fva'
+            * `pfba <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/index.html#cobra.flux_analysis.pfba>`_ if `weight` is 'pfba'
+            * `geometric_fba <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/geometric/index.html#cobra.flux_analysis.geometric.geometric_fba>`_ if `weight` is 'gfba'
     kwargs
         Keyword arguments are passed to the cobra flux_variability_analysis method
         when weight_by is flux
@@ -395,31 +411,29 @@ def create_reaction_network(
     # Create the metabolic network
     metabolic_network = create_metabolic_network(
         model=model,
-        weighted=weighted,
+        weight=weight,
         directed=directed,
-        weight_by=weight_by,
         nodes_to_remove=nodes_to_remove,
-        reciprocal_weights=reciprocal_weights,
-        threshold=threshold,
+        remove_top_metabolites=remove_top_metabolites,
+        weight_scale_fn=weight_scale_fn,
+        zero_tolerance=zero_tolerance,
+        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
         **kwargs,
     )
-    # Get a list of reactions which are in the model and not in the nodes_to_remove
-    if nodes_to_remove:
-        rxns_to_remove_set = set(nodes_to_remove)
-    else:
-        rxns_to_remove_set = set()
-    reaction_ids = {
-        r.id for r in model.reactions if r.id not in rxns_to_remove_set
-    }
+    # Get the reaction nodes
+    rxn_nodes = set(metabolic_network.nodes) & {r.id for r in model.reactions}
+
     # Project onto only reactions
-    if weighted:
+    if weight is not None:
         if projection_weight is None:
-            projection_weight = max
+            projection_weight = min
         if projection_weight_combine is None:
             projection_weight_combine = max
     return bipartite_project(
         network=metabolic_network,
-        node_set=reaction_ids,
+        node_set=rxn_nodes,
         directed=directed,
         weight=projection_weight,
         weight_combine=projection_weight_combine,
@@ -432,45 +446,58 @@ def create_reaction_network(
 
 def create_metabolite_network(
     model: cobra.Model,
-    weighted: bool,
-    directed: bool,
-    weight_by: Literal["stoichiometry", "fva", "pfba"] = "stoichiometry",
-    nodes_to_remove: list[str] | None = None,
-    reciprocal_weights: bool = False,
-    threshold: float = 0.0,
+    weight: None
+    | Literal["stoichiometry", "fva", "pfba", "gfba"]
+    | np.typing.ArrayLike
+    | pd.Series
+    | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
+    | tuple[pd.Series, pd.Series] = None,
+    directed: bool = True,
+    weight_by_metabolite_stoich: bool = True,
+    product_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    reactant_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    nodes_to_remove: Iterable[str] | None = None,
+    remove_top_metabolites: int | None = None,
+    weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
     projection_weight: str | Callable[[float, float], float] | None = None,
     projection_weight_combine: Callable[[list[float]], float] | None = None,
+    zero_tolerance: float = ALMOST_ZERO,
     **kwargs,
 ):
     """
     Create a metabolite connectivity network from the
-    metabolic model
+    metabolic model by projecting the bipartite metabolic network
+    onto the metabolite nodes
 
     Parameters
     ----------
     model : cobra.Model
         Cobra Model to create the network from
-    weighted : bool
-        Whether the network should be weighted
+    weight : {'stoichiometry', "fva", "pfba", "gfba"} or ArrayLike or Series or tuple of ArrayLike or Series, optional
+        The reaction weights to use for creating the adjacency matrix. If None the network represented
+        by the adjacency matrix will be unweighted (all values will be 0 or 1). If an ArrayLike or Series,
+        treated as reaction weights, with positive values being used for forward weights,
+        and negative values being used for reverse weights. If a tuple, treated as
+        (forward, reverse). For all array arguments, they should be a 1-D array (or
+        coercible to a 1-D array), with length equal to the number of reactions in the model.
+        Also, all weights (forward and reverse) should be positive.
+        See `Notes` for more information.
     directed : bool
         Whether the network should be directed
-    weight_by : {'fva', 'pfba', 'stoichiometry'}, default='stoichiometry'
-        String indicating if the network should be weighted by
-        'stoichiometry', 'fva', 'pfba' (see notes for more information).
-        Ignored if `weighted = False`
-    nodes_to_remove : list[str] | None
-        List of any metabolites or reactions that should be removed from
-        the final network. This can be used to remove metabolites that
-        participate in a large number of reactions, but are not desired
-        in downstream analysis such as water, or ATP, or pseudo
-        reactions like biomass. Each metabolite/reaction should be the
-        string ID associated with them in the cobra model.
-    reciprocal_weights : bool
-        Whether to use the reciprocal of the weights, useful if higher
-        flux should equate with lower weights in the final network (for
-        use with graph algorithms)
-    threshold : float
-        Threshold, below which to consider a bound to be 0
+    nodes_to_remove : Iterable of str, optional
+        Iterable of nodes which will be removed from the network before it is returned
+    remove_top_metabolites : int, optional
+        Number of top most connected metabolites to remove. This can be useful to remove
+        common currency metabolites such as ATP, or solvent metabolites like H20.
+    weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
+        Optional function for scaling the weights, called with a 1-D numpy array of all the
+        weights in the network, and must return a 1-D numpy array of the same size.
+        This could be used to make the weights all fall in a specific range
+        (e.g. use a minmax scalar so they are all between 0 and 1),
+        or to invert the direction of the weights (so larger weights become smaller) by
+        taking the reciprocal of all the weights.
     projection_weight : str | Callable[[float, float], float] | None
         How to weight the projected graph. If None, the projected graph
         will not be weighted. If "ratio", the edges will be weighted
@@ -486,6 +513,15 @@ def create_metabolite_network(
         a list of possible weights, and returns a single final weight. Python
         builtin `max` and `min` can be used for this. If not provided,
         `max` is used.
+    zero_tolerance : float
+        Threshold, below which to consider a (absolute value of a) bound/flux
+        to be 0
+    kwargs
+        Passed to COBRApy functions depending on value of `weight`.
+
+            * `flux_variability_analysis <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/index.html#cobra.flux_analysis.flux_variability_analysis>`_ if `weight` is 'fva'
+            * `pfba <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/index.html#cobra.flux_analysis.pfba>`_ if `weight` is 'pfba'
+            * `geometric_fba <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/geometric/index.html#cobra.flux_analysis.geometric.geometric_fba>`_ if `weight` is 'gfba'
     kwargs
         Keyword arguments are passed to the cobra flux_variability_analysis method
         when weight_by is flux
@@ -493,31 +529,31 @@ def create_metabolite_network(
     # Create the metabolic network
     metabolic_network = create_metabolic_network(
         model=model,
-        weighted=weighted,
+        weight=weight,
         directed=directed,
-        weight_by=weight_by,
         nodes_to_remove=nodes_to_remove,
-        reciprocal_weights=reciprocal_weights,
-        threshold=threshold,
+        remove_top_metabolites=remove_top_metabolites,
+        weight_scale_fn=weight_scale_fn,
+        zero_tolerance=zero_tolerance,
+        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
         **kwargs,
     )
-    # Get a list of reactions which are in the model and not in the nodes_to_remove
-    if nodes_to_remove:
-        mets_to_remove_set = set(nodes_to_remove)
-    else:
-        mets_to_remove_set = set()
-    met_ids = {
-        m.id for m in model.metabolites if m.id not in mets_to_remove_set
+    # Get the metabolite nodes
+    met_nodes = set(metabolic_network.nodes) & {
+        m.id for m in model.metabolites
     }
-    if weighted:
+
+    # Project onto only reactions
+    if weight is not None:
         if projection_weight is None:
-            projection_weight = max
+            projection_weight = min
         if projection_weight_combine is None:
             projection_weight_combine = max
-    # Project onto only reactions
     return bipartite_project(
         network=metabolic_network,
-        node_set=met_ids,
+        node_set=met_nodes,
         directed=directed,
         weight=projection_weight,
         weight_combine=projection_weight_combine,
@@ -530,9 +566,10 @@ def create_metabolite_network(
 
 def create_gene_network(
     model: cobra.Model,
-    directed: bool,
-    nodes_to_remove: list[str] | None,
-    essential: bool,
+    directed: bool = True,
+    nodes_to_remove: list[str] | None = None,
+    remove_top_metabolites: int | None = None,
+    essential: bool = False,
 ) -> nx.Graph | nx.DiGraph:
     """
     Create a gene connectivity network from the metabolic model,
@@ -543,7 +580,7 @@ def create_gene_network(
     model : cobra.Model
         Cobra Model to create the network from
     directed : bool
-        Whether the network should be directed. It True,
+        Whether the network should be directed. If True,
         the network's edges direction will be decided by the
         directionality of the reaction network, and
         multiple genes associated with a single reaction
@@ -554,6 +591,9 @@ def create_gene_network(
         it onto the reactions and constructing the gene network.
         Each metabolite/reaction to remove should be the string
         id associated with them in the cobra Model
+    remove_top_metabolites : int, optional
+        Number of top most connected metabolites to remove. This can be useful to remove
+        common currency metabolites such as ATP, or solvent metabolites like H20.
     essential : bool
         Whether a gene should be required for a reaction to function
         in order for that reaction to be used in assigning the
@@ -591,42 +631,22 @@ def create_gene_network(
     # Construct the reaction network
     rxn_network = create_reaction_network(
         model=model,
-        weighted=False,
+        weight=None,
         directed=directed,
         nodes_to_remove=nodes_to_remove,
+        remove_top_metabolites=remove_top_metabolites,
     )
-    # Create the new gene network
-    gene_list = reaction_to_gene_list(
-        model=model, reaction_list=rxn_network.nodes, essential=False
+    return reaction_to_gene_network(
+        model=model,
+        reaction_network=rxn_network,
+        directed=directed,
+        essential=essential,
     )
-    # Create the new network
-    if not directed:
-        gene_network: nx.Graph | nx.DiGraph = nx.Graph()
-    else:
-        gene_network = nx.DiGraph()
-    gene_network.add_nodes_from(gene_list)
 
-    # Add edges
-    for rxn in rxn_network.nodes:
-        rxn_gene_set = reaction_to_gene_ids(
-            model=model, reaction=rxn, essential=essential
-        )
-        # This won't run at all if there are not at least 2 genes
-        for g1, g2 in itertools.combinations(rxn_gene_set, 2):
-            gene_network.add_edge(g1, g2)
-            gene_network.add_edge(g2, g1)
-        # Go through all neighboring reactions (successors for directed)
-        # NOTE: For networkx DiGraphs, neighbors and successors are the same
-        for g1, g2 in itertools.product(
-            rxn_gene_set,
-            reaction_to_gene_list(
-                model=model,
-                reaction_list=rxn_network.neighbors(rxn),
-                essential=essential,
-            ),
-        ):
-            gene_network.add_edge(g1, g2)
-    return gene_network
+
+######################
+### Group Networks ###
+######################
 
 
 def create_group_neighborhood_network(
@@ -851,6 +871,61 @@ def create_group_neighborhood_network(
     return connectivity_network
 
 
+def create_group_distance_network(
+    network: nx.Graph | nx.DiGraph,
+    groups: dict[Hashable, Iterable[Hashable]],
+    weight: str | None = None,
+    linkage: Literal["mean", "min", "max"] = "mean",
+    directed: bool = False,
+) -> nx.Graph | nx.DiGraph:
+    """
+    Create an network for the distances between the `groups`
+
+    Parameters
+    ----------
+    network : nx.Graph or nx.DiGraph
+        Network to use when finding distances between nodes
+        in the groups. Edge weights are ignored.
+    groups : : dict of Hashable to Iterable of Hashable
+        Group definitions, must be a map between group names (which
+        will be used as index/columns in the matrix), and an iterable of
+        group members (which should be nodes in the network)
+    weight : str, optional
+        Edge attribute to use for weight, if None all edges have weight 1
+    linkage : {'mean', 'min', 'max'}
+        Method to use when combining pairwise distances between groups
+    directed : bool
+        Whether the adjacency matrix should be directed or not, ignored
+        unless the input network is a nx.DiGraph
+
+    Returns
+    -------
+    nx.Graph or nx.DiGraph
+        Network with a node for each group, and edges weighted by the distances
+        between the `groups` on the `network`.
+
+    Notes
+    -----
+    Constructs the network using the pairwise distances between
+    groups. For each pair of groups, finds the distances between their
+    nodes and finds the distance between the two groups by aggregating
+    these distances, either using the mean, minimum, or maximum of
+    the set of pairwise distances between two groups of nodes.
+
+    """
+    if directed:
+        group_obj = nx.DiGraph
+    else:
+        group_obj = nx.Graph
+    return group_obj(
+        network=network,
+        groups=groups,
+        weight=weight,
+        linkage=linkage,
+        directed=directed,
+    )
+
+
 def create_group_distance_adjacency_matrix(
     network: nx.Graph | nx.DiGraph,
     groups: dict[Hashable, Iterable[Hashable]],
@@ -910,7 +985,7 @@ def create_group_distance_adjacency_matrix(
         g2_nodes = group_sets[g2] & network_node_set
         if isinstance(network, nx.Graph):
             # Undirected case
-            adj_mat.loc[g1, g2] = _get_group_distance(  # type: ignore
+            adj_mat.loc[g1, g2] = _get_group_distance(
                 distance_dict=distance_dict,
                 group1=g1_nodes,
                 group2=g2_nodes,
@@ -932,67 +1007,473 @@ def create_group_distance_adjacency_matrix(
                 linkage=linkage,
             )
             if directed:
-                adj_mat.loc[g1, g2] = d1  # type: ignore
-                adj_mat.loc[g2, g2] = d2  # type: ignore
+                adj_mat.loc[g1, g2] = d1
+                adj_mat.loc[g2, g2] = d2
             else:
-                adj_mat.loc[g1, g2] = min(d1, d2)  # type: ignore
-                adj_mat.loc[g2, g1] = min(d1, d2)  # type: ignore
+                adj_mat.loc[g1, g2] = min(d1, d2)
+                adj_mat.loc[g2, g1] = min(d1, d2)
     return adj_mat
 
 
-def create_group_distance_network(
-    network: nx.Graph | nx.DiGraph,
-    groups: dict[Hashable, Iterable[Hashable]],
-    weight: str | None = None,
-    linkage: Literal["mean", "min", "max"] = "mean",
-    directed: bool = False,
+##########################
+### Network Conversion ###
+##########################
+
+
+def reaction_to_gene_network(
+    model: cobra.Model,
+    reaction_network: nx.Graph | nx.DiGraph,
+    directed: bool | None = None,
+    essential: bool = False,
 ) -> nx.Graph | nx.DiGraph:
     """
-    Create an network for the distances between the `groups`
+    Create a gene connectivity network from a reaction connectivity
+    network, see notes for details
 
     Parameters
     ----------
-    network : nx.Graph or nx.DiGraph
-        Network to use when finding distances between nodes
-        in the groups. Edge weights are ignored.
-    groups : : dict of Hashable to Iterable of Hashable
-        Group definitions, must be a map between group names (which
-        will be used as index/columns in the matrix), and an iterable of
-        group members (which should be nodes in the network)
-    weight : str, optional
-        Edge attribute to use for weight, if None all edges have weight 1
-    linkage : {'mean', 'min', 'max'}
-        Method to use when combining pairwise distances between groups
+    model : cobra.Model
+        Cobra Model to create the network from
+    reaction_network : nx.Graph or nx.DiGraph
+        The reaction network to convert into a gene network
     directed : bool
-        Whether the adjacency matrix should be directed or not, ignored
-        unless the input network is a nx.DiGraph
+        Whether the network should be directed. If True,
+        the network's edges direction will be decided by the
+        directionality of the reaction network, and
+        multiple genes associated with a single reaction
+        will have two (reciprocal) edges connecting them.
+    essential : bool
+        Whether a gene should be required for a reaction to function
+        in order for that reaction to be used in assigning the
+        gene edges
 
     Returns
     -------
-    nx.Graph or nx.DiGraph
-        Network with a node for each group, and edges weighted by the distances
-        between the `groups` on the `network`.
+    gene_network : nx.Graph or nx.DiGraph
+        Network connecting genes which are neighboring in the
+        reaction network together
 
     Notes
     -----
-    Constructs the network using the pairwise distances between
-    groups. For each pair of groups, finds the distances between their
-    nodes and finds the distance between the two groups by aggregating
-    these distances, either using the mean, minimum, or maximum of
-    the set of pairwise distances between two groups of nodes.
+    The gene network includes nodes for each gene associated with
+    a reaction in the network (whether or not essential is True).
+    Edges are added by connecting each gene associated with a reaction
+    to genes associated with all the neighboring reactions. If the
+    graph is directed, then gene nodes are connected to genes associated
+    with succcessor reactions. For genes associated with a single reaction
+    they are given edges between them (going both directions in the
+    case of directed graphs).
 
+    The essential parameter is to decide which genes are associated
+    with which reactions in order to determine which genes are neighbors
+    in the gene network. If True, genes will only be associated with
+    a reaction, when adding edges to the network, if they are required
+    for that reaction to function. All genes associated with reactions
+    in the network will still be added as nodes even if they are not
+    essential for any reactions in the network.
     """
-    if directed:
-        group_obj = nx.DiGraph
-    else:
-        group_obj = nx.Graph
-    return group_obj(
-        network=network,
-        groups=groups,
-        weight=weight,
-        linkage=linkage,
-        directed=directed,
+    # Create the new gene network
+    gene_list = reaction_to_gene_list(
+        model=model, reaction_list=reaction_network.nodes, essential=False
     )
+    # Create the new network
+    if not directed:
+        gene_network: nx.Graph | nx.DiGraph = nx.Graph()
+    elif directed and reaction_network.is_directed():
+        gene_network = nx.DiGraph()
+    else:
+        gene_network = nx.Graph()
+    gene_network.add_nodes_from(gene_list)
+
+    # Add edges
+    for rxn in reaction_network.nodes:
+        reaction_gene_set = reaction_to_gene_ids(
+            model=model, reaction=rxn, essential=essential
+        )
+        # This won't run at all if there are not at least 2 genes
+        for g1, g2 in itertools.combinations(reaction_gene_set, 2):
+            gene_network.add_edge(g1, g2)
+            gene_network.add_edge(g2, g1)
+        # Go through all neighboring reactions (successors for directed)
+        # NOTE: For networkx DiGraphs, neighbors and successors are the same
+        for g1, g2 in itertools.product(
+            reaction_gene_set,
+            reaction_to_gene_list(
+                model=model,
+                reaction_list=reaction_network.neighbors(rxn),
+                essential=essential,
+            ),
+        ):
+            gene_network.add_edge(g1, g2)
+    return gene_network
+
+
+########################
+### Adjacency Matrix ###
+########################
+def create_adjacency_matrix(
+    model: cobra.Model,
+    weight: None
+    | Literal["stoichiometry", "fva", "pfba", "gfba"]
+    | np.typing.ArrayLike
+    | pd.Series
+    | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
+    | tuple[pd.Series, pd.Series] = None,
+    directed: bool = True,
+    weight_by_metabolite_stoich: bool = True,
+    product_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    reactant_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    array_type: Literal[
+        "dense", "frame", "bsr", "coo", "csc", "csr", "dia", "dok", "lil"
+    ] = "frame",
+    zero_tolerance: float = ALMOST_ZERO,
+    **kwargs,
+) -> pd.DataFrame | np.ndarray | sparse.sparray:
+    """
+    Create an adjacency matrix representing the bipartite metabolic network of a provided
+    cobra Model, with nodes representing both reactions and metabolites
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model to create the network from
+    weight : {'stoichiometry', "fva", "pfba", "gfba"} or ArrayLike or Series or tuple of ArrayLike or Series, optional
+        The reaction weights to use for creating the adjacency matrix. If None the network represented
+        by the adjacency matrix will be unweighted (all values will be 0 or 1). If an ArrayLike or Series,
+        treated as reaction weights, with positive values being used for forward weights,
+        and negative values being used for reverse weights. If a tuple, treated as
+        (forward, reverse). For all array arguments, they should be a 1-D array (or
+        coercible to a 1-D array), with length equal to the number of reactions in the model.
+        Also, all weights (forward and reverse) should be positive.
+        See `Notes` for more information.
+    directed : bool
+        Whether the network should be directed
+    weight_by_metabolite_stoich: bool, default=True
+        Whether the reaction weights should be multiplied by
+        a metabolite's stoichiometric coefficient to find
+        the edge weight between a reation and a metabolite
+        (or a metabolite and a reaction).
+    product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
+        If provided function will be called on the reactant and product
+        edge weight arrays (both with columns for reactions and rows for
+        metabolites). The product array is all the weights of edges connecting a
+        reaction to a metabolite, and the reactant array represents all of the
+        edges connecting a metabolite to a reaction. These functions must return a
+        coo_array of the same dimension of the passed array. This allows for rescaling
+        or otherwise modifying the edge weights prior to network construction if that is desired.
+    array_type : {'dense', 'frame', 'bsr', 'coo', 'csc', 'csr', 'dia', 'dok', 'lil'}, default='frame'
+        The type to use for the adjacency matrix. "dense" will return a numpy.ndarray,
+        "frame" will return a dataframe (indexed by reaction and metabolite ids). The other
+        types will return a `scipy sparse array <https://docs.scipy.org/doc/scipy/reference/sparse.html>`_
+        of that type (so "coo" will return a `coo_array <https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.coo_array.html#scipy.sparse.coo_array>`_).
+    zero_tolerance : float
+        Threshold, below which to consider a (absolute value of a) bound/flux
+        to be 0
+    kwargs
+        Passed to COBRApy functions depending on value of `weight`.
+
+            * `flux_variability_analysis <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/index.html#cobra.flux_analysis.flux_variability_analysis>`_ if `weight` is 'fva'
+            * `pfba <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/index.html#cobra.flux_analysis.pfba>`_ if `weight` is 'pfba'
+            * `geometric_fba <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/flux_analysis/geometric/index.html#cobra.flux_analysis.geometric.geometric_fba>`_ if `weight` is 'gfba'
+
+    Returns
+    -------
+    pd.DataFrame or np.ndarray or scipy.sparse.sparray
+        The adjacency matrix, the index is ordered based on the
+        cobra model's order, reactions first, and then metabolites.
+
+    Notes
+    -----
+    When creating a weighted network, for each (reaction, metabolite) edge the weight
+    is the reaction weight  multiplied by the stoichiometric coefficient of the metabolite
+    (optionally, depending on `weihght_by_metabolite_stoich`).
+    Each reaction is allowed a forward, and a reverse weight. The forward weights
+    are used to connect reactions to their products, and the reverse weights are
+    used to connect reactions to their reactants.
+
+    As an example, take a reaction named rxn1 with formula 2A + B -> 3C, a forward weight of
+    2.5, and a reverse weight of 5.0. The reaction will connect to the A,B and C
+    metabolites, and the edges will have weights 10.0, 5.0, and 7.5 respectively.
+    Or, if `weight_by_metabolite_stoich` is False, then the reaction connects to
+    A, B, and C with weights of 2.5, 2.5, and 5.0 respectively.
+
+    For the weights parameter, these forward and reverse weights can be supplied
+    directly as a tuple of (forward, reverse), where forward and reverse can be
+    either numpy arrays or pandas series (they should have length equal to the number
+    of reactions in the model). Alternatively, they can be supplied as a single
+    numpy array or series, where each reaction has only a forward or (exclusive) a
+    reverse weight. In this case positive values will be treated as the forward
+    weight, and negative values will be treated as reverse weights (but their
+    absolute value will be the actual weight value).
+
+    Another option is to use the stoichiometry directly as weights, this is equivalent
+    to supplying 1 for all forward weights for reactions which can run in the forward
+    direction, and 0 for all reactions that can't. Simmilarly for the reverse weights,
+    values of 1 for all reactions which can run in reverse, and 0 for all reactions
+    that can't.
+
+    Alternatively, several strategies of using flux to weight to edges can be employed,
+    specifically flux variability analysis (fva), parsimonious flux balance analysis (pfba),
+    or geometric flux balance analysis (gfba).
+
+    For fva, the maximum possible positive flux through a reaction is used as its forward
+    weight (reactions whose maximum flux is negative are given forward weights of 0), and
+    the minimum possible negative flux is used as its reverse weight.
+
+    For pfba, the resulting flux is used as the weights, with positive values
+    being used for forward weights, and negative values being used for reverse weights.
+    gfba is the same as pfba, except using geometric instead of parsimonious flux balance
+    analysis.
+    """
+    # Construct the reaction weights
+    weighted = weight is not None
+    if weight is None:
+        # For unweighted, use the lower and upper bound (clipped at 0)
+        # for the weights
+        forward = sparse.coo_array(
+            np.array(model.reactions.list_attr("upper_bound"))
+        )
+        forward[forward < 0.0] = 0.0
+
+        reverse = sparse.coo_array(
+            np.array(model.reactions.list_attr("lower_bound"))
+        )
+        reverse[reverse > 0.0] = 0.0
+        reverse *= -1
+    elif isinstance(weight, str):
+        if weight == "stoichiometry":
+            # Want 1 for all forward with upper bound greater than 0.0, 0 otherwise
+            # and 1 for all reverse with lower bound less than 0.0, 0 otherwise
+            forward = sparse.coo_array(
+                np.array(model.reactions.list_attr("upper_bound"))
+            )
+            forward[forward < 0.0] = 0.0
+            forward[forward > 0.0] = 1.0
+            reverse = sparse.coo_array(
+                np.array(model.reactions.list_attr("lower_bound"))
+            )
+            reverse[reverse > 0.0] = 0.0
+            reverse[reverse < 0.0] = 1.0
+        elif weight == "fva":
+            fva_result = _enforce_threshold(
+                cobra.flux_analysis.flux_variability_analysis(
+                    model=model, **kwargs
+                ),
+                zero_tolerance,
+            )
+            min_series = fva_result["minimum"].clip(upper=0.0).abs()
+            max_series = fva_result["maximum"].clip(lower=0.0)
+            # Convert into COO
+            forward = sparse.coo_array(max_series)
+            reverse = sparse.coo_array(min_series)
+        elif weight == "pfba":
+            pfba_res = _enforce_threshold(
+                cobra.flux_analysis.pfba(model=model, **kwargs).fluxes,
+                zero_tolerance,
+            )
+            forward = sparse.coo_array(pfba_res.clip(lower=0.0))
+            reverse = sparse.coo_array(pfba_res.clip(upper=0.0).abs())
+        elif weight == "gfba":
+            gfba_res = _enforce_threshold(
+                cobra.flux_analysis.geometric_fba(
+                    model=model, **kwargs
+                ).fluxes,
+                zero_tolerance,
+            )
+            forward = sparse.coo_array(gfba_res.clip(lower=0.0))
+            reverse = sparse.coo_array(gfba_res.clip(upper=0.0).abs())
+        else:
+            raise ValueError(
+                f"Expected weight to be one of 'stoichiometry', 'fva', 'pfba', or 'gfba' but received {weight}"
+            )
+    elif isinstance(weight, pd.Series):
+        forward = sparse.coo_array(weight.clip(lower=0.0))
+        reverse = sparse.coo_array(weight.clip(upper=0.0).abs())
+    elif isinstance(weight, tuple):
+        forward_weight, reverse_weight = weight
+        forward = sparse.coo_array(forward_weight)
+        reverse = sparse.coo_array(reverse_weight)
+    else:
+        weight = np.array(weight)
+        forward = sparse.coo_array(weight)
+        reverse = sparse.coo_array(weight)
+
+        forward[forward < 0.0] = 0.0
+        reverse[reverse > 0.0] = 0.0
+        reverse *= -1
+    forward.eliminate_zeros()
+    reverse.eliminate_zeros()
+    # Create the sparse adjacency matrix
+    adj_mat = _create_sparse_adjacency_matrix(
+        model=model,
+        forward=forward,
+        reverse=reverse,
+        directed=directed,
+        weighted=weighted,
+        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
+        zero_tolerance=zero_tolerance,
+    )
+    if array_type == "dense":
+        return adj_mat.todense()
+    elif array_type == "frame":
+        adj_index = pd.Index(
+            model.reactions.list_attr("id") + model.metabolites.list_attr("id")
+        )
+        return pd.DataFrame(
+            adj_mat.todense(), index=adj_index, columns=adj_index
+        )
+    elif array_type == "bsr":
+        return adj_mat.tobsr()
+    elif array_type == "coo":
+        return adj_mat.tocoo()
+    elif array_type == "csc":
+        return adj_mat.tocsc()
+    elif array_type == "csr":
+        return adj_mat.tocsr()
+    elif array_type == "dia":
+        return adj_mat.todia()
+    elif array_type == "dok":
+        return adj_mat.todok()
+    elif array_type == "lil":
+        return adj_mat.tolil()
+    raise ValueError(
+        f"Expected array_type to be one of 'dense', 'frame', 'bsr', 'coo', 'csc', 'csr', 'dia', 'dok', or 'lil' but received {array_type}"
+    )
+
+
+###############################
+### Sparse Adjacency Matrix ###
+###############################
+def _create_sparse_adjacency_matrix(
+    model: cobra.Model,
+    forward: sparse.sparray,
+    reverse: sparse.sparray,
+    directed: bool = True,
+    weighted: bool = True,
+    weight_by_metabolite_stoich: bool = True,
+    product_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    reactant_scale_fn: None
+    | Callable[[sparse.coo_array], sparse.coo_array] = None,
+    zero_tolerance: float = ALMOST_ZERO,
+) -> sparse.coo_array:
+    """
+    Creates an Adjacency matrix from a stoichiometric matrix
+
+    Parameters
+    ----------
+    model : cobra.Model
+        The model to construct the adjacency matrix for
+    forward : scipy sparse array
+        1-D Array representing forward reaction weights
+    reverse : scipy sparse array
+        1-D Array representing reverse reaction weights
+    directed : bool, default=True
+        Whether the adjacency matrix should be directed. If False,
+        then the directed version is found first, and connections are
+        decided by combining the forward and reverse directions for
+        each node pair.
+    weighted : bool, default=True
+        Whether the adjacency matrix should be weighted. If False,
+        all weights above `zero_tolerance` are set to 1, and
+        all weights below `zero_tolerance` are set to 0.
+    weight_by_metabolite_stoich: bool, default=True
+        Whether the reaction weights should be multiplied by
+        a metabolite's stoichiometric coefficient to find
+        the edge weight between a reation and a metabolite
+        (or a metabolite and a reaction).
+    product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
+        If provided function will be called on the reactant and product
+        edge weight arrays (both with columns for reactions and rows for
+        metabolites). The product array is all the weights of edges connecting a
+        reaction to a metabolite, and the reactant array represents all of the
+        edges connecting a metabolite to a reaction. These functions must return a
+        coo_array of the same dimension of the passed array. This allows for rescaling
+        or otherwise modifying the edge weights prior to network construction if that is desired.
+    zero_tolerance : float, default=1e-15
+        Tolerance for values to be considered differently from 0. Weights
+        whose absolute values are less than this will be set to 0.
+
+    Returns
+    -------
+    adjacency_matrix : sparse.coo_array
+        The adjacency matrix in the form of a sparse COOrdinate array
+    """
+    # Get the sparse stoichiometric matrix
+    stoichiometric_matrix = _create_stoichiometric_matrix(model=model)
+    if not weighted or not weight_by_metabolite_stoich:
+        stoichiometric_matrix: sparse.coo_array = stoichiometric_matrix.sign(  # ty: ignore[unresolved-attribute]
+            dtype=stoichiometric_matrix.dtype
+        )
+    # Get the number of reactions, and metabolites
+    n_met, n_rxns = stoichiometric_matrix.shape
+    # Convert Forward and reverse to csr
+    forward = sparse.csr_array(forward.reshape((-1,)))  # ty: ignore[unresolved-attribute]
+    reverse = sparse.csr_array(reverse.reshape((-1,)))  # ty: ignore[unresolved-attribute]
+
+    # Split the stoichiomety into products and reactants
+    product_array = stoichiometric_matrix
+    reactant_array = stoichiometric_matrix.copy()
+    product_array[product_array < 0.0] = 0.0
+    reactant_array[reactant_array > 0.0] = 0.0
+    reactant_array = reactant_array * -1
+
+    # Convert to csr arrays for the multiplication
+    product_array = product_array.tocsr()
+    reactant_array = reactant_array.tocsr()
+
+    # Multiply by the stoich matrices by the forward/reverse weightings
+    # NOTE: Multiplying by reverse yields the opposite type (product/reactant)
+    product_forward: sparse.coo_array = (product_array * forward).tocoo()
+    reactant_reverse: sparse.coo_array = (product_array * reverse).tocoo()
+    reactant_forward: sparse.coo_array = (reactant_array * forward).tocoo()
+    product_reverse: sparse.coo_array = (reactant_array * reverse).tocoo()
+
+    # Create the reaction->metabolite, and the metabolite->reaction
+    # matrices, both of which will
+    product_array: sparse.coo_array = product_forward.maximum(product_reverse)
+    reactant_array: sparse.coo_array = reactant_forward.maximum(
+        reactant_reverse
+    )
+    if product_scale_fn is not None:
+        product_array = product_scale_fn(product_array)
+    if reactant_scale_fn is not None:
+        reactant_array = reactant_scale_fn(reactant_array)
+
+    # Build the blocks of the matrix
+    rxn_rxn_block = sparse.coo_array((n_rxns, n_rxns))
+    met_met_block = sparse.coo_array((n_met, n_met))
+    met_rxn_block: sparse.coo_array = reactant_array
+    rxn_met_block: sparse.coo_array = product_array.T
+
+    # Create the adjacency matrix
+    adj_mat = sparse.vstack(
+        [
+            sparse.hstack([rxn_rxn_block, rxn_met_block]),
+            sparse.hstack([met_rxn_block, met_met_block]),
+        ]
+    ).tocoo()
+
+    if not weighted:
+        adj_mat = adj_mat.sign(dtype=adj_mat.sign)
+    # Convert all entries within zero_tolerance of zero to be 0
+    adj_mat.data[
+        (adj_mat.data < zero_tolerance) & (adj_mat.data > -zero_tolerance)
+    ] = 0.0
+    adj_mat.eliminate_zeros()
+    if not directed:
+        # Convert to undirected, using the maximum directed weight
+        adj_mat: sparse.coo_array = adj_mat.maximum(adj_mat.T).tocoo()
+    return adj_mat
+
+
+##################################
+### Find Connected Metabolites ###
+##################################
 
 
 def get_top_metabolites(
@@ -1091,10 +1572,9 @@ def get_top_metabolite_pairs(
     return top_met_pair_list  # type: ignore
 
 
-# endregion Main Function
-
-
-# region Helpers
+#######################
+### Helper Functions###
+#######################
 def _enforce_threshold(
     data: pd.DataFrame | pd.Series, threshold: float
 ) -> pd.DataFrame | pd.Series:
@@ -1127,314 +1607,18 @@ def _get_group_distance(
         return max_
 
 
-def _get_rxn_attr_series(model: cobra.Model, attr: str) -> pd.Series:
-    return pd.Series(
-        model.reactions.list_attr(attr),
-        index=model.reactions.list_attr("id"),
-    )
-
-
-def _get_lower_bounds(model: cobra.Model) -> pd.Series:
-    return _get_rxn_attr_series(model, "lower_bound")
-
-
-def _get_upper_bounds(model: cobra.Model) -> pd.Series:
-    return _get_rxn_attr_series(model, "upper_bound")
-
-
-def _get_stoichiometric_matrix(model: cobra.Model) -> pd.DataFrame:
+def _create_stoichiometric_matrix(model: cobra.Model) -> sparse.coo_array:
     """
-    Get the stoichiometric matrix from the cobra Model
-
-    Notes
-    -----
-    The columns represent the reactions, and the rows represent the
-    metabolites
-
-    Basically just a typing wrapper
+    Replacing COBRApy's version since that uses the old sparse matrix
+    instead of sparse array
     """
-    return cast(
-        pd.DataFrame,
-        cobra.util.create_stoichiometric_matrix(
-            model=model, array_type="DataFrame"
-        ),
-    )
+    n_met, n_rxn = len(model.metabolites), len(model.reactions)
+    stoich_array = sparse.coo_array((n_met, n_rxn))
 
+    met_ind = model.metabolites.index
+    rxn_ind = model.reactions.index
 
-def _create_adj_matrix_ud_uw(
-    model: cobra.Model, threshold: float
-) -> pd.DataFrame:
-    stoich_mat = _get_stoichiometric_matrix(model=model)
-    lb_series = _get_lower_bounds(model=model)
-    ub_series = _get_upper_bounds(model=model)
-    product_mat = stoich_mat.copy().clip(lower=0.0)
-    substrate_mat = stoich_mat.copy().clip(upper=0.0).abs()
-    # Split into reaction gen/consume matrices
-    rxn_gen_forward = product_mat.mul(ub_series > threshold)
-    rxn_cons_forward = substrate_mat.mul(ub_series > threshold)
-    rxn_gen_reverse = substrate_mat.mul(lb_series < -threshold)
-    rxn_cons_reverse = product_mat.mul(lb_series < -threshold)
-    # Build up the block matrix
-    rxn_rxn_block = pd.DataFrame(
-        False, columns=stoich_mat.columns, index=stoich_mat.columns
-    )
-    met_met_block = pd.DataFrame(
-        False, columns=stoich_mat.index, index=stoich_mat.index
-    )
-    met_rxn_block = (
-        (rxn_gen_forward > threshold)
-        | (rxn_cons_forward > threshold)
-        | (rxn_gen_reverse > threshold)
-        | (rxn_cons_reverse > threshold)
-    )
-    rxn_met_block = met_rxn_block.T
-    # Combine the blocks
-    return pd.concat(
-        [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),
-            pd.concat([met_rxn_block, met_met_block], axis=1),
-        ],
-        axis=0,
-    )
-
-
-def _create_adj_matrix_d_uw(
-    model: cobra.Model, threshold: float
-) -> pd.DataFrame:
-    stoich_mat = _get_stoichiometric_matrix(model=model)
-    lb_series = _get_lower_bounds(model=model)
-    ub_series = _get_upper_bounds(model=model)
-    product_mat = stoich_mat.copy().clip(lower=0.0)
-    substrate_mat = stoich_mat.copy().clip(upper=0.0).abs()
-    # Split into reaction gen/consum matrices
-    rxn_gen_forward = product_mat.mul(ub_series > threshold)
-    rxn_cons_forward = substrate_mat.mul(ub_series > threshold)
-    rxn_gen_reverse = substrate_mat.mul(lb_series < -threshold)
-    rxn_cons_reverse = product_mat.mul(lb_series < -threshold)
-    # Build up the block matrix
-    rxn_rxn_block = pd.DataFrame(
-        False, columns=stoich_mat.columns, index=stoich_mat.columns
-    )
-    met_met_block = pd.DataFrame(
-        False, columns=stoich_mat.index, index=stoich_mat.index
-    )
-    rxn_met_block = (
-        (rxn_gen_forward > threshold) | (rxn_gen_reverse > threshold)
-    ).T
-    met_rxn_block = (rxn_cons_forward > threshold) | (
-        rxn_cons_reverse > threshold
-    )
-    # Combine the blocks
-    return pd.concat(
-        [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),
-            pd.concat([met_rxn_block, met_met_block], axis=1),
-        ],
-        axis=0,
-    )
-
-
-def _create_adj_matrix_d_w_stoich(
-    model: cobra.Model, threshold: float
-) -> pd.DataFrame:
-    stoich_mat = _get_stoichiometric_matrix(model=model)
-    lb_series = _get_lower_bounds(model=model)
-    ub_series = _get_upper_bounds(model=model)
-    product_mat = stoich_mat.copy().clip(lower=0.0)
-    substrate_mat = stoich_mat.copy().clip(upper=0.0).abs()
-    # Split into reaction gen/consum matrices
-    rxn_gen_forward = product_mat.mul(ub_series > threshold)
-    rxn_cons_forward = substrate_mat.mul(ub_series > threshold)
-    rxn_gen_reverse = substrate_mat.mul(lb_series < -threshold)
-    rxn_cons_reverse = product_mat.mul(lb_series < -threshold)
-    # Build up the block matrix
-    rxn_rxn_block = pd.DataFrame(
-        0.0, columns=stoich_mat.columns, index=stoich_mat.columns
-    )
-    met_met_block = pd.DataFrame(
-        0.0, columns=stoich_mat.index, index=stoich_mat.index
-    )
-    rxn_met_block = np.maximum(rxn_gen_forward, rxn_gen_reverse).T
-    met_rxn_block = np.maximum(rxn_cons_forward, rxn_cons_reverse)
-    # Combine the blocks
-    return pd.concat(
-        [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),  # ty: ignore[no-matching-overload]
-            pd.concat([met_rxn_block, met_met_block], axis=1),  # ty: ignore[no-matching-overload]
-        ],
-        axis=0,
-    )
-
-
-def _create_adj_matrix_d_w_fva(
-    model: cobra.Model, threshold: float, **kwargs
-) -> pd.DataFrame:
-    stoich_mat = _get_stoichiometric_matrix(model=model)
-    fva_res = _enforce_threshold(
-        cobra.flux_analysis.flux_variability_analysis(model=model, **kwargs),
-        threshold=threshold,
-    )
-    min_series = fva_res["minimum"].clip(upper=0.0)
-    max_series = fva_res["maximum"].clip(lower=0.0)
-    product_mat = stoich_mat.clip(lower=0.0)
-    substrate_mat = stoich_mat.clip(upper=0.0).abs()
-    # Multiply the stoich matrices by the fva series
-    # Split into reaction gen/consum matrices
-    rxn_gen_forward = product_mat.mul(max_series)
-    rxn_cons_forward = substrate_mat.mul(max_series)
-    rxn_gen_reverse = substrate_mat.mul(min_series).abs()
-    rxn_cons_reverse = product_mat.mul(min_series).abs()
-    # Build up the block matrix
-    rxn_rxn_block = pd.DataFrame(
-        0.0, columns=stoich_mat.columns, index=stoich_mat.columns
-    )
-    met_met_block = pd.DataFrame(
-        0.0, columns=stoich_mat.index, index=stoich_mat.index
-    )
-    rxn_met_block = np.maximum(rxn_gen_forward, rxn_gen_reverse).T
-    met_rxn_block = np.maximum(rxn_cons_forward, rxn_cons_reverse)
-    # Combine the blocks
-    return pd.concat(
-        [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),  # ty: ignore[no-matching-overload]
-            pd.concat([met_rxn_block, met_met_block], axis=1),  # ty: ignore[no-matching-overload]
-        ],
-        axis=0,
-    )
-
-
-def _create_adj_matrix_d_w_pfba(
-    model: cobra.Model, threshold: float, **kwargs
-) -> pd.DataFrame:
-    # Get the stoichiometric matrix
-    stoich_mat = _get_stoichiometric_matrix(model=model)
-    # Perform pFBA
-    pfba_res = cobra.flux_analysis.pfba(model=model, **kwargs)
-    # Get the fluxes
-    pfba_fluxes = _enforce_threshold(pfba_res.fluxes, threshold=threshold)
-    assert isinstance(pfba_fluxes, pd.Series), "Unable to get pFBA solution"
-    # Multiply the pFBA by the stoichiometric matrix to get weights
-    weights = stoich_mat.mul(pfba_fluxes)
-    # Build the block matrix
-    rxn_rxn_block = pd.DataFrame(
-        0.0, columns=stoich_mat.columns, index=stoich_mat.columns
-    )
-    met_met_block = pd.DataFrame(
-        0.0, columns=stoich_mat.index, index=stoich_mat.index
-    )
-    rxn_met_block = weights.clip(lower=0.0).T
-    met_rxn_block = weights.clip(upper=0.0).abs()
-    # COmbine the blocks
-    return pd.concat(
-        [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),
-            pd.concat([met_rxn_block, met_met_block], axis=1),
-        ],
-        axis=0,
-    )
-
-
-def _create_adj_matrix_ud_w_stoich(
-    model: cobra.Model, threshold: float
-) -> pd.DataFrame:
-    stoich_mat = _get_stoichiometric_matrix(model=model)
-    lb_series = _get_lower_bounds(model=model)
-    ub_series = _get_upper_bounds(model=model)
-    product_mat = stoich_mat.copy().clip(lower=0.0)
-    substrate_mat = stoich_mat.copy().clip(upper=0.0).abs()
-    # Split into reaction gen/consum matrices
-    rxn_gen_forward = product_mat.mul(ub_series > threshold)
-    rxn_cons_forward = substrate_mat.mul(ub_series > threshold)
-    rxn_gen_reverse = substrate_mat.mul(lb_series < -threshold)
-    rxn_cons_reverse = product_mat.mul(lb_series < -threshold)
-    # Build up the block matrix
-    rxn_rxn_block = pd.DataFrame(
-        0.0, columns=stoich_mat.columns, index=stoich_mat.columns
-    )
-    met_met_block = pd.DataFrame(
-        0.0, columns=stoich_mat.index, index=stoich_mat.index
-    )
-    met_rxn_block = np.maximum(
-        np.maximum(rxn_gen_forward, rxn_gen_reverse),
-        np.maximum(rxn_cons_forward, rxn_cons_reverse),
-    )
-    rxn_met_block = met_rxn_block.T
-    # Combine the blocks
-    return pd.concat(
-        [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),  # ty: ignore[no-matching-overload]
-            pd.concat([met_rxn_block, met_met_block], axis=1),  # ty: ignore[no-matching-overload]
-        ],
-        axis=0,
-    )
-
-
-def _create_adj_matrix_ud_w_fva(
-    model: cobra.Model, threshold: float, **kwargs
-) -> pd.DataFrame:
-    stoich_mat = _get_stoichiometric_matrix(model=model)
-    fva_res = _enforce_threshold(
-        cobra.flux_analysis.flux_variability_analysis(model=model, **kwargs),
-        threshold=threshold,
-    )
-    min_series = fva_res["minimum"].clip(upper=0.0)
-    max_series = fva_res["maximum"].clip(lower=0.0)
-    product_mat = stoich_mat.copy().clip(lower=0.0)
-    substrate_mat = stoich_mat.copy().clip(upper=0.0).abs()
-    # Multiply the stoich matrices by the fva series
-    # Split into reaction gen/consum matrices
-    rxn_gen_forward = product_mat.mul(max_series)
-    rxn_cons_forward = substrate_mat.mul(max_series)
-    rxn_gen_reverse = substrate_mat.mul(min_series).abs()
-    rxn_cons_reverse = product_mat.mul(min_series).abs()
-    # Build up the block matrix
-    rxn_rxn_block = pd.DataFrame(
-        0.0, columns=stoich_mat.columns, index=stoich_mat.columns
-    )
-    met_met_block = pd.DataFrame(
-        0.0, columns=stoich_mat.index, index=stoich_mat.index
-    )
-    met_rxn_block = np.maximum(
-        np.maximum(rxn_gen_forward, rxn_gen_reverse),
-        np.maximum(rxn_cons_forward, rxn_cons_reverse),
-    )
-    rxn_met_block = met_rxn_block.T
-    # Combine the blocks
-    return pd.concat(
-        [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),  # ty: ignore[no-matching-overload]
-            pd.concat([met_rxn_block, met_met_block], axis=1),  # ty: ignore[no-matching-overload]
-        ],
-        axis=0,
-    )
-
-
-def _create_adj_matrix_ud_w_pfba(
-    model: cobra.Model, threshold: float, **kwargs
-) -> pd.DataFrame:
-    # Get the stoichiometric matrix
-    stoich_mat = _get_stoichiometric_matrix(model=model)
-    # Perform pFBA
-    pfba_res = cobra.flux_analysis.pfba(model=model, **kwargs)
-    # Get the fluxes
-    pfba_fluxes = _enforce_threshold(pfba_res.fluxes, threshold=threshold)
-    assert isinstance(pfba_fluxes, pd.Series), "Unable to get pFBA solution"
-    # Build the block matrix
-    rxn_rxn_block = pd.DataFrame(
-        0.0, columns=stoich_mat.columns, index=stoich_mat.columns
-    )
-    met_met_block = pd.DataFrame(
-        0.0, columns=stoich_mat.index, index=stoich_mat.index
-    )
-    met_rxn_block = stoich_mat.abs().mul(pfba_fluxes.abs())
-    rxn_met_block = met_rxn_block.T
-    return pd.concat(
-        [
-            pd.concat([rxn_rxn_block, rxn_met_block], axis=1),
-            pd.concat([met_rxn_block, met_met_block], axis=1),
-        ],
-        axis=0,
-    )
-
-
-# endregion Helpers
+    for rxn in model.reactions:
+        for met, stoich in rxn.metabolites.items():
+            stoich_array[met_ind(met), rxn_ind(rxn)] = stoich
+    return stoich_array
