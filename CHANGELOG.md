@@ -44,6 +44,10 @@
   metabolite->reaction edges prior to adjacency matrix/network construction.
 - New function (`neighborhood_map`) which applies a function to the
   neighborhoods in a network in parallel.
+- New function (`gene_neighborhood_map`) which applies a function to gene
+  neighborhoods in a network in parallel.
+- New function (`combine_neighborhood_pvalues`) which accepts a mapping between
+  genes and p-values, and creates combined neighborhood p-values
 
 ## Version 0.10.0
 
