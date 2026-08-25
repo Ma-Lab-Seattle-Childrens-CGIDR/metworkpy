@@ -17,6 +17,8 @@ from .density import (
 )
 from .fuzzy import fuzzy_reaction_intersection, fuzzy_reaction_set
 from .neighborhoods import (
+    combine_neighborhood_pvalues,
+    gene_neighborhood_map,
     graph_gene_neighborhood_iter,
     graph_neighborhood_iter,
     neighborhood_map,
@@ -41,6 +43,7 @@ __all__ = [
     "betweenness_centrality_subset",
     "bipartite_project",
     "closeness_centrality_subset",
+    "combine_neighborhood_pvalues",
     "create_adjacency_matrix",
     "create_gene_network",
     "create_group_distance_adjacency_matrix",
@@ -54,6 +57,7 @@ __all__ = [
     "find_variable_components",
     "fuzzy_reaction_intersection",
     "fuzzy_reaction_set",
+    "gene_neighborhood_map",
     "gene_target_density",
     "gene_target_enrichment",
     "get_distance_matrix",
