@@ -42,6 +42,8 @@
 - Add parameters to network construction functions (`product_scale_fn`,
   `reactant_scale_fn`), to allow for rescaling the reaction->metabolite and
   metabolite->reaction edges prior to adjacency matrix/network construction.
+- New function (`neighborhood_map`) which applies a function to the
+  neighborhoods in a network in parallel.
 
 ## Version 0.10.0
 
