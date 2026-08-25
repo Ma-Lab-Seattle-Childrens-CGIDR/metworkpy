@@ -19,6 +19,7 @@ from .fuzzy import fuzzy_reaction_intersection, fuzzy_reaction_set
 from .neighborhoods import (
     graph_gene_neighborhood_iter,
     graph_neighborhood_iter,
+    neighborhood_map,
 )
 from .network_construction import (
     create_adjacency_matrix,
@@ -62,6 +63,7 @@ __all__ = [
     "get_top_metabolites",
     "graph_gene_neighborhood_iter",
     "graph_neighborhood_iter",
+    "neighborhood_map",
     "node_target_density",
     "reaction_target_density",
 ]
