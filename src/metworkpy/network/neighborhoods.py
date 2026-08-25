@@ -6,7 +6,7 @@ from __future__ import annotations
 import functools
 import operator
 from collections.abc import Hashable, Iterable, Iterator, Mapping
-from typing import Callable, TypeVar, cast, NamedTuple, Generic
+from typing import Callable, NamedTuple, TypeVar, cast
 
 # External Imports
 import cobra
@@ -493,9 +493,9 @@ def _gene_neighborhood_worker(
 #########################
 ### Stouffer's method ###
 #########################
-class CombinePvaluesResult(NamedTuple, Generic[NodeType]):
-    statistics: dict[NodeType, float]
-    pvalues: dict[NodeType, float]
+class CombinePvaluesResult(NamedTuple):
+    statistics: dict[Hashable, float]
+    pvalues: dict[Hashable, float]
 
 
 def combine_neighborhood_pvalues(
