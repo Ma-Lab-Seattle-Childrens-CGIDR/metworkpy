@@ -500,6 +500,7 @@ class TestAdjMatUdWStoichiometry(unittest.TestCase):
         self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
+        assert isinstance(self.tiny_adj_mat, pd.DataFrame)
         pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
@@ -571,6 +572,7 @@ class TestAdjMatUdWpFBA(unittest.TestCase):
         self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
+        assert isinstance(self.tiny_adj_mat, pd.DataFrame)
         pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
