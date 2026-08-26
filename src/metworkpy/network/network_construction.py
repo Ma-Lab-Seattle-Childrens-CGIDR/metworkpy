@@ -1417,13 +1417,13 @@ def _create_sparse_adjacency_matrix(
     # Convert Forward and reverse to csr
     forward = sparse.csr_array(forward.reshape((1, -1)))  # ty: ignore[unresolved-attribute]
     reverse = sparse.csc_array(
-        reverse.reshape(
+        reverse.reshape(  # ty: ignore[unresolved-attribute]
             (
                 1,
                 -1,
             )
         )
-    )  # ty: ignore[unresolved-attribute]
+    )
 
     # Split the stoichiomety into products and reactants
     product_array = stoichiometric_matrix
@@ -1634,3 +1634,17 @@ def _create_stoichiometric_matrix(model: cobra.Model) -> sparse.coo_array:
         for met, stoich in rxn.metabolites.items():
             stoich_array[met_ind(met), rxn_ind(rxn)] = stoich
     return stoich_array.tocoo()
+
+
+def _normalize_array(array: sparse.sparray, axis: int) -> sparse.coo_array:
+    array: sparse.csr_array = array.tocsr()  # ty: ignore[unresolved-attribute]
+    totals = array.sum(axis=axis)
+    totals[totals > 0.0] = np.reciprocal(totals[totals > 0.0])
+    if axis == 1:
+        array = array.multiply(totals.reshape(-1, 1))
+        return array.tocoo()
+    elif axis == 0:
+        array = array.multiply(totals.reshape(1, -1))
+        return array.tocoo()
+    else:
+        raise ValueError(f"Axis must be 0 or 1, received {axis}")
