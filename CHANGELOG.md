@@ -19,6 +19,12 @@
 
 <!--toc:end-->
 
+## Version DEV
+
+- Dropping support for python 3.9
+- Increasing minimum SciPy version to 1.15 for associated sparse array
+  improvements
+
 ## Version 0.11.0
 
 - Add parameter to metabolite consuming networks which allows for adding sinks
