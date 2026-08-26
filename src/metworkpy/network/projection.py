@@ -5,8 +5,7 @@
 from __future__ import annotations
 
 import itertools
-from collections.abc import Iterable
-from typing import Callable
+from collections.abc import Callable, Iterable
 
 # External Imports
 import networkx as nx
