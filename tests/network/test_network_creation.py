@@ -277,7 +277,7 @@ class TestAdjMatDWFVA(unittest.TestCase):
         self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
-        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)  # ty: ignore[invalid-argument-type]
 
 
 class TestAdjMatDWpFBA(unittest.TestCase):
@@ -348,7 +348,7 @@ class TestAdjMatDWpFBA(unittest.TestCase):
         self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
-        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)  # ty: ignore[invalid-argument-type]
 
 
 class TestAdjMatDWStoichiometry(unittest.TestCase):
