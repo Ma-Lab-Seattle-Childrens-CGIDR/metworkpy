@@ -1235,12 +1235,14 @@ def create_adjacency_matrix(
         forward = sparse.coo_array(
             np.array(model.reactions.list_attr("upper_bound"))
         )
-        forward[forward < 0.0] = 0.0
+        forward.data[forward.data < 0.0] = 0.0
+        forward.eliminate_zeros()
 
         reverse = sparse.coo_array(
             np.array(model.reactions.list_attr("lower_bound"))
         )
-        reverse[reverse > 0.0] = 0.0
+        reverse.data[reverse.data > 0.0] = 0.0
+        reverse.eliminate_zeros()
         reverse *= -1
     elif isinstance(weight, str):
         if weight == "stoichiometry":
@@ -1249,13 +1251,14 @@ def create_adjacency_matrix(
             forward = sparse.coo_array(
                 np.array(model.reactions.list_attr("upper_bound"))
             )
-            forward[forward < 0.0] = 0.0
-            forward[forward > 0.0] = 1.0
+            forward.data[forward.data < 0.0] = 0.0
+            forward.data[forward.data > 0.0] = 1.0
+            forward.eliminate_zeros()
             reverse = sparse.coo_array(
                 np.array(model.reactions.list_attr("lower_bound"))
             )
-            reverse[reverse > 0.0] = 0.0
-            reverse[reverse < 0.0] = 1.0
+            reverse.data[reverse.data > 0.0] = 0.0
+            reverse.data[reverse.data < 0.0] = 1.0
         elif weight == "fva":
             fva_result = _enforce_threshold(
                 cobra.flux_analysis.flux_variability_analysis(
@@ -1300,8 +1303,10 @@ def create_adjacency_matrix(
         forward = sparse.coo_array(weight)
         reverse = sparse.coo_array(weight)
 
-        forward[forward < 0.0] = 0.0
-        reverse[reverse > 0.0] = 0.0
+        forward.data[forward.data < 0.0] = 0.0
+        forward.eliminate_zeros()
+        reverse.data[reverse.data > 0.0] = 0.0
+        reverse.eliminate_zeros()
         reverse *= -1
     forward.eliminate_zeros()
     reverse.eliminate_zeros()
@@ -1410,14 +1415,23 @@ def _create_sparse_adjacency_matrix(
     # Get the number of reactions, and metabolites
     n_met, n_rxns = stoichiometric_matrix.shape
     # Convert Forward and reverse to csr
-    forward = sparse.csr_array(forward.reshape((-1,)))  # ty: ignore[unresolved-attribute]
-    reverse = sparse.csr_array(reverse.reshape((-1,)))  # ty: ignore[unresolved-attribute]
+    forward = sparse.csr_array(forward.reshape((1, -1)))  # ty: ignore[unresolved-attribute]
+    reverse = sparse.csc_array(
+        reverse.reshape(
+            (
+                1,
+                -1,
+            )
+        )
+    )  # ty: ignore[unresolved-attribute]
 
     # Split the stoichiomety into products and reactants
     product_array = stoichiometric_matrix
     reactant_array = stoichiometric_matrix.copy()
-    product_array[product_array < 0.0] = 0.0
-    reactant_array[reactant_array > 0.0] = 0.0
+    product_array.data[product_array.data < 0.0] = 0.0
+    reactant_array.data[reactant_array.data > 0.0] = 0.0
+    product_array.eliminate_zeros()
+    reactant_array.eliminate_zeros()
     reactant_array = reactant_array * -1
 
     # Convert to csr arrays for the multiplication
@@ -1611,7 +1625,7 @@ def _create_stoichiometric_matrix(model: cobra.Model) -> sparse.coo_array:
     instead of sparse array
     """
     n_met, n_rxn = len(model.metabolites), len(model.reactions)
-    stoich_array = sparse.coo_array((n_met, n_rxn))
+    stoich_array = sparse.dok_array((n_met, n_rxn))
 
     met_ind = model.metabolites.index
     rxn_ind = model.reactions.index
@@ -1619,4 +1633,4 @@ def _create_stoichiometric_matrix(model: cobra.Model) -> sparse.coo_array:
     for rxn in model.reactions:
         for met, stoich in rxn.metabolites.items():
             stoich_array[met_ind(met), rxn_ind(rxn)] = stoich
-    return stoich_array
+    return stoich_array.tocoo()
