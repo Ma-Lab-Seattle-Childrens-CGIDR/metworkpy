@@ -5,11 +5,11 @@ Functions for constructing networks based on genome scale metabolic models
 # Imports
 # Standard Library Imports
 from __future__ import annotations
+import scipy
 
 import itertools
-from collections.abc import Hashable, Iterable
+from collections.abc import Callable, Hashable, Iterable
 from typing import (
-    Callable,
     Literal,
     cast,
 )
@@ -154,12 +154,16 @@ def create_metabolic_network(
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
     weight_by_metabolite_stoich: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     product_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     reactant_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     nodes_to_remove: Iterable[str] | None = None,
-    remove_top_metabolites: int | None = None,
+    remove_top_metabolites: float | None = None,
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
     zero_tolerance: float = ALMOST_ZERO,
     **kwargs,
@@ -188,6 +192,18 @@ def create_metabolic_network(
         a metabolite's stoichiometric coefficient to find
         the edge weight between a reation and a metabolite
         (or a metabolite and a reaction).
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
     product_scale_fn, reactant_scale_fn : callable of coo_array to coo_array, optional
         if provided function will be called on the reactant and product
         edge weight arrays (both with columns for reactions and rows for
@@ -198,9 +214,21 @@ def create_metabolic_network(
         or otherwise modifying the edge weights prior to network construction if that is desired.
     nodes_to_remove : Iterable of str, optional
         Iterable of nodes which will be removed from the network before it is returned
-    remove_top_metabolites : int, optional
-        Number of top most connected metabolites to remove. This can be useful to remove
-        common currency metabolites such as ATP, or solvent metabolites like H20.
+    remove_top_metabolites : int or float, optional
+        Number of top most connected metabolites to remove. If an integer that
+        is 1 or greater, that number of top connected metabolites (based on the
+        number of reactions they participate in) are removed. If a float between
+        0.0 and 1.0, instead any metabolite participating in more than that
+        proportion of reactions is removed. So a value of 0.1 would indicate to
+        remove any metabolites which participate in more than 10% of reactions
+        in the model. Note that this removal is independent of the removal of
+        currency metabolites  that occurs if `currency_metabolites` is passed
+        (that the counts for how many reactions a metabolite is involved in is
+        calculated prior to removing currency metabolites). It is also independent
+        of the node removal caused by passing `nodes_to_remove`. This can be useful
+        to remove highly connected metabolites which can distort the topology of
+        the network. Such as common currency metabolites like ATP, or solvent
+        metabolites like H20.
     weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
         Optional function for scaling the weights, called with a 1-D numpy array of all the
         weights in the network, and must return a 1-D numpy array of the same size.
@@ -274,6 +302,7 @@ def create_metabolic_network(
             array_type="coo",
             zero_tolerance=zero_tolerance,
             weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+            currency_metabolites=currency_metabolites,
             product_scale_fn=product_scale_fn,
             reactant_scale_fn=reactant_scale_fn,
             **kwargs,
@@ -323,12 +352,16 @@ def create_reaction_network(
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
     weight_by_metabolite_stoich: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     product_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     reactant_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     nodes_to_remove: Iterable[str] | None = None,
-    remove_top_metabolites: int | None = None,
+    remove_top_metabolites: float | None = None,
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
     projection_weight: str | Callable[[float, float], float] | None = None,
     projection_weight_combine: Callable[[list[float]], float] | None = None,
@@ -360,6 +393,18 @@ def create_reaction_network(
         a metabolite's stoichiometric coefficient to find
         the edge weight between a reation and a metabolite
         (or a metabolite and a reaction).
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
     product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
         If provided function will be called on the reactant and product
         edge weight arrays (both with columns for reactions and rows for
@@ -370,9 +415,21 @@ def create_reaction_network(
         or otherwise modifying the edge weights prior to network construction if that is desired.
     nodes_to_remove : Iterable of str, optional
         Iterable of nodes which will be removed from the network before it is returned
-    remove_top_metabolites : int, optional
-        Number of top most connected metabolites to remove. This can be useful to remove
-        common currency metabolites such as ATP, or solvent metabolites like H20.
+    remove_top_metabolites : int or float, optional
+        Number of top most connected metabolites to remove. If an integer that
+        is 1 or greater, that number of top connected metabolites (based on the
+        number of reactions they participate in) are removed. If a float between
+        0.0 and 1.0, instead any metabolite participating in more than that
+        proportion of reactions is removed. So a value of 0.1 would indicate to
+        remove any metabolites which participate in more than 10% of reactions
+        in the model. Note that this removal is independent of the removal of
+        currency metabolites  that occurs if `currency_metabolites` is passed
+        (that the counts for how many reactions a metabolite is involved in is
+        calculated prior to removing currency metabolites). It is also independent
+        of the node removal caused by passing `nodes_to_remove`. This can be useful
+        to remove highly connected metabolites which can distort the topology of
+        the network. Such as common currency metabolites like ATP, or solvent
+        metabolites like H20.
     weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
         Optional function for scaling the weights, called with a 1-D numpy array of all the
         weights in the network, and must return a 1-D numpy array of the same size.
@@ -418,6 +475,7 @@ def create_reaction_network(
         weight_scale_fn=weight_scale_fn,
         zero_tolerance=zero_tolerance,
         weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        currency_metabolites=currency_metabolites,
         product_scale_fn=product_scale_fn,
         reactant_scale_fn=reactant_scale_fn,
         **kwargs,
@@ -454,12 +512,16 @@ def create_metabolite_network(
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
     weight_by_metabolite_stoich: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     product_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     reactant_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     nodes_to_remove: Iterable[str] | None = None,
-    remove_top_metabolites: int | None = None,
+    remove_top_metabolites: float | None = None,
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
     projection_weight: str | Callable[[float, float], float] | None = None,
     projection_weight_combine: Callable[[list[float]], float] | None = None,
@@ -486,11 +548,48 @@ def create_metabolite_network(
         See `Notes` for more information.
     directed : bool
         Whether the network should be directed
+    weight_by_metabolite_stoich: bool, default=True
+        Whether the reaction weights should be multiplied by
+        a metabolite's stoichiometric coefficient to find
+        the edge weight between a reation and a metabolite
+        (or a metabolite and a reaction).
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
+    product_scale_fn, reactant_scale_fn : callable of coo_array to coo_array, optional
+        if provided function will be called on the reactant and product
+        edge weight arrays (both with columns for reactions and rows for
+        metabolites). the product array is all the weights of edges connecting a
+        reaction to a metabolite, and the reactant array represents all of the
+        edges connecting a metabolite to a reaction. these functions must return a
+        coo_array of the same dimension of the passed array. this allows for rescaling
+        or otherwise modifying the edge weights prior to network construction if that is desired.
     nodes_to_remove : Iterable of str, optional
         Iterable of nodes which will be removed from the network before it is returned
-    remove_top_metabolites : int, optional
-        Number of top most connected metabolites to remove. This can be useful to remove
-        common currency metabolites such as ATP, or solvent metabolites like H20.
+    remove_top_metabolites : int or float, optional
+        Number of top most connected metabolites to remove. If an integer that
+        is 1 or greater, that number of top connected metabolites (based on the
+        number of reactions they participate in) are removed. If a float between
+        0.0 and 1.0, instead any metabolite participating in more than that
+        proportion of reactions is removed. So a value of 0.1 would indicate to
+        remove any metabolites which participate in more than 10% of reactions
+        in the model. Note that this removal is independent of the removal of
+        currency metabolites  that occurs if `currency_metabolites` is passed
+        (that the counts for how many reactions a metabolite is involved in is
+        calculated prior to removing currency metabolites). It is also independent
+        of the node removal caused by passing `nodes_to_remove`. This can be useful
+        to remove highly connected metabolites which can distort the topology of
+        the network. Such as common currency metabolites like ATP, or solvent
+        metabolites like H20.
     weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
         Optional function for scaling the weights, called with a 1-D numpy array of all the
         weights in the network, and must return a 1-D numpy array of the same size.
@@ -531,13 +630,14 @@ def create_metabolite_network(
         model=model,
         weight=weight,
         directed=directed,
+        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        currency_metabolites=currency_metabolites,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
         nodes_to_remove=nodes_to_remove,
         remove_top_metabolites=remove_top_metabolites,
         weight_scale_fn=weight_scale_fn,
         zero_tolerance=zero_tolerance,
-        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
-        product_scale_fn=product_scale_fn,
-        reactant_scale_fn=reactant_scale_fn,
         **kwargs,
     )
     # Get the metabolite nodes
@@ -567,8 +667,12 @@ def create_metabolite_network(
 def create_gene_network(
     model: cobra.Model,
     directed: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     nodes_to_remove: list[str] | None = None,
-    remove_top_metabolites: int | None = None,
+    remove_top_metabolites: float | None = None,
     essential: bool = False,
 ) -> nx.Graph | nx.DiGraph:
     """
@@ -585,15 +689,39 @@ def create_gene_network(
         directionality of the reaction network, and
         multiple genes associated with a single reaction
         will have two (reciprocal) edges connecting them.
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
     nodes_to_remove : list[str] or None
         List of any metabolites or reactions to remove
         from the metabolic network prior to projecting
         it onto the reactions and constructing the gene network.
         Each metabolite/reaction to remove should be the string
         id associated with them in the cobra Model
-    remove_top_metabolites : int, optional
-        Number of top most connected metabolites to remove. This can be useful to remove
-        common currency metabolites such as ATP, or solvent metabolites like H20.
+    remove_top_metabolites : int or float, optional
+        Number of top most connected metabolites to remove. If an integer that
+        is 1 or greater, that number of top connected metabolites (based on the
+        number of reactions they participate in) are removed. If a float between
+        0.0 and 1.0, instead any metabolite participating in more than that
+        proportion of reactions is removed. So a value of 0.1 would indicate to
+        remove any metabolites which participate in more than 10% of reactions
+        in the model. Note that this removal is independent of the removal of
+        currency metabolites  that occurs if `currency_metabolites` is passed
+        (that the counts for how many reactions a metabolite is involved in is
+        calculated prior to removing currency metabolites). It is also independent
+        of the node removal caused by passing `nodes_to_remove`. This can be useful
+        to remove highly connected metabolites which can distort the topology of
+        the network. Such as common currency metabolites like ATP, or solvent
+        metabolites like H20.
     essential : bool
         Whether a gene should be required for a reaction to function
         in order for that reaction to be used in assigning the
@@ -633,6 +761,7 @@ def create_gene_network(
         model=model,
         weight=None,
         directed=directed,
+        currency_metabolites=currency_metabolites,
         nodes_to_remove=nodes_to_remove,
         remove_top_metabolites=remove_top_metabolites,
     )
@@ -1121,6 +1250,10 @@ def create_adjacency_matrix(
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
     weight_by_metabolite_stoich: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     product_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     reactant_scale_fn: None
@@ -1155,6 +1288,18 @@ def create_adjacency_matrix(
         a metabolite's stoichiometric coefficient to find
         the edge weight between a reation and a metabolite
         (or a metabolite and a reaction).
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
     product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
         If provided function will be called on the reactant and product
         edge weight arrays (both with columns for reactions and rows for
@@ -1318,6 +1463,7 @@ def create_adjacency_matrix(
         directed=directed,
         weighted=weighted,
         weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        currency_metabolites=currency_metabolites,
         product_scale_fn=product_scale_fn,
         reactant_scale_fn=reactant_scale_fn,
         zero_tolerance=zero_tolerance,
@@ -1360,6 +1506,10 @@ def _create_sparse_adjacency_matrix(
     directed: bool = True,
     weighted: bool = True,
     weight_by_metabolite_stoich: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     product_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     reactant_scale_fn: None
@@ -1391,6 +1541,18 @@ def _create_sparse_adjacency_matrix(
         a metabolite's stoichiometric coefficient to find
         the edge weight between a reation and a metabolite
         (or a metabolite and a reaction).
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
     product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
         If provided function will be called on the reactant and product
         edge weight arrays (both with columns for reactions and rows for
@@ -1410,13 +1572,18 @@ def _create_sparse_adjacency_matrix(
     """
     # Get the sparse stoichiometric matrix
     stoichiometric_matrix = _create_stoichiometric_matrix(model=model)
+    # Handle currency metabolites
+    if currency_metabolites is not None:
+        stoichiometric_matrix = _remove_currency_metabolites(
+            model, stoichiometric_matrix, currency_metabolites
+        )
     if not weighted or not weight_by_metabolite_stoich:
-        stoichiometric_matrix: sparse.coo_array = stoichiometric_matrix.sign()  # ty: ignore[unresolved-attribute]
+        stoichiometric_matrix = stoichiometric_matrix.sign()  # ty: ignore[unresolved-attribute]
     # Get the number of reactions, and metabolites
     n_met, n_rxns = stoichiometric_matrix.shape
     # Convert Forward and reverse to csr
     forward = sparse.csr_array(forward.reshape((1, -1)))  # ty: ignore[unresolved-attribute]
-    reverse = sparse.csc_array(
+    reverse = sparse.csr_array(
         reverse.reshape(  # ty: ignore[unresolved-attribute]
             (
                 1,
@@ -1490,7 +1657,7 @@ def _create_sparse_adjacency_matrix(
 
 def get_top_metabolites(
     model: cobra.Model,
-    n: int,
+    n: float,
     type: Literal["substrate", "reactant", "product"] = "substrate",
 ) -> list[str]:
     """
@@ -1501,32 +1668,56 @@ def get_top_metabolites(
     ----------
     model : cobra.Model
         The model to find the top metabolites for
-    n : int
-        The number of top metabolites to find
+    n : int or float
+        The number of top metabolites to find. If an int greater than 1,
+        this is the number of top metabolites to find. If a
+        float between 0.0 and 1.0, instead returns metabolites
+        which are involved in more than that proportion of
+        reactions. So if n is 0.1, then the metabolites
+        which participate in more than 10% of reactions in the
+        model are returned.
 
     Returns
     -------
     list of str
         A list of the ids of the top `n` metabolites in the `model`
     """
-    # Get a count of the reactions each metabolite is involved in
     stoich_mat = cobra.util.create_stoichiometric_matrix(
         model=model, array_type="DataFrame"
     )
     assert isinstance(stoich_mat, pd.DataFrame), (
         "Cobra returned incorrect stoichiometric matrix type"
     )
-    if type == "substrate":
-        counts = (stoich_mat.abs() > 0).sum(axis=1)
-    elif type == "reactant":
-        counts = (stoich_mat.clip(upper=0.0) < 0.0).sum(axis=1)
-    elif type == "product":
-        counts = (stoich_mat.clip(lower=0.0) > 0.0).sum(axis=1)
+    if n >= 1:
+        # Get a count of the reactions each metabolite is involved in
+        if type == "substrate":
+            counts = (stoich_mat.abs() > 0).sum(axis=1)
+        elif type == "reactant":
+            counts = (stoich_mat.clip(upper=0.0) < 0.0).sum(axis=1)
+        elif type == "product":
+            counts = (stoich_mat.clip(lower=0.0) > 0.0).sum(axis=1)
+        else:
+            raise ValueError(
+                f"Type must be 'substrate', 'reactant', or 'product', but received {type}"
+            )
+        return list(counts.sort_values(ascending=False).iloc[:n].index)
+    elif 0.0 <= n < 1:
+        # Get the proportion of reactions each metabolite is involved in
+        if type == "substrate":
+            proportion = (stoich_mat.abs() > 0).mean(axis=1)
+        elif type == "reactant":
+            proportion = (stoich_mat.clip(upper=0.0) < 0.0).mean(axis=1)
+        elif type == "product":
+            proportion = (stoich_mat.clip(lower=0.0) > 0.0).mean(axis=1)
+        else:
+            raise ValueError(
+                f"Type must be 'substrate', 'reactant', or 'product', but received {type}"
+            )
+        return list(proportion[proportion >= n].index)
     else:
         raise ValueError(
-            f"Type must be 'substrate', 'reactant', or 'product', but received {type}"
+            f"`n` must either be a float between 0 and 1, or an integer 1 or greater, but received {n}"
         )
-    return list(counts.sort_values(ascending=False).iloc[:n].index)
 
 
 def get_top_metabolite_pairs(
@@ -1636,6 +1827,55 @@ def _create_stoichiometric_matrix(model: cobra.Model) -> sparse.coo_array:
     return stoich_array.tocoo()
 
 
+def _remove_currency_metabolites(
+    model: cobra.Model,
+    stoichiometric_matrix: sparse.coo_array,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ],
+) -> sparse.coo_array:
+    if not _check_scipy_version_greater(1, 17, 0):
+        # NOTE: SciPy sparse doesn't allow indexing COO arrays until 1.17.0
+        # For compatibility, just using a DOK array to allow this to work,
+        # but its not particularly efficient.
+        stoichiometric_matrix = stoichiometric_matrix.todok()
+    met_index = model.metabolites.index
+    for currency_metabolite_group in currency_metabolites:
+        lhs, rhs = currency_metabolite_group
+        n_lhs = 1 if isinstance(lhs, str) else len(lhs)  # ty: ignore[invalid-argument-type]
+        n_rhs = 1 if isinstance(rhs, str) else len(rhs)  # ty: ignore[invalid-argument-type]
+        # Find the indexes of the metabolites
+        lhs_indices = np.array(
+            [met_index(lhs)]
+            if isinstance(lhs, str)
+            else list(map(met_index, lhs))
+        )
+        rhs_indices = np.array(
+            [met_index(rhs)]
+            if isinstance(rhs, str)
+            else list(map(met_index, rhs))
+        )
+        not_indices = np.ones(stoichiometric_matrix.shape[0], dtype=np.bool)
+        not_indices[lhs_indices] = np.False_
+        not_indices[rhs_indices] = np.False_
+        # Find the indices of the reactions where these currency metabolites
+        # appear on both sides (with appropriate stoichiometry)
+        remove_from_rxns_bool = (
+            (
+                stoichiometric_matrix[lhs_indices].sum(axis=0) * n_rhs
+                + stoichiometric_matrix[rhs_indices].sum(axis=0) * n_lhs
+            )
+            == 0.0
+        ) & (np.abs(stoichiometric_matrix[not_indices]).sum(axis=0) > 0)
+        # Remove the reactions
+        for idx in itertools.chain(lhs_indices, rhs_indices):
+            stoichiometric_matrix[idx, remove_from_rxns_bool] = 0.0
+    if not _check_scipy_version_greater(1, 17, 0):
+        stoichiometric_matrix = stoichiometric_matrix.tocoo()
+    stoichiometric_matrix.eliminate_zeros()
+    return stoichiometric_matrix
+
+
 def _normalize_array(array: sparse.sparray, axis: int) -> sparse.coo_array:
     array: sparse.csr_array = array.tocsr()  # ty: ignore[unresolved-attribute]
     totals = array.sum(axis=axis)
@@ -1648,3 +1888,36 @@ def _normalize_array(array: sparse.sparray, axis: int) -> sparse.coo_array:
         return array.tocoo()
     else:
         raise ValueError(f"Axis must be 0 or 1, received {axis}")
+
+
+def _check_scipy_version_greater(maj, min, bug):
+    scipy_maj, scipy_min, scipy_bug = scipy.__version__.split(".")
+    scipy_maj, scipy_min, scipy_bug = (
+        int(scipy_maj),
+        int(scipy_min),
+        int(scipy_bug),
+    )
+    if scipy_maj < maj:
+        return False
+    if scipy_maj > maj:
+        return True
+    if scipy_min < min:
+        return False
+    if scipy_min > min:
+        return True
+    if scipy_bug < bug:
+        return False
+    if scipy_bug > bug:
+        return True
+    return True
+
+
+def _assert_scipy_version_greater(maj, min, bug):
+    if not _check_scipy_version_greater(maj, min, bug):
+        raise UnsupportedVersionError(
+            f"This method requires a SciPy version greater than {maj}.{min}.{bug}, but the current SciPy version is {scipy.__version__}"
+        )
+
+
+class UnsupportedVersionError(Exception):
+    pass

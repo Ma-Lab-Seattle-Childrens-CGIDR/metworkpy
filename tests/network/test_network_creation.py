@@ -4,6 +4,7 @@ from __future__ import annotations
 # Standard library imports
 import itertools
 import pathlib
+import string
 import unittest
 
 # External Imports
@@ -1142,6 +1143,165 @@ class TestAdjMat(unittest.TestCase):
             test_adj_stoich_all_reversible.todense(),
             expected_adj_stoich_all_reversible,
         )
+
+
+class TestCurrencyMetabolites(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Create a small model with currency metabolites
+        metabolite_dict = {}
+        for char in string.ascii_lowercase[1:11]:
+            metabolite_dict[char] = cobra.Metabolite(
+                char.upper(), "", f"Metabolite {char}"
+            )
+        rxn_list = [
+            cobra.Reaction(
+                f"rxn{idx}", f"Reaction {idx}", lower_bound=0, upper_bound=10
+            )
+            for idx in range(1, 8)
+        ]
+        # B->C
+        rxn_list[0].add_metabolites(
+            {metabolite_dict["b"]: -1, metabolite_dict["c"]: 1}
+        )
+        # C->H
+        rxn_list[1].add_metabolites(
+            {metabolite_dict["c"]: -1, metabolite_dict["h"]: 1}
+        )
+        # E+C->F+D
+        rxn_list[2].add_metabolites(
+            {
+                metabolite_dict["e"]: -1,
+                metabolite_dict["c"]: -1,
+                metabolite_dict["f"]: 1,
+                metabolite_dict["d"]: 1,
+            }
+        )
+        # F+I->G+J+K
+        rxn_list[3].add_metabolites(
+            {
+                metabolite_dict["f"]: -1,
+                metabolite_dict["i"]: -1,
+                metabolite_dict["g"]: 1,
+                metabolite_dict["j"]: 1,
+                metabolite_dict["k"]: 1,
+            }
+        )
+        # C->I
+        rxn_list[4].add_metabolites(
+            {metabolite_dict["c"]: -1, metabolite_dict["i"]: 1}
+        )
+        # C->D
+        rxn_list[5].add_metabolites(
+            {metabolite_dict["c"]: -1, metabolite_dict["d"]: 1}
+        )
+        # I->J+K
+        rxn_list[6].add_metabolites(
+            {
+                metabolite_dict["i"]: -1,
+                metabolite_dict["j"]: 1,
+                metabolite_dict["k"]: 1,
+            }
+        )
+
+        cls.curr_met_model = cobra.Model()
+        cls.curr_met_model.add_reactions(rxn_list)
+        # Create a graph with no currency metabolites removed
+        cls.test_graph = create_metabolic_network(
+            model=cls.curr_met_model,
+            weight=None,
+            directed=False,
+        )
+
+    def check_has_edges(self, graph, u, vs):
+        for v in vs:
+            self.assertTrue(graph.has_edge(u, v))
+
+    def check_has_no_edges(self, graph, u, vs):
+        for v in vs:
+            print(f"Checking for edge ({u}, {v})")
+            self.assertFalse(graph.has_edge(u, v))
+
+    def test_single_pair(self):
+        print(
+            cobra.util.create_stoichiometric_matrix(
+                self.curr_met_model, "DataFrame"
+            )
+        )
+        test_graph_curr_removed = create_metabolic_network(
+            model=self.curr_met_model,
+            weight=None,
+            directed=False,
+            currency_metabolites=[("C", "D")],
+        )
+        assert isinstance(self.test_graph, nx.Graph)
+        assert isinstance(test_graph_curr_removed, nx.Graph)
+        # There should be an edges between rxn3 and C and D
+        # in test_graph, but not in test_graph_curr_removed
+        self.check_has_edges(self.test_graph, "rxn3", ["C", "D"])
+        self.check_has_no_edges(test_graph_curr_removed, "rxn3", ["C", "D"])
+        # Both should have rxn6 connected to C and D
+        self.check_has_edges(self.test_graph, "rxn6", ["C", "D"])
+        self.check_has_edges(test_graph_curr_removed, "rxn6", ["C", "D"])
+        # Both should have rxn1,2,5 connected to C
+        for rxn in ["rxn1", "rxn2", "rxn5"]:
+            self.check_has_edges(self.test_graph, rxn, ["C"])
+
+    def test_multiple_on_one_side(self):
+        test_graph_curr_removed = create_metabolic_network(
+            model=self.curr_met_model,
+            weight=None,
+            directed=False,
+            currency_metabolites=[("I", ("J", "K"))],
+        )
+        # Test graph should have rxn4 connected to f,g,i,j,k
+        # curr_removed should have rxn4 connected to f,g only
+        self.check_has_edges(
+            self.test_graph, "rxn4", ["F", "G", "I", "J", "K"]
+        )
+        self.check_has_edges(test_graph_curr_removed, "rxn4", ["F", "G"])
+        self.check_has_no_edges(
+            test_graph_curr_removed, "rxn4", ["I", "J", "K"]
+        )
+        # Both should have rxn7 connected to I, J, and K
+        self.check_has_edges(self.test_graph, "rxn7", ["I", "J", "K"])
+        self.check_has_edges(test_graph_curr_removed, "rxn7", ["I", "J", "K"])
+        # Both should have rxn5 connected to I
+        self.check_has_edges(self.test_graph, "rxn5", ["I"])
+        self.check_has_edges(test_graph_curr_removed, "rxn5", ["I"])
+
+    def test_multiple_curr(self):
+        test_graph_curr_removed = create_metabolic_network(
+            model=self.curr_met_model,
+            weight=None,
+            directed=False,
+            currency_metabolites=[("C", "D"), ("I", ("J", "K"))],
+        )
+        # There should be an edges between rxn3 and C and D
+        # in test_graph, but not in test_graph_curr_removed
+        self.check_has_edges(self.test_graph, "rxn3", ["C", "D"])
+        self.check_has_no_edges(test_graph_curr_removed, "rxn3", ["C", "D"])
+        # Both should have rxn6 connected to C and D
+        self.check_has_edges(self.test_graph, "rxn6", ["C", "D"])
+        self.check_has_edges(test_graph_curr_removed, "rxn6", ["C", "D"])
+        # Both should have rxn1,2,5 connected to C
+        for rxn in ["rxn1", "rxn2", "rxn5"]:
+            self.check_has_edges(self.test_graph, rxn, ["C"])
+        # Test graph should have rxn4 connected to f,g,i,j,k
+        # curr_removed should have rxn4 connected to f,g only
+        self.check_has_edges(
+            self.test_graph, "rxn4", ["F", "G", "I", "J", "K"]
+        )
+        self.check_has_edges(test_graph_curr_removed, "rxn4", ["F", "G"])
+        self.check_has_no_edges(
+            test_graph_curr_removed, "rxn4", ["I", "J", "K"]
+        )
+        # Both should have rxn7 connected to I, J, and K
+        self.check_has_edges(self.test_graph, "rxn7", ["I", "J", "K"])
+        self.check_has_edges(test_graph_curr_removed, "rxn7", ["I", "J", "K"])
+        # Both should have rxn5 connected to I
+        self.check_has_edges(self.test_graph, "rxn5", ["I"])
+        self.check_has_edges(test_graph_curr_removed, "rxn5", ["I"])
 
 
 # region Mutual Information Network

@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version DEV](#version-dev)
   - [Version 0.11.0](#version-0110)
   - [Version 0.10.0](#version-0100)
   - [Version 0.9.0](#version-090)
@@ -24,6 +25,20 @@
 - Dropping support for python 3.9
 - Increasing minimum SciPy version to 1.15 for associated sparse array
   improvements
+- For metabolic network creation functions, added option for removing currency
+  metabolites from generated metabolic graphs, this is done by passing currency
+  metabolite groups, which are tuples representing the forms of currency
+  metabolites seen on two sides of an equation. For ATP, this could be (ATP,
+  ADP) for ATP acting as a phosphate donor, or (ATP, (ADP,Pi)) for ATP acting as
+  an energy carrier. These currency metabolites are removed when the two forms
+  are found (with equal stoichiometry) on opposite sides of a reaction equation,
+  but where they are not the only metabolites present.
+- For metabolic network creation functions, changed 'remove_top_metabolites'
+  parameter to allow for removing metabolites based on participating in above a
+  specified proportion of the reactions in the metabolic model. Now an integer
+  greater than 1 will maintain the previous behaviour, but a float between 0 and
+  1 will remove metabolites which participate in more than that proportion of
+  the models reactions.
 
 ## Version 0.11.0
 
