@@ -12,11 +12,11 @@ from warnings import warn
 
 # External Imports
 import cobra
-import joblib  # type: ignore   # Missing stubs
+import joblib
 import numpy as np
 import pandas as pd
 
-from metworkpy.network.neighborhoods import graph_neighborhoods
+from metworkpy.network.neighborhoods import get_graph_neighborhoods
 from metworkpy.network.network_construction import create_reaction_network
 
 from .js_divergence_functions import js_divergence
@@ -191,7 +191,9 @@ def calculate_reaction_neighborhood_divergence(
         nodes_to_remove=nodes_to_remove,
     )
     # Get the reaction neighborhoods from the network
-    reaction_neighborhoods = graph_neighborhoods(rxn_network, radius=radius)
+    reaction_neighborhoods = get_graph_neighborhoods(
+        rxn_network, radius=radius
+    )
     return calculate_divergence_grouped(
         dataset1,
         dataset2,

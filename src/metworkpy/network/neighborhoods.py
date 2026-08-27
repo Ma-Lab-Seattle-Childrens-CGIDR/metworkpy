@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import functools
 import operator
-from collections.abc import Hashable, Iterable, Iterator, Mapping
-from typing import Callable, NamedTuple, TypeVar, cast
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
+from typing import NamedTuple, TypeVar, cast
 
 # External Imports
 import cobra
@@ -21,8 +21,8 @@ from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
 # region Graph Neighborhoods
 
 
-def graph_neighborhoods(
-    network: nx.Graph, radius: int
+def get_graph_neighborhoods(
+    network: nx.Graph | nx.DiGraph, radius: int
 ) -> dict[Hashable, set[Hashable]]:
     """
     Find the neighborhoods of a graph
@@ -49,8 +49,11 @@ def graph_neighborhoods(
     }
 
 
-def graph_gene_neighborhoods(
-    network: nx.Graph, model: cobra.Model, radius: int
+def get_graph_gene_neighborhoods(
+    network: nx.Graph,
+    model: cobra.Model,
+    radius: int,
+    essential: bool = False,
 ) -> dict[Hashable, set[str]]:
     """
     Find the neighborhoods of a graph
@@ -63,6 +66,9 @@ def graph_gene_neighborhoods(
         The cobra model associated with the metabolic network
     radius : int
         The radius determining the sizes of the neighborhoods
+    essential : bool
+        Whether to only include genes essential for reactions in the
+        neighborhood
 
     Returns
     -------
@@ -74,7 +80,7 @@ def graph_gene_neighborhoods(
     return {
         n: neighborhood
         for n, neighborhood in graph_gene_neighborhood_iter(
-            network=network, model=model, radius=radius
+            network=network, model=model, radius=radius, essential=essential
         )
     }
 
@@ -83,7 +89,7 @@ def graph_gene_neighborhoods(
 
 
 def graph_neighborhood_iter(
-    network: nx.Graph, radius: int
+    network: nx.Graph | nx.DiGraph, radius: int
 ) -> Iterator[tuple[Hashable, set[Hashable]]]:
     """
     Iterator over neighborhoods in a graph
@@ -179,7 +185,7 @@ def get_graph_neighborhood(
     return neighborhood
 
 
-def get_graph_neighborhood_group(
+def get_group_graph_neighborhood(
     network: nx.Graph | nx.DiGraph, radius: int, nodes: set[Hashable]
 ) -> set[Hashable]:
     """

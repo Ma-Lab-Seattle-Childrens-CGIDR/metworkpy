@@ -37,11 +37,7 @@ def find_metabolite_synthesis_network_reactions(
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
     **kwargs,
-) -> (
-    pd.DataFrame[bool | float]
-    | dict[str, list[str]]
-    | dict[str, dict[str, float]]
-):
+) -> pd.DataFrame | dict[str, list[str]] | dict[str, dict[str, float]]:
     """Find which reactions are used to generate each metabolite in the model
 
     Parameters
@@ -211,7 +207,7 @@ def find_metabolite_synthesis_network_genes(
     progress_bar: bool = False,
     essential: bool = False,
     **kwargs,
-) -> pd.DataFrame[bool | float]:
+) -> pd.DataFrame | dict[str, list[str]] | dict[str, dict[str, float]]:
     """Find which genes are used to generate each metabolite in the model
 
     Parameters
@@ -271,7 +267,7 @@ def find_metabolite_synthesis_network_genes(
 
     Returns
     -------
-    pd.DataFrame[bool|float] or dict
+    pd.DataFrame or dict
         If `return_type` is 'DataFrame' (the default), returns
         a dataframe with genes as the index and metabolites as the
         columns, containing either
@@ -399,9 +395,9 @@ def find_metabolite_synthesis_network_genes(
                 return_dict[metabolite] = list(
                     gene_id_series[gene_id_series].index
                 )
-            return return_dict
+            return return_dict  # ty: ignore[invalid-return-type]
         elif method == "pfba" or method == "gfba":
-            return res_df.to_dict()
+            return res_df.to_dict()  # ty: ignore[invalid-return-type]
         else:
             raise ValueError(
                 f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
@@ -421,7 +417,7 @@ def find_metabolite_consuming_network_reactions(
     check_reverse: bool = True,
     progress_bar: bool = False,
     **kwargs,
-) -> pd.DataFrame[bool]:
+) -> pd.DataFrame | dict[str, list[str]]:
     """Find reactions which consume a metabolite, or its derivatives
 
     Parameters
@@ -530,7 +526,7 @@ def find_metabolite_consuming_network_reactions(
     if return_type == "DataFrame":
         return res_df
     elif return_type == "dict":
-        return {m: list(rs[rs].index) for m, rs in res_df.items()}
+        return {m: list(rs[rs].index) for m, rs in res_df.items()}  # ty: ignore[invalid-return-type]
     else:
         raise ValueError(
             f"Expected 'DataFrame' or 'dict' as 'return_type', received {return_type}"
@@ -546,7 +542,7 @@ def find_metabolite_consuming_network_genes(
     essential: bool = False,
     progress_bar: bool = False,
     **kwargs,
-) -> pd.DataFrame[bool]:
+) -> pd.DataFrame | dict[str, list[str]]:
     """
     Find genes associated with reactions which consume a metabolite or its derivatives
 
@@ -601,6 +597,7 @@ def find_metabolite_consuming_network_genes(
         add_sinks=add_sinks,
         **kwargs,
     )
+    assert isinstance(metabolite_reaction_network, pd.DataFrame)
     for metabolite in metabolite_reaction_network.columns:
         gene_list = reaction_to_gene_list(
             model=model,
@@ -616,18 +613,17 @@ def find_metabolite_consuming_network_genes(
     if return_type == "DataFrame":
         return res_df
     elif return_type == "dict":
-        return {m: list(gs[gs].index) for m, gs in res_df.items()}
+        return {m: list(gs[gs].index) for m, gs in res_df.items()}  # ty: ignore[invalid-return-type]
     else:
         raise ValueError(
             f"Expected 'DataFrame' or 'dict' as 'return_type', received {return_type}"
         )
-    return res_df
 
 
 def find_metabolite_network_enrichment(
     metabolite_networks: pd.DataFrame,
     target_set=Iterable[str],
-    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
+    alternative: Literal["two-sided", "less", "greater"] = "greater",
     fdr: bool = True,
     **kwargs,
 ) -> pd.Series:
@@ -672,9 +668,11 @@ def find_metabolite_network_enrichment(
             group2=metabolite_net_set,
             total_count=total_count,
             alternative=alternative,
-        ).pvalue
+        ).pvalue  # ty: ignore[invalid-assignment]
     if fdr:
-        results_series = stats.false_discovery_control(results_series)
+        results_series = stats.false_discovery_control(
+            results_series, **kwargs
+        )
     return results_series
 
 

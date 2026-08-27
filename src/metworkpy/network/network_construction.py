@@ -5,10 +5,10 @@ Functions for constructing networks based on genome scale metabolic models
 # Imports
 # Standard Library Imports
 from __future__ import annotations
-import operator
 
 import functools
 import itertools
+import operator
 from collections.abc import Callable, Hashable, Iterable
 from typing import (
     Literal,
@@ -28,7 +28,7 @@ from metworkpy.information.mutual_information_network import (
     mi_pairwise,
 )
 from metworkpy.network.neighborhoods import (
-    get_graph_neighborhood_group,
+    get_group_graph_neighborhood,
 )
 from metworkpy.network.projection import bipartite_project
 from metworkpy.utils import reaction_to_gene_ids, reaction_to_gene_list
@@ -974,7 +974,7 @@ def create_group_neighborhood_network(
     group_sets = {k: set(v) for k, v in groups.items()}
     # Find the neighborhoods around the groups
     neighborhood_dict = {
-        g: get_graph_neighborhood_group(
+        g: get_group_graph_neighborhood(
             network=network, radius=max_distance, nodes=n
         )
         for g, n in group_sets.items()
@@ -1154,12 +1154,15 @@ def create_group_distance_network(
         group_obj = nx.DiGraph
     else:
         group_obj = nx.Graph
-    return group_obj(
-        network=network,
-        groups=groups,
-        weight=weight,
-        linkage=linkage,
-        directed=directed,
+    return nx.from_pandas_adjacency(
+        create_group_distance_adjacency_matrix(
+            network=network,
+            groups=groups,
+            weight=weight,
+            linkage=linkage,
+            directed=directed,
+        ),
+        group_obj,
     )
 
 
@@ -2136,14 +2139,3 @@ def _check_scipy_version_greater(maj, min, bug):
     if scipy_bug > bug:
         return True
     return True
-
-
-def _assert_scipy_version_greater(maj, min, bug):
-    if not _check_scipy_version_greater(maj, min, bug):
-        raise UnsupportedVersionError(
-            f"This method requires a SciPy version greater than {maj}.{min}.{bug}, but the current SciPy version is {scipy.__version__}"
-        )
-
-
-class UnsupportedVersionError(Exception):
-    pass

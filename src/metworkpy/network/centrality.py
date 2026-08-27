@@ -1,7 +1,7 @@
 # The code for closeness_centrality_subset, betweenness_centrality_subset,
 # _rescale, and _accumulate_subset is a modified
 # version of the NetworkX closeness_centrality, betweenness_centrality_subset,
-# _rescale, and _accumulate_subset functions.
+# _rescale, and _accumulate_subset functions respectively.
 # NetworkX is licensed under the BSD-3-Clause license
 # Reproduced below
 # Copyright (c) 2004-2025, NetworkX Developers
@@ -298,7 +298,6 @@ def betweenness_centrality_bipartite_subset(
     node_partition: Iterable[Hashable],
     targets: Iterable[Hashable] | None = None,
     normalized=True,
-    weight=None,
 ):
     r"""
     Compute betweenness centrality for a subset of

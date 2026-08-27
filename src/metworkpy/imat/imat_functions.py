@@ -68,6 +68,7 @@ def imat_sampling(
     rxn_weights: pd.Series | dict,
     epsilon: float = IMAT_DEFAULTS.epsilon,
     threshold: float = IMAT_DEFAULTS.threshold,
+    fraction: float = 1.0,
     **kwargs,
 ):
     """Function for sampling from an iMAT model. Returns a cobra Solution object,
@@ -85,6 +86,8 @@ def imat_sampling(
     threshold : float
         The threshold value to use for iMAT (default: 1e-2). Represents
         the maximum flux for a reaction to be considered off.
+    fraction : float
+        The fraction of the optimum the objective is required to reach
     kwargs
         Keyword arguments are passed to the `metworkpy.sampling.corner_sampling`
         method
@@ -108,6 +111,8 @@ def imat_sampling(
     # Create the iMAT model to sample from
     imat_model = add_imat_constraints(model, rxn_weights, epsilon, threshold)
     add_imat_objective_(imat_model, rxn_weights)
+    # Fix the iMAT objective as a constraint
+    cobra.util.fix_objective_as_constraint(model=imat_model, fraction=fraction)
     # Sample from the iMAT model
     return corner_sampling(model=imat_model, **kwargs)
 

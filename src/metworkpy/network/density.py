@@ -3,9 +3,8 @@
 # Standard Library Imports
 from __future__ import annotations
 
-from collections.abc import Hashable, Iterable
+from collections.abc import Callable, Hashable, Iterable
 from typing import (
-    Callable,
     Literal,
 )
 from warnings import warn
@@ -109,7 +108,7 @@ def node_target_density(
     if nodes is None:
         nodes = network.nodes
 
-    results_series = pd.Series(np.nan, index=pd.Index(nodes))
+    results_series = pd.Series(np.nan, index=pd.Index(nodes))  # ty: ignore[no-matching-overload]
     for node, density in Parallel(n_jobs=processes, return_as="generator")(
         delayed(_node_density_worker)(
             node,
