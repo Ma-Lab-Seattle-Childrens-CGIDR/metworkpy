@@ -39,6 +39,10 @@
   greater than 1 will maintain the previous behaviour, but a float between 0 and
   1 will remove metabolites which participate in more than that proportion of
   the models reactions.
+- Added experimental `create_mass_flow_network` function based on
+  "Flux-dependent graphs for metabolic networks" by Mariano Beguerisse-Díaz,
+  Gabriel Bosque, Diego Oyarzún, Jesús Picó & Mauricio Barahona. This method
+  should produce a similar network, but has not been fully tested yet.
 
 ## Version 0.11.0
 

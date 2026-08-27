@@ -21,6 +21,7 @@ from metworkpy.network.network_construction import (
     _create_stoichiometric_matrix,
     create_adjacency_matrix,
     create_group_neighborhood_network,
+    create_mass_flow_network,
     create_metabolic_network,
     create_mutual_information_network,
 )
@@ -1302,6 +1303,27 @@ class TestCurrencyMetabolites(unittest.TestCase):
         # Both should have rxn5 connected to I
         self.check_has_edges(self.test_graph, "rxn5", ["I"])
         self.check_has_edges(test_graph_curr_removed, "rxn5", ["I"])
+
+
+class TestMassFlowNetwork(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        Configuration().solver = "glpk"
+        cls.data_path = (
+            pathlib.Path(__file__).parent.parent.absolute() / "data"
+        )
+        cls.textbook_model = read_model(cls.data_path / "textbook_model.xml")
+
+    def test_mass_flow_stoich_network_catch_fire(self):
+        test_mfg = create_mass_flow_network(model=self.textbook_model)
+        self.assertIsInstance(test_mfg, nx.DiGraph)
+
+    def test_mass_flow_flux_network_catch_fire(self):
+        test_mfg = create_mass_flow_network(
+            model=self.textbook_model,
+            weight=self.textbook_model.optimize().fluxes,
+        )
+        self.assertIsInstance(test_mfg, nx.DiGraph)
 
 
 # region Mutual Information Network
