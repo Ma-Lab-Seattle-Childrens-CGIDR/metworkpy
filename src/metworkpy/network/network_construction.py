@@ -20,7 +20,6 @@ import cobra
 import networkx as nx
 import numpy as np
 import pandas as pd
-import scipy
 from scipy import sparse, stats
 
 # Local Imports
@@ -32,6 +31,7 @@ from metworkpy.network.neighborhoods import (
 )
 from metworkpy.network.projection import bipartite_project
 from metworkpy.utils import reaction_to_gene_ids, reaction_to_gene_list
+from metworkpy.utils._scipy_compat import _check_scipy_version_greater
 
 ALMOST_ZERO = 1e-15
 
@@ -2117,25 +2117,3 @@ def _normalize_array(array: sparse.sparray, axis: int) -> sparse.coo_array:
         return array.tocoo()
     else:
         raise ValueError(f"Axis must be 0 or 1, received {axis}")
-
-
-def _check_scipy_version_greater(maj, min, bug):
-    scipy_maj, scipy_min, scipy_bug = scipy.__version__.split(".")
-    scipy_maj, scipy_min, scipy_bug = (
-        int(scipy_maj),
-        int(scipy_min),
-        int(scipy_bug),
-    )
-    if scipy_maj < maj:
-        return False
-    if scipy_maj > maj:
-        return True
-    if scipy_min < min:
-        return False
-    if scipy_min > min:
-        return True
-    if scipy_bug < bug:
-        return False
-    if scipy_bug > bug:
-        return True
-    return True
