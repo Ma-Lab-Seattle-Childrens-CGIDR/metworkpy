@@ -74,7 +74,7 @@ def bipartite_project(
         and not directed
         and isinstance(network, nx.DiGraph)
     ):
-        network = network.to_undirected(reciprocal=reciprocal)
+        network = network.to_undirected(reciprocal=reciprocal)  # ty: ignore[invalid-assignment]
     if weight is None:
         return projected_graph(network, nodes=node_set)
     if weight_combine is None:
@@ -93,7 +93,7 @@ def bipartite_project(
         return weighted_projected_graph(network, nodes=node_set, ratio=ratio)
     if isinstance(network, nx.DiGraph):
         return _directed_projection(
-            network=network,
+            network=network,  # ty: ignore[invalid-argument-type]
             node_set=node_set,
             weight=weight,
             weight_combine=weight_combine,

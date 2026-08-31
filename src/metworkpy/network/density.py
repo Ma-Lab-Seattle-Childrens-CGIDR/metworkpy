@@ -3,9 +3,12 @@
 # Standard Library Imports
 from __future__ import annotations
 
-from collections.abc import Callable, Hashable, Iterable
+import functools
+import operator
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from typing import (
     Literal,
+    cast,
 )
 from warnings import warn
 
@@ -14,27 +17,32 @@ import cobra
 import networkx as nx
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 from scipy import stats
 
 # Local Imports
 from metworkpy.network.neighborhoods import (
-    _graph_gene_neighborhood,
-    get_graph_neighborhood,
+    NodeType,
+    _create_filter_set,
+    _create_rxn_to_gene_set_dict,
+    gene_neighborhood_map,
+    neighborhood_map,
 )
-from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
 
 # region Main Functions
+
+DEFAULT_RADIUS = 2
 
 
 def node_target_density(
     network: nx.Graph | nx.DiGraph,
     targets: list[Hashable] | dict[Hashable, float | int] | pd.Series,
-    nodes: Iterable[Hashable] | None = None,
-    radius: int = 3,
-    node_filter: Callable[[Hashable], bool] | set[Hashable] | None = None,
+    radius: int = DEFAULT_RADIUS,
+    nodes: Iterable[NodeType] | None = None,
+    node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
+    weight: str | None = None,
+    include_node: bool = True,
     processes: int | None = None,
-) -> pd.Series:
+) -> dict[NodeType, float]:
     """
     Find the target density for different nodes in the graph. See note for
     details.
@@ -43,37 +51,40 @@ def node_target_density(
     ----------
     network : nx.DiGraph | nx.Graph
         Networkx network (directed or undirected) to find the target
-        density of. Directed graphs are converted to undirected, and
-        edge weights are currently ignored.
+        density of.
     targets : list | dict | pd.Series
         Targets to find density of. Can be a list of nodes in the network
         where are targeted nodes will be treated equally, or a dict or
         Series keyed by nodes in the network which can specify a target
         weight (such as multiple targets for a single node). If a dict or
         Series, values should be ints or floats.
-    nodes : iterable of hashable, optional
-        Subset of nodes to find the density for, if not provided defaults
-        to all of the nodes in the network
-    radius : int
+    radius : int, default=2
         Radius to use for finding density. Specifies how far out from a
         given node targets are counted towards density. A radius of 0
         only counts the single node, and so will just return the
         `targets` values back unchanged. Default value of 3.
-    node_filter : Callable of node id to bool, or set of node id, optional
-        Filter nodes in the network to consider when calculating density.
+    nodes : iterable of hashable, optional
+        Subset of nodes to find the density for, if not provided defaults
+        to all of the nodes in the network
+    node_filter : callable of node id->bool or set of node ids, optional
+        Filter nodes in the network to consider when finding neighborhoods.
         If a Callable, should take node ids as the only argument and return
-        a bool, if True the node will be considered in the density,
-        if False it will not be. If a set, only nodes in the set will be considered
-        when calculating density. Note that the density is still calculated for
-        all nodes, but nodes that are not in the filter won't count towards the
-        size of the neighborhoods, and won't be checked for being in the target
-        set.
+        a bool, if True the node will be considered in neighborhoods,
+        if False it will not be. If a set, only nodes in the set will be included
+        in neighborhoods.
+    weight : str, optional
+        If provided indicates the edge parameter to be used as weights
+        when finding distances from a central node to
+        define a neighborhood. If None, all edges are treated as having a
+        weight of 1.
+    include_node : bool, default=True
+        Whether to include the central node in a neighborhood
     processes : int, optional
         Number of processes to use for finding the density
 
     Returns
     -------
-    pd.Series
+    dict of node id to density
         The target density for the nodes in the network
 
     Notes
@@ -83,55 +94,44 @@ def node_target_density(
     targets found (in the case of dict or Series input) divided by the number of nodes
     within that radius is the density for a particular node.
     """
-    if isinstance(network, nx.DiGraph):
-        # copy of original graph
-        network = network.to_undirected()
-    if not isinstance(network, nx.Graph):
-        raise TypeError(
-            f"Network must be a networkx network, but received {type(network)}"
-        )
     if isinstance(targets, list):
-        targets = pd.Series(1, index=targets)
-    elif isinstance(targets, dict):
-        targets = pd.Series(targets)
-    if callable(node_filter):
-        filter_fn = node_filter
-    elif isinstance(node_filter, set):
+        targets = {k: 1 for k in targets}
+    elif isinstance(targets, pd.Series):
+        targets = targets.to_dict()  # type: ignore
+    assert isinstance(targets, dict), (
+        f"Targets must be a dict, but received: {type(targets)}"
+    )
 
-        def filter_fn(x: Hashable) -> bool:
-            return x in node_filter
-    else:
+    def _get_density(node_ids: set[NodeType]):
+        return float(
+            sum(cast(dict, targets).get(n, 0.0) for n in node_ids)
+        ) / len(node_ids)
 
-        def filter_fn(_: Hashable) -> bool:
-            return True
-
-    if nodes is None:
-        nodes = network.nodes
-
-    results_series = pd.Series(np.nan, index=pd.Index(nodes))  # ty: ignore[no-matching-overload]
-    for node, density in Parallel(n_jobs=processes, return_as="generator")(
-        delayed(_node_density_worker)(
-            node,
-            network=network,
-            targets=targets,
-            node_filter=filter_fn,
-            radius=radius,
-        )
-        for node in nodes
-    ):
-        results_series[node] = density
-    return results_series
+    return neighborhood_map(
+        _get_density,
+        network=network,
+        radius=radius,
+        nodes=nodes,
+        node_filter=node_filter,
+        weight=weight,
+        include_node=include_node,
+        processes=processes,
+    )
 
 
 def gene_target_density(
     metabolic_network: nx.Graph | nx.DiGraph,
-    metabolic_model: cobra.Model,
-    gene_targets: pd.Series | list | dict,
-    nodes: Iterable[Hashable] | None = None,
-    radius: int = 3,
+    gene_targets: pd.Series | list[str] | dict[str, float],
+    metabolic_model: cobra.Model | None = None,
+    reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
+    radius: int = DEFAULT_RADIUS,
     essential: bool = False,
+    nodes: Iterable[NodeType] | None = None,
+    node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
+    weight: str | None = None,
+    include_node: bool = True,
     processes: int | None = None,
-) -> pd.Series:
+) -> dict[NodeType, float]:
     """
     Determine the density of gene targets in the neighborhood of a nodes
     within a metabolic network
@@ -142,18 +142,19 @@ def gene_target_density(
         Metabolic network in the form of a reaction network, can be
         directed or undirected, but directed graphs will be converted
         to undirected.
-    metabolic_model : cobra.Model
-        Metabolic model from which the metabolic network was constructed
     gene_targets : pd.Series or list or dict
         Targets/counts of targets for genes associated with reactions in the
         metabolic network. If a list each value should be a gene id, and will
         have equal weight. If a dict, should be keyed by gene id, with values
         corresponding to weight. If a pd.Series, should be indexed by gene id,
         with values corresponding to weight.
-    nodes : iterable of hashable, optional
-        Subset of nodes to find the density for, if not provided defaults
-        to all of the nodes in the network
-    radius : int, default=3
+    metabolic_model : cobra.Model, optional
+        Metabolic model from which the metabolic network was constructed
+    reaction_to_gene_set_dict : dict of reaction id to sets of gene ids, optional
+        Map between reaction ids and sets of gene ids. Must provide at least one of
+        `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
+        takes precedence if both are provided.
+    radius : int, default=2
         The radius to use for finding density, specifies how far out from
         a given node targets are counted towards density. A radius of 0 only
         counts the genes associated with the single node.
@@ -164,58 +165,73 @@ def gene_target_density(
         are counted as in the neighborhood. If True, only genes
         which are required for at least 1 reaction within the radius
         are counted as in the neighborhood.
+    nodes : iterable of hashable, optional
+        Subset of nodes to find the density for, if not provided defaults
+        to all of the nodes in the network
+    node_filter : callable of node id->bool or set of node ids, optional
+        Filter nodes in the network to consider when finding neighborhoods.
+        If a Callable, should take node ids as the only argument and return
+        a bool, if True the node will be considered in neighborhoods,
+        if False it will not be. If a set, only nodes in the set will be included
+        in neighborhoods.
+    weight : str, optional
+        If provided indicates the edge parameter to be used as weights
+        when finding distances from a central node to
+        define a neighborhood. If None, all edges are treated as having a weight of 1.
+    include_node : bool, default=True
+        Whether to include the central node in a neighborhood
     processes : int, optional
         Number of processes to use
 
     Returns
     -------
-    target_density : pd.Series
-        Pandas series with index corresponding to reactions in the network,
+    target_density : dict of node id to gene target density
+        Dict with keys corresponding to nodes in the network,
         and values corresponding to the density of gene targets in the
-        neighborhood of that reaction node
+        neighborhood of that node (`nodes` and `node_filter` can be
+        used to only )
     """
-    if isinstance(metabolic_network, nx.DiGraph):
-        metabolic_network = metabolic_network.to_undirected()
-    if not isinstance(metabolic_network, nx.Graph):
-        raise TypeError(
-            f"Metabolic network must be a networkx Graph but received a "
-            f"{type(metabolic_network)}"
-        )
-    if nodes is None:
-        nodes = metabolic_network.nodes
     if isinstance(gene_targets, list):
-        gene_targets = pd.Series(1, index=pd.Index(gene_targets))
-    elif isinstance(gene_targets, dict):
-        gene_targets = pd.Series(gene_targets)
-    density_series = pd.Series(np.nan, index=pd.Index(nodes))
-    rxn_to_gene_set_dict = get_reaction_to_gene_translation_dict(
-        model=metabolic_model, essential=essential
+        gene_targets = {g: 1 for g in gene_targets}
+    elif isinstance(gene_targets, pd.Series):
+        gene_targets = gene_targets.to_dict()  # type: ignore
+
+    def _get_density(gene_ids: set[NodeType]):
+        return float(
+            sum(cast(dict, gene_targets).get(g, 0.0) for g in gene_ids)
+        ) / len(gene_ids)
+
+    return gene_neighborhood_map(
+        _get_density,
+        network=metabolic_network,
+        model=metabolic_model,
+        reaction_to_gene_set_dict=reaction_to_gene_set_dict,
+        radius=radius,
+        essential=essential,
+        nodes=nodes,
+        node_filter=node_filter,
+        weight=weight,
+        include_node=include_node,
+        processes=processes,
     )
-    for node, density in Parallel(n_jobs=processes, return_as="generator")(
-        delayed(_gene_density_worker)(
-            node,
-            network=metabolic_network,
-            gene_targets=gene_targets,
-            radius=radius,
-            rxn_to_gene_set_dict=rxn_to_gene_set_dict,
-        )
-        for node in nodes
-    ):
-        density_series[node] = density
-    return density_series
 
 
 def gene_target_enrichment(
     metabolic_network: nx.Graph | nx.DiGraph,
-    metabolic_model: cobra.Model,
     gene_targets: set[str] | list[str],
-    nodes: Iterable[Hashable] | None = None,
+    metabolic_model: cobra.Model | None = None,
+    reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
+    radius: int = DEFAULT_RADIUS,
+    essential: bool = False,
+    nodes: Iterable[NodeType] | None = None,
+    node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
+    weight: str | None = None,
+    include_node: bool = True,
     metric: Literal["odds-ratio", "p-value"] = "p-value",
     alternative: Literal["two-sided", "less", "greater"] = "greater",
-    radius: int = 3,
-    essential: bool = False,
     processes: int | None = None,
-) -> pd.Series:
+    **kwargs,
+) -> dict[NodeType, float]:
     """
     Determine the enrichment of gene targets in the neighborhood of a reaction
     within a metabolic network
@@ -224,25 +240,18 @@ def gene_target_enrichment(
     ----------
     metabolic_network : nx.Graph or nx.DiGraph
         Metabolic network in the form of a reaction network, can be
-        directed or undirected, but directed graphs will be converted
-        to undirected.
-    metabolic_model : cobra.Model
-        Metabolic model from which the metabolic network was constructed
+        directed or undirected.
     gene_targets : list or set of str
         Targeted genes associated with reactions in the
         metabolic network. Result will be the enrichment in these targeted
         genes in a neighborhood of each reaction in the network
-    nodes : iterable of hashable, optional
-        Subset of nodes to find the enrichment for, if not provided defaults
-        to all of the nodes in the network
-    metric : "odds-ratio" or "p-value", default="p-value"
-        The enrichment metric to return in the Series, either the odds-ratio
-        or the p-value (default) of the Fisher's exact test used to
-        evaluate enrichment
-    alternative : "two-sided", "less", or "greater"
-        The alternative hypothesis for the Fisher's exact test used to
-        evaluate the enrichment
-    radius : int, default=3
+    metabolic_model : cobra.Model, optional
+        Metabolic model from which the metabolic network was constructed
+    reaction_to_gene_set_dict : dict of reaction id to sets of gene ids, optional
+        Map between reaction ids and sets of gene ids. Must provide at least one of
+        `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
+        takes precedence if both are provided.
+    radius : int, default=2
         The radius to use for defining a neighborhood around the reaction for
         finding enrichment, specifies how far out from a given node targets are
         counted towards enrichment. A radius of 0 only counts the genes
@@ -254,67 +263,128 @@ def gene_target_enrichment(
         are counted as in the neighborhood. If True, only genes
         which are required for at least 1 reaction within the radius
         are counted as in the neighborhood.
+    nodes : iterable of hashable, optional
+        Subset of nodes to find the enrichment for, if not provided defaults
+        to all of the nodes in the network
+    node_filter : callable of node id->bool or set of node ids, optional
+        Filter nodes in the network to consider when finding neighborhoods.
+        If a Callable, should take node ids as the only argument and return
+        a bool, if True the node will be considered in neighborhoods,
+        if False it will not be. If a set, only nodes in the set will be included
+        in neighborhoods.
+    weight : str, optional
+        If provided indicates the edge parameter to be used as weights
+        when finding distances from a central node to
+        define a neighborhood. If None, all edges are treated as having a weight of 1.
+    include_node : bool, default=True
+        Whether to include the central node in a neighborhood
+    metric : "odds-ratio" or "p-value", default="p-value"
+        The enrichment metric to return in the Series, either the odds-ratio
+        or the p-value (default) of the Fisher's exact test used to
+        evaluate enrichment
+    alternative : "two-sided", "less", or "greater", default="greater"
+        The alternative hypothesis for the Fisher's exact test used to
+        evaluate the enrichment
     processes : int, optional
         Number of processes to use
+    kwargs
+        Keyword arguments are passed to SciPy's
+        `stats.fisher_exact <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.fisher_exact.html>`_
+        for performing the enrichment test.
 
     Returns
     -------
-    target_enrichment : pd.Series
-        Pandas series with index corresponding to reactions in the network,
-        and values corresponding to either the odds-ratio or the enrichment
-        p-value (depending on the value of metric)
+    target_enrichment : dict of node id to enrichment value
+        Dict with keys corresponding to nodes in the network,
+        and values corresponding to either the odds-ratio or the
+        p-value (depending on the `value` of `metric`)
     """
-    if isinstance(metabolic_network, nx.DiGraph):
-        metabolic_network = metabolic_network.to_undirected()
-    if not isinstance(metabolic_network, nx.Graph):
-        raise TypeError(
-            f"Metabolic network must be a networkx Graph but received a "
-            f"{type(metabolic_network)}"
-        )
     if isinstance(gene_targets, list):
         gene_targets = set(gene_targets)
-    if not isinstance(gene_targets, set):
-        raise TypeError(
-            f"Gene targets must be a list or a set but received a "
-            f"{type(gene_targets)}"
-        )
-    if nodes is None:
-        nodes = metabolic_network.nodes
-    # Filter the gene targets for only those in the model
-    gene_targets &= set(metabolic_model.genes.list_attr("id"))
-    if len(gene_targets) < 1:
-        warn("No targeted genes, p-values all 1.0, odds-ratio all 0.0")
-        if metric == "p-value":
-            return pd.Series(1.0, index=pd.Index(nodes))
-        elif metric == "odds-ratio":
-            return pd.Series(0.0, index=pd.Index(nodes))
-    total_genes = len(metabolic_model.genes.list_attr("id"))
-    enrichment_series = pd.Series(np.nan, index=pd.Index(nodes))
-    rxn_to_gene_set_dict = get_reaction_to_gene_translation_dict(
-        model=metabolic_model, essential=essential
+
+    # Get a dict of reaction to gene set
+    rxn_to_gene_dict = _create_rxn_to_gene_set_dict(
+        model=metabolic_model,
+        reaction_to_gene_set_dict=reaction_to_gene_set_dict,
+        essential=essential,
     )
-    for node, odds, pval in Parallel(
-        n_jobs=processes, return_as="generator_unordered"
-    )(
-        delayed(_gene_enrichment_worker)(
-            node,
-            network=metabolic_network,
-            gene_targets=gene_targets,
-            radius=radius,
-            rxn_to_gene_set_dict=rxn_to_gene_set_dict,
-            total_genes=total_genes,
-            alternative=alternative,
+    # Get the filter set
+    filter_set = _create_filter_set(
+        network=metabolic_network, node_filter=node_filter
+    )
+
+    # Find the community gene set (possible background)
+    rxn_node_set: set[NodeType] = (
+        set(metabolic_network.nodes) & set(rxn_to_gene_dict.keys())
+    ) - filter_set
+    community_gene_set: set[str] = functools.reduce(
+        operator.or_,
+        (rxn_to_gene_dict.get(r, set()) for r in rxn_node_set),
+        set(),
+    )
+    gene_targets &= community_gene_set
+    if len(gene_targets) < 1:
+        warn(
+            "No targeted genes in metabolic network, p-values all 1.0, odds-ratios all 0.0"
         )
-        for node in nodes
-    ):
-        enrichment_series[node] = pval if metric == "p-value" else odds
-    return enrichment_series
+        if nodes is None:
+            nodes = metabolic_network.nodes
+        match metric:
+            case "p-value":
+                return {n: 1.0 for n in nodes}
+            case "odds-ratio":
+                return {n: 0.0 for n in nodes}
+            case m:
+                raise ValueError(
+                    f"Expected either 'p-value' or 'odds-ratio' for metric, received: {m}"
+                )
+    total_gene_count = len(community_gene_set)
+
+    def _get_enrichment(neighborhood_gene_ids: set[NodeType]):
+        fisher_res = stats.fisher_exact(
+            [
+                [
+                    len(neighborhood_gene_ids & gene_targets),
+                    len(gene_targets - neighborhood_gene_ids),
+                ],
+                [
+                    len(neighborhood_gene_ids - gene_targets),
+                    total_gene_count
+                    - len(neighborhood_gene_ids | gene_targets),
+                ],
+            ],
+            alternative=alternative,
+            **kwargs,
+        )
+        match metric:
+            case "p-value":
+                return fisher_res.pvalue
+            case "odds-ratio":
+                return fisher_res.statistic
+            case m:
+                raise ValueError(
+                    f"Excpected 'p-value' or 'statistic' for metric, received {m}"
+                )
+
+    return gene_neighborhood_map(
+        _get_enrichment,
+        network=metabolic_network,
+        model=None,
+        reaction_to_gene_set_dict=rxn_to_gene_dict,
+        radius=radius,
+        essential=essential,
+        nodes=nodes,
+        node_filter=node_filter,
+        weight=weight,
+        include_node=include_node,
+        processes=processes,
+    )
 
 
 def find_dense_clusters(
     network: nx.Graph | nx.DiGraph,
     targets: list[Hashable] | dict[Hashable, float | int] | pd.Series,
-    radius: int = 3,
+    radius: int = DEFAULT_RADIUS,
     top_quantile_cutoff: float = 0.20,
     target_type: Literal["genes", "nodes"] = "nodes",
     **kwargs,
@@ -331,11 +401,11 @@ def find_dense_clusters(
         Series keyed by nodes/genes in the network which can specify
         a target weight. If a dict or Series, values should be ints
         or floats.
-    radius : int
+    radius : int, default=2
         Radius to use for finding density. Specifies how far out from a
         given node targets are counted towards density. A radius of 0
         only counts the single node, and so will just return the
-        `targets` values back unchanged. Default value of 3.
+        `targets` values back unchanged.
     top_quantile_cutoff : float
         Quantile cutoff for defining high density, the nodes within the
         top 100*`quantile`% of label density are considered high
@@ -367,15 +437,19 @@ def find_dense_clusters(
     the graph are then used as the high density clusters.
     """
     if target_type == "nodes":
-        density = node_target_density(
-            network=network, targets=targets, radius=radius, **kwargs
+        density = pd.Series(
+            node_target_density(
+                network=network, targets=targets, radius=radius, **kwargs
+            )
         )
     elif target_type == "genes":
-        density = gene_target_density(
-            metabolic_network=network,
-            gene_targets=targets,
-            radius=radius,
-            **kwargs,
+        density = pd.Series(
+            gene_target_density(
+                metabolic_network=network,
+                gene_targets=targets,  # type: ignore
+                radius=radius,
+                **kwargs,
+            )
         )
     else:
         raise ValueError(
@@ -406,105 +480,3 @@ def find_dense_clusters(
 
 
 # endregion Main Functions
-
-
-# region worker functions
-def _node_density_worker(
-    node: Hashable,
-    network: nx.Graph,
-    targets: pd.Series,
-    radius: int,
-    node_filter: Callable[[Hashable], bool],
-) -> tuple[Hashable, float]:
-    """
-    Calculate the density of targets in a neighborhood
-    """
-    neighborhood = set(
-        filter(
-            node_filter,
-            get_graph_neighborhood(network=network, radius=radius, node=node),
-        )
-    )
-    return node, targets[  # ty: ignore[invalid-argument-type]
-        [idx for idx in neighborhood if idx in targets.index]
-    ].sum() / len(neighborhood)
-
-
-def _gene_density_worker(
-    node: str,
-    network: nx.Graph,
-    gene_targets: pd.Series,
-    radius: int,
-    rxn_to_gene_set_dict: dict[str, set[str]],
-) -> tuple[str, float]:
-    """
-    Calculate the density of gene targets in a neighborhood
-    """
-    gene_neighborhood = _graph_gene_neighborhood(
-        network=network,
-        radius=radius,
-        node=node,
-        rxn_to_gene_set_dict=rxn_to_gene_set_dict,
-    )
-    if len(gene_neighborhood) == 0:
-        return node, 0.0
-    return node, gene_targets[
-        [idx for idx in gene_neighborhood if idx in gene_targets.index]
-    ].sum() / len(gene_neighborhood)
-
-
-def _gene_enrichment_worker(
-    node: str,
-    network: nx.Graph,
-    gene_targets: set[str],
-    radius: int,
-    rxn_to_gene_set_dict: dict[str, set[str]],
-    total_genes: int,
-    alternative: str = "greater",
-) -> tuple[str, float, float]:
-    """
-    Calculate the enrichment of gene targets in a neighborhood
-
-    Returns
-    -------
-    node, odds-ratio, p-value : tuple of str, float, float
-        The node and the results of an enrichment test
-    """
-    gene_neighborhood = _graph_gene_neighborhood(
-        network=network,
-        radius=radius,
-        node=node,
-        rxn_to_gene_set_dict=rxn_to_gene_set_dict,
-    )
-    if len(gene_neighborhood) == 0:
-        return node, 0.0, 1.0
-    # Create contingency table
-    #                      | in targets | not in targets |
-    #  in neighborhood     |            |                |
-    #  not in neighborhood |            |                |
-    contingency_table = np.array(
-        [
-            [
-                len(
-                    gene_targets & gene_neighborhood
-                ),  # In labels and Neighborhood
-                len(
-                    gene_neighborhood - gene_targets
-                ),  # In neighborhood but not labels
-            ],
-            [
-                len(
-                    gene_targets - gene_neighborhood
-                ),  # In targets but not neighborhood
-                total_genes
-                - len(gene_targets | gene_neighborhood),  # in neither
-            ],
-        ]
-    )
-    fisher_res = stats.fisher_exact(
-        table=contingency_table, alternative=alternative
-    )
-    return node, fisher_res.statistic, fisher_res.pvalue
-
-
-# endregion worker functions

@@ -365,7 +365,7 @@ def gene_neighborhood_map(
     weight: str | None = None,
     include_node: bool = True,
     processes: int | None = None,
-):
+) -> dict[NodeType, T]:
     """
     Map a function across gene neighborhoods in a network
 
@@ -418,28 +418,17 @@ def gene_neighborhood_map(
         Dictionary of central nodes to the result of applying the passed function `fn`
         to the neighborhood around it.
     """
-    if callable(node_filter):
-        filter_set = {node for node in network if not node_filter(node)}  # ty: ignore[call-top-callable]
-    elif isinstance(node_filter, set):
-        filter_set = set(network.nodes) - node_filter
-    else:
-        filter_set = set()
+    filter_set = _create_filter_set(network=network, node_filter=node_filter)
 
     if nodes is None:
         nodes = network.nodes
 
     # Get a dict of reaction to gene set
-    if reaction_to_gene_set_dict is None:
-        if model is not None:
-            rxn_to_gene_dict = get_reaction_to_gene_translation_dict(
-                model=model, essential=essential
-            )
-        else:
-            raise ValueError(
-                "Must provide at least one of model or reaction_to_gene_set_dict, but received None"
-            )
-    else:
-        rxn_to_gene_dict = reaction_to_gene_set_dict
+    rxn_to_gene_dict = _create_rxn_to_gene_set_dict(
+        model=model,
+        reaction_to_gene_set_dict=reaction_to_gene_set_dict,
+        essential=essential,
+    )
     map_res: dict[NodeType, T] = {}
     for node_idx, ret_value in joblib.Parallel(
         n_jobs=processes, return_as="generator_unordered"
@@ -610,3 +599,39 @@ def combine_neighborhood_pvalues(
         stats_dict[node] = stat
         pvals_dict[node] = pval
     return CombinePvaluesResult(stats_dict, pvals_dict)
+
+
+########################
+### Helper Functions ###
+########################
+def _create_filter_set(
+    network: nx.Graph | nx.DiGraph,
+    node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
+):
+    if callable(node_filter):
+        filter_set = {node for node in network if not node_filter(node)}  # ty: ignore[call-top-callable]
+    elif isinstance(node_filter, set):
+        filter_set = set(network.nodes) - node_filter
+    else:
+        filter_set = set()
+    return filter_set
+
+
+def _create_rxn_to_gene_set_dict(
+    model: cobra.Model | None = None,
+    reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
+    essential: bool = False,
+):
+    # Get a dict of reaction to gene set
+    if reaction_to_gene_set_dict is None:
+        if model is not None:
+            rxn_to_gene_dict = get_reaction_to_gene_translation_dict(
+                model=model, essential=essential
+            )
+        else:
+            raise ValueError(
+                "Must provide at least one of model or reaction_to_gene_set_dict, but received None"
+            )
+    else:
+        rxn_to_gene_dict = reaction_to_gene_set_dict
+    return rxn_to_gene_dict
