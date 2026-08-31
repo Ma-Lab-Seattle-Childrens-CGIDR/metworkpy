@@ -43,6 +43,10 @@
   "Flux-dependent graphs for metabolic networks" by Mariano Beguerisse-Díaz,
   Gabriel Bosque, Diego Oyarzún, Jesús Picó & Mauricio Barahona. This method
   should produce a similar network, but has not been fully tested yet.
+- Refactor to network density/enrichment functions. Uses neighborhood map
+  functions which allows for some more options in terms of the neighborhood
+  finding/filtering. Now returns dicts instead of pandas Series (can convert to
+  pandas Series with `pd.Series(density_result)`).
 
 ## Version 0.11.0
 
