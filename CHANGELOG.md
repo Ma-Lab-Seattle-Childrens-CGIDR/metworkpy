@@ -47,6 +47,9 @@
   functions which allows for some more options in terms of the neighborhood
   finding/filtering. Now returns dicts instead of pandas Series (can convert to
   pandas Series with `pd.Series(density_result)`).
+- Added parameters to the `corner_sampling` function to allow for adjusting the
+  randomized objective (changing the number of randomly selected reactions,
+  changing the minimum and maximum possible objective weights).
 
 ## Version 0.11.0
 
