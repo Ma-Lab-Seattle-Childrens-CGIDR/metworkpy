@@ -43,6 +43,8 @@
   "Flux-dependent graphs for metabolic networks" by Mariano Beguerisse-Díaz,
   Gabriel Bosque, Diego Oyarzún, Jesús Picó & Mauricio Barahona. This method
   should produce a similar network, but has not been fully tested yet.
+- Added experimental `create_metabolite_mass_flow_network` function inspired by
+  the `create_mass_flow_network` above.
 - Refactor to network density/enrichment functions. Uses neighborhood map
   functions which allows for some more options in terms of the neighborhood
   finding/filtering. Now returns dicts instead of pandas Series (can convert to

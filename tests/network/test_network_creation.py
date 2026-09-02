@@ -23,6 +23,7 @@ from metworkpy.network.network_construction import (
     create_group_neighborhood_network,
     create_mass_flow_network,
     create_metabolic_network,
+    create_metabolite_mass_flow_network,
     create_mutual_information_network,
 )
 
@@ -1320,6 +1321,19 @@ class TestMassFlowNetwork(unittest.TestCase):
 
     def test_mass_flow_flux_network_catch_fire(self):
         test_mfg = create_mass_flow_network(
+            model=self.textbook_model,
+            weight=self.textbook_model.optimize().fluxes,
+        )
+        self.assertIsInstance(test_mfg, nx.DiGraph)
+
+    def test_metabolite_mass_flow_stoich_catch_fire(self):
+        test_mfg = create_metabolite_mass_flow_network(
+            model=self.textbook_model
+        )
+        self.assertIsInstance(test_mfg, nx.DiGraph)
+
+    def test_metabolite_mass_flow_flux_network_catch_fire(self):
+        test_mfg = create_metabolite_mass_flow_network(
             model=self.textbook_model,
             weight=self.textbook_model.optimize().fluxes,
         )

@@ -1702,13 +1702,53 @@ def create_mass_flow_network(
     """
     if weight is None:
         reaction_weights = "stoichiometry"
-        product_scale_fn = functools.partial(_normalize_array, axis=1)
-        reactant_scale_fn = functools.partial(_normalize_array, axis=1)
+        scale_fn = functools.partial(_normalize_array, axis=1)
+        product_scale_fn = scale_fn
+        reactant_scale_fn = scale_fn
     else:
         reaction_weights = weight
         product_scale_fn = None
         reactant_scale_fn = functools.partial(_normalize_array, axis=1)
     return create_reaction_network(
+        model=model,
+        weight=reaction_weights,
+        directed=directed,
+        weight_by_metabolite_stoich=True,
+        currency_metabolites=currency_metabolites,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
+        nodes_to_remove=nodes_to_remove,
+        remove_top_metabolites=remove_top_metabolites,
+        weight_scale_fn=weight_scale_fn,
+        projection_weight=operator.mul,
+        projection_weight_combine=sum,
+        zero_tolerance=zero_tolerance,
+    )
+
+
+def create_metabolite_mass_flow_network(
+    model: cobra.Model,
+    weight: pd.Series | np.typing.ArrayLike | None = None,
+    directed: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
+    nodes_to_remove: Iterable[str] | None = None,
+    remove_top_metabolites: float | None = None,
+    weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
+    zero_tolerance: float = ALMOST_ZERO,
+):
+    if weight is None:
+        reaction_weights = "stoichiometry"
+        scale_fn = functools.partial(_normalize_array, axis=0)
+        product_scale_fn = scale_fn
+        reactant_scale_fn = scale_fn
+    else:
+        reaction_weights = weight
+        product_scale_fn = None
+        reactant_scale_fn = functools.partial(_normalize_array, axis=0)
+    return create_metabolite_network(
         model=model,
         weight=reaction_weights,
         directed=directed,
