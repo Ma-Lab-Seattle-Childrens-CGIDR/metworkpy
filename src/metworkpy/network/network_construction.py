@@ -924,8 +924,7 @@ def create_group_neighborhood_network(
         other). The significance is the -log10 of the p-value. Note that the
         odds_ratio can be infinite.
     directed : bool, default=False
-        Whether the resulting connectivity graph should be directed,
-        ignored unless the input network is directed.
+        Whether the resulting connectivity graph should be directed.
 
     Returns
     -------
@@ -960,13 +959,6 @@ def create_group_neighborhood_network(
     in that group), and counting the number of nodes from
     the other group which are within that neighborhood.
     """
-    # If the input network isn't directed, directed must be False
-    if not isinstance(network, nx.DiGraph):
-        directed = False
-    # If the result shouldn't be directed, get an undirected view
-    # of the input graph
-    if not directed and isinstance(network, nx.DiGraph):
-        network = nx.to_undirected(network)
     # Add the expected nodes
     connectivity_network = nx.Graph()
     connectivity_network.add_nodes_from(groups.keys())
@@ -1123,7 +1115,7 @@ def create_group_distance_network(
     network : nx.Graph or nx.DiGraph
         Network to use when finding distances between nodes
         in the groups. Edge weights are ignored.
-    groups : : dict of Hashable to Iterable of Hashable
+    groups : dict of Hashable to Iterable of Hashable
         Group definitions, must be a map between group names (which
         will be used as index/columns in the matrix), and an iterable of
         group members (which should be nodes in the network)
