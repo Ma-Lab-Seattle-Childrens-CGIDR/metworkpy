@@ -41,8 +41,13 @@ class TestTargetDensity(unittest.TestCase):
         cls.test_labels = {0: 2, 5: 3, 7: 2}
 
     def test_target_density(self):
-        target_density_calc = node_target_density(
-            self.test_graph, targets=self.test_labels, radius=1, processes=1
+        target_density_calc = pd.Series(
+            node_target_density(
+                self.test_graph,
+                targets=self.test_labels,  # ty: ignore[invalid-argument-type]
+                radius=1,
+                processes=1,
+            )
         )
         target_density_exp = pd.Series(
             {
@@ -83,16 +88,16 @@ class TestFindDenseClusters(unittest.TestCase):
     def test_find_dense_clusters(self):
         res_df = find_dense_clusters(
             network=self.test_graph,
-            targets=self.test_labels,
+            targets=self.test_labels,  # ty: ignore[invalid-argument-type]
             radius=0,
             top_quantile_cutoff=3 / 9,
         )
         for i in [0, 5, 7]:
             self.assertTrue(i in res_df.index)
         self.assertFalse(2 in res_df.index)
-        self.assertAlmostEqual(res_df.loc[0, "density"], 2)
-        self.assertAlmostEqual(res_df.loc[5, "density"], 3)
-        self.assertAlmostEqual(res_df.loc[7, "density"], 2)
+        self.assertAlmostEqual(res_df.loc[0, "density"], 2)  # ty: ignore[no-matching-overload]
+        self.assertAlmostEqual(res_df.loc[5, "density"], 3)  # ty: ignore[no-matching-overload]
+        self.assertAlmostEqual(res_df.loc[7, "density"], 2)  # ty: ignore[no-matching-overload]
         self.assertNotEqual(res_df.loc[5, "cluster"], res_df.loc[0, "cluster"])
 
 
@@ -138,6 +143,7 @@ class TestGeneTargetDensity(unittest.TestCase):
 
     def test_gene_target_density_r1(self):
         test_net = self.reaction_network
+        print(f"Is test network directed?: {test_net.is_directed()}")
         test_model = self.model
         # Test with single gene label
         gene_targets = ["g_A_B_D_E"]
@@ -149,9 +155,7 @@ class TestGeneTargetDensity(unittest.TestCase):
             radius=1,
             processes=1,
         )
-        # Since there is only one targeted gene, with a radius of 0,
-        # every reaction but r_A_B_D_E should have a density of 0
-        # and r_A_B_D_E should have a density of 1.0
+        print(test_density)
         for rxn, density in test_density.items():
             if rxn == "r_A_B_D_E" or rxn == "r_C_E_F":
                 self.assertAlmostEqual(density, 0.2, delta=1e-7)
@@ -174,7 +178,7 @@ class TestGeneTargetEnrichment(unittest.TestCase):
         metabolic_network = create_metabolic_network(
             model=cls.model,
             weighted=False,
-            directed=True,
+            directed=False,
         )
         cls.reaction_network = bipartite_project(
             metabolic_network,
@@ -267,24 +271,33 @@ class TestGeneTargetEnrichment(unittest.TestCase):
             radius=1,
             processes=1,
         )
+        print(test_enrichment)
         self.assertAlmostEqual(
             test_enrichment["R_A_e_ex"],
-            stats.fisher_exact(np.array([[0, 1], [2, 7]])).statistic,
+            stats.fisher_exact(
+                np.array([[0, 1], [2, 7]]), alternative="greater"
+            ).statistic,
             delta=1e-7,
         )
         self.assertAlmostEqual(
             test_enrichment["R_B_e_ex"],
-            stats.fisher_exact(np.array([[0, 1], [2, 7]])).statistic,
+            stats.fisher_exact(
+                np.array([[0, 1], [2, 7]]), alternative="greater"
+            ).statistic,
             delta=1e-7,
         )
         self.assertAlmostEqual(
             test_enrichment["R_C_e_ex"],
-            stats.fisher_exact(np.array([[0, 1], [2, 7]])).statistic,
+            stats.fisher_exact(
+                np.array([[0, 1], [2, 7]]), alternative="greater"
+            ).statistic,
             delta=1e-7,
         )
         self.assertAlmostEqual(
             test_enrichment["R_F_e_ex"],
-            stats.fisher_exact(np.array([[0, 1], [2, 7]])).statistic,
+            stats.fisher_exact(
+                np.array([[0, 1], [2, 7]]), alternative="greater"
+            ).statistic,
             delta=1e-7,
         )
         self.assertAlmostEqual(

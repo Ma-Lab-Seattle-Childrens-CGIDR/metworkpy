@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from multiprocessing import cpu_count
-from typing import Protocol, Union
+from typing import Protocol
 
 # External Imports
 import joblib
@@ -25,11 +25,8 @@ class DivergenceFunction(Protocol):
     ) -> float | DivergenceResult: ...
 
 
-ArrayInput = Union[pd.DataFrame, np.ndarray]
-Array1D = Union[
-    pd.Series,
-    np.ndarray[tuple[int], np.dtype[Union[np.float32, np.float64]]],
-]
+ArrayInput = pd.DataFrame | np.ndarray
+Array1D = pd.Series | np.ndarray[tuple[int], np.dtype[np.float32 | np.float64]]
 
 
 def _divergence_array(

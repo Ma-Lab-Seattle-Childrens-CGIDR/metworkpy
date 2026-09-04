@@ -10,7 +10,6 @@ from collections.abc import Hashable, Iterable
 from typing import (
     Literal,
     NamedTuple,
-    Union,
     cast,
 )
 
@@ -23,7 +22,7 @@ import pandas as pd
 
 
 # Type for distance dictionaries used in the clustering
-_DistDict = dict[Hashable, dict[Hashable, Union[int, float]]]
+_DistDict = dict[Hashable, dict[Hashable, int | float]]
 
 
 class GroupClusteringResult(NamedTuple):

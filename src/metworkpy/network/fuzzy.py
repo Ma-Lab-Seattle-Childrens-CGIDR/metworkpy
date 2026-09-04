@@ -7,10 +7,9 @@ from __future__ import annotations
 
 import functools
 import math
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import (
     Any,
-    Callable,
     Literal,
     Protocol,
     cast,
