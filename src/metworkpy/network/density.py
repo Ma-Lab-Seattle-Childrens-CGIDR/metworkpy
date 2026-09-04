@@ -35,7 +35,7 @@ DEFAULT_RADIUS = 2
 
 def node_target_density(
     network: nx.Graph | nx.DiGraph,
-    targets: list[Hashable] | dict[Hashable, float | int] | pd.Series,
+    targets: list[Hashable] | Mapping[Hashable, float | int] | pd.Series,
     radius: int = DEFAULT_RADIUS,
     nodes: Iterable[NodeType] | None = None,
     node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
@@ -103,6 +103,8 @@ def node_target_density(
     )
 
     def _get_density(node_ids: set[NodeType]):
+        if len(node_ids) == 0:
+            return 0.0
         return float(
             sum(cast(dict, targets).get(n, 0.0) for n in node_ids)
         ) / len(node_ids)
@@ -121,7 +123,7 @@ def node_target_density(
 
 def gene_target_density(
     metabolic_network: nx.Graph | nx.DiGraph,
-    gene_targets: pd.Series | list[str] | dict[str, float],
+    gene_targets: pd.Series | list[str] | Mapping[str, float],
     metabolic_model: cobra.Model | None = None,
     reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
     radius: int = DEFAULT_RADIUS,
@@ -197,6 +199,8 @@ def gene_target_density(
         gene_targets = gene_targets.to_dict()  # type: ignore
 
     def _get_density(gene_ids: set[NodeType]):
+        if len(gene_ids) == 0:
+            return 0.0
         return float(
             sum(cast(dict, gene_targets).get(g, 0.0) for g in gene_ids)
         ) / len(gene_ids)
@@ -299,8 +303,7 @@ def gene_target_enrichment(
         and values corresponding to either the odds-ratio or the
         p-value (depending on the `value` of `metric`)
     """
-    if isinstance(gene_targets, list):
-        gene_targets = set(gene_targets)
+    gene_targets = set(gene_targets)
 
     # Get a dict of reaction to gene set
     rxn_to_gene_dict = _create_rxn_to_gene_set_dict(
@@ -345,10 +348,10 @@ def gene_target_enrichment(
             [
                 [
                     len(neighborhood_gene_ids & gene_targets),
-                    len(gene_targets - neighborhood_gene_ids),
+                    len(neighborhood_gene_ids - gene_targets),
                 ],
                 [
-                    len(neighborhood_gene_ids - gene_targets),
+                    len(gene_targets - neighborhood_gene_ids),
                     total_gene_count
                     - len(neighborhood_gene_ids | gene_targets),
                 ],
@@ -383,7 +386,7 @@ def gene_target_enrichment(
 
 def find_dense_clusters(
     network: nx.Graph | nx.DiGraph,
-    targets: list[Hashable] | dict[Hashable, float | int] | pd.Series,
+    targets: list[Hashable] | Mapping[Hashable, float | int] | pd.Series,
     radius: int = DEFAULT_RADIUS,
     top_quantile_cutoff: float = 0.20,
     target_type: Literal["genes", "nodes"] = "nodes",

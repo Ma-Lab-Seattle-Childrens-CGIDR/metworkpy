@@ -295,12 +295,7 @@ def neighborhood_map(
         Dictionary of central nodes to the result of applying the passed function `fn`
         to the neighborhood around it.
     """
-    if callable(node_filter):
-        filter_set = {node for node in network if not node_filter(node)}  # ty: ignore[call-top-callable]
-    elif isinstance(node_filter, set):
-        filter_set = set(network.nodes) - node_filter
-    else:
-        filter_set = set()
+    filter_set = _create_filter_set(network, node_filter)
 
     if nodes is None:
         nodes = network.nodes
@@ -424,11 +419,17 @@ def gene_neighborhood_map(
         nodes = network.nodes
 
     # Get a dict of reaction to gene set
-    rxn_to_gene_dict = _create_rxn_to_gene_set_dict(
-        model=model,
-        reaction_to_gene_set_dict=reaction_to_gene_set_dict,
-        essential=essential,
-    )
+    # Filtering out empty sets, since if a key isn't
+    # found an empty set is assumed
+    rxn_to_gene_dict = {
+        r: gs
+        for r, gs in _create_rxn_to_gene_set_dict(
+            model=model,
+            reaction_to_gene_set_dict=reaction_to_gene_set_dict,
+            essential=essential,
+        ).items()
+        if len(gs) > 0
+    }
     map_res: dict[NodeType, T] = {}
     for node_idx, ret_value in joblib.Parallel(
         n_jobs=processes, return_as="generator_unordered"
@@ -462,14 +463,14 @@ def _gene_neighborhood_worker(
 ):
     # Find the neighborhood around the node
     if include_node:
-        neighborhood: set[str] = rxn_to_gene_dict.get(node, set())
+        neighborhood: set[str] = rxn_to_gene_dict.get(node, set()).copy()
     else:
         neighborhood: set[str] = set()
     if weight is None:
         for _, successors in nx.bfs_successors(
             network, source=node, depth_limit=int(radius)
         ):
-            for n in set(successors) & filter_set:
+            for n in set(successors) - filter_set:
                 neighborhood.update(rxn_to_gene_dict.get(n, set()))
     else:
         for n in (
@@ -478,10 +479,9 @@ def _gene_neighborhood_worker(
                     network, source=node, cutoff=radius, weight=weight
                 ).keys()
             )
-            & filter_set
+            - filter_set
         ):
             neighborhood.update(rxn_to_gene_dict.get(n, set()))
-
     return node, fn(neighborhood)
 
 
