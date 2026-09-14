@@ -58,6 +58,14 @@
   neighborhood size (neighborhoods smaller than this will result in 0.0)
 - Added function for finding target node enrichment (`node_target_enrichment`),
   finds the enrichment of target node set within neighborhoods of a network.
+- Added option for metabolic network construction methods to split the reaction
+  nodes into a forward and reverse node, representing the two directions the
+  reactions could potentially operate in. Also, added an option for pruning lone
+  nodes to the `create_metabolic_network` function, which allows for removing
+  all nodes which are connected to no other nodes. This can allow for removing
+  either forward/reverse nodes for reactions which can only operate in one
+  direction (since the node representing the other direction will not be
+  connected to any other nodes).
 
 ## Version 0.11.0
 
