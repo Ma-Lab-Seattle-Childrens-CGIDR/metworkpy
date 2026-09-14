@@ -280,7 +280,7 @@ class TestAdjMatDWFVA(unittest.TestCase):
         self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
-        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)  # ty: ignore[invalid-argument-type]
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
 class TestAdjMatDWpFBA(unittest.TestCase):
@@ -351,7 +351,7 @@ class TestAdjMatDWpFBA(unittest.TestCase):
         self.assertIsInstance(self.adj_mat, pd.DataFrame)
 
     def test_known(self):
-        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)  # ty: ignore[invalid-argument-type]
+        pd.testing.assert_frame_equal(self.tiny_known, self.tiny_adj_mat)
 
 
 class TestAdjMatDWStoichiometry(unittest.TestCase):
@@ -646,6 +646,7 @@ class TestCreateNetwork(unittest.TestCase):
         tiny_network = create_metabolic_network(
             model=self.tiny_model, weighted=False, directed=True
         )
+        print(tiny_network.nodes)
         self.assertEqual(tiny_network["C"]["R_C_ex"]["weight"], 1)
         with self.assertRaises(KeyError):
             _ = tiny_network["R_C_ex"]["C"]
@@ -1225,11 +1226,6 @@ class TestCurrencyMetabolites(unittest.TestCase):
             self.assertFalse(graph.has_edge(u, v))
 
     def test_single_pair(self):
-        print(
-            cobra.util.create_stoichiometric_matrix(
-                self.curr_met_model, "DataFrame"
-            )
-        )
         test_graph_curr_removed = create_metabolic_network(
             model=self.curr_met_model,
             weight=None,

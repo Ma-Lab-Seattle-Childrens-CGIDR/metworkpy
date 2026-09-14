@@ -155,6 +155,7 @@ def create_metabolic_network(
     | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
+    split_direction: bool = False,
     weight_by_metabolite_stoich: bool = True,
     currency_metabolites: Iterable[
         str | tuple[str | Iterable[str], str | Iterable[str]]
@@ -167,6 +168,7 @@ def create_metabolic_network(
     nodes_to_remove: Iterable[str] | None = None,
     remove_top_metabolites: float | None = None,
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
+    prune_lone_nodes: bool = False,
     zero_tolerance: float = ALMOST_ZERO,
     **kwargs,
 ) -> nx.Graph | nx.DiGraph:
@@ -189,6 +191,12 @@ def create_metabolic_network(
         See `Notes` for more information.
     directed : bool
         Whether the network should be directed
+    split_direction : bool,default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If True, each reaction will be represented by 2 nodes,
+        which will have ids that are the reaction id, with either
+        '_FORWARD', or '_REVERSE' as a suffix.
     weight_by_metabolite_stoich: bool, default=true
         whether the reaction weights should be multiplied by
         a metabolite's stoichiometric coefficient to find
@@ -209,13 +217,17 @@ def create_metabolic_network(
     product_scale_fn, reactant_scale_fn : callable of coo_array to coo_array, optional
         if provided function will be called on the reactant and product
         edge weight arrays (both with columns for reactions and rows for
-        metabolites). the product array is all the weights of edges connecting a
+        metabolites). The product array is all the weights of edges connecting a
         reaction to a metabolite, and the reactant array represents all of the
-        edges connecting a metabolite to a reaction. these functions must return a
-        coo_array of the same dimension of the passed array. this allows for rescaling
+        edges connecting a metabolite to a reaction. These functions must return a
+        coo_array of the same dimension of the passed array. This allows for rescaling
         or otherwise modifying the edge weights prior to network construction if that is desired.
+        Note that if `split_direction` is True, then there will be a column for both
+        the forward and the reverse reaction.
     nodes_to_remove : Iterable of str, optional
-        Iterable of nodes which will be removed from the network before it is returned
+        Iterable of nodes which will be removed from the network before it is returned.
+        Note, that if `split_direction` is True, then the reaction nodes have
+        '_FORWARD' and '_REVERSE' suffixes.
     remove_top_metabolites : int or float, optional
         Number of top most connected metabolites to remove. If an integer that
         is 1 or greater, that number of top connected metabolites (based on the
@@ -230,7 +242,8 @@ def create_metabolic_network(
         of the node removal caused by passing `nodes_to_remove`. This can be useful
         to remove highly connected metabolites which can distort the topology of
         the network. Such as common currency metabolites like ATP, or solvent
-        metabolites like H20.
+        metabolites like H20. Note that this doesn't depend on `split_direction`,
+        (so each reaction is only counted a single time).
     weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
         Optional function for scaling the weights, called with a 1-D numpy array of all the
         weights in the network, and must return a 1-D numpy array of the same size.
@@ -238,6 +251,8 @@ def create_metabolic_network(
         (e.g. use a minmax scalar so they are all between 0 and 1),
         or to invert the direction of the weights (so larger weights become smaller) by
         taking the reciprocal of all the weights.
+    prune_lone_nodes : bool,default=False
+        Remove nodes which have degree of 0.
     zero_tolerance : float
         Threshold, below which to consider a (absolute value of a) bound/flux
         to be 0
@@ -253,7 +268,10 @@ def create_metabolic_network(
     nx.Graph or nx.DiGraph
         The bipartite network constructed from the provided `cobra.Model`,
         with nodes for reactions and metabolites (using the reaction/metabolite id
-        as the node id).
+        as the node id). If `split_direction` is True, then there will be two nodes
+        for each reaction, one with '_FORWARD' as a suffix representing
+        the reaction in the forward direction, and one with '_REVERSE'
+        representing the reaction in the reverse direction.
 
     Notes
     -----
@@ -301,6 +319,7 @@ def create_metabolic_network(
             model=model,
             weight=weight,
             directed=directed,
+            split_direction=split_direction,
             array_type="coo",
             zero_tolerance=zero_tolerance,
             weight_by_metabolite_stoich=weight_by_metabolite_stoich,
@@ -331,16 +350,39 @@ def create_metabolic_network(
         adj_mat, create_using=nx.DiGraph if directed else nx.Graph
     )
 
-    met_network = nx.relabel_nodes(
-        met_network,
-        {
-            idx: node.id
-            for idx, node in enumerate(
-                itertools.chain(model.reactions, model.metabolites)
-            )
-        },
-    )
+    if split_direction:
+        met_network = nx.relabel_nodes(
+            met_network,
+            {
+                idx: node
+                for idx, node in enumerate(
+                    itertools.chain(
+                        (f"{r.id}_FORWARD" for r in model.reactions),
+                        (f"{r.id}_REVERSE" for r in model.reactions),
+                        (x.id for x in model.metabolites),
+                    )
+                )
+            },
+        )
+    else:
+        met_network = nx.relabel_nodes(
+            met_network,
+            {
+                idx: node
+                for idx, node in enumerate(
+                    itertools.chain(
+                        (r.id for r in model.reactions),
+                        (x.id for x in model.metabolites),
+                    )
+                )
+            },
+        )
+
     met_network.remove_nodes_from(nodes_to_remove)
+    if prune_lone_nodes:
+        met_network.remove_nodes_from(
+            [n for (n, deg) in met_network.degree() if deg == 0]
+        )
     return met_network
 
 
@@ -353,6 +395,7 @@ def create_reaction_network(
     | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
+    split_direction: bool = False,
     weight_by_metabolite_stoich: bool = True,
     currency_metabolites: Iterable[
         str | tuple[str | Iterable[str], str | Iterable[str]]
@@ -367,6 +410,7 @@ def create_reaction_network(
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
     projection_weight: str | Callable[[float, float], float] | None = None,
     projection_weight_combine: Callable[[list[float]], float] | None = None,
+    prune_lone_nodes: bool = False,
     zero_tolerance: float = ALMOST_ZERO,
     **kwargs,
 ):
@@ -390,6 +434,12 @@ def create_reaction_network(
         See `Notes` for more information.
     directed : bool
         Whether the network should be directed
+    split_direction : bool,default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If True, each reaction will be represented by 2 nodes,
+        which will have ids that are the reaction id, with either
+        '_FORWARD', or '_REVERSE' as a suffix.
     weight_by_metabolite_stoich: bool, default=True
         Whether the reaction weights should be multiplied by
         a metabolite's stoichiometric coefficient to find
@@ -454,6 +504,8 @@ def create_reaction_network(
         a list of possible weights, and returns a single final weight. Python
         builtin `max` and `min` can be used for this. If not provided,
         `max` is used.
+    prune_lone_nodes : bool,default=False
+        Remove nodes which have degree of 0.
     zero_tolerance : float
         Threshold, below which to consider a (absolute value of a) bound/flux
         to be 0
@@ -525,18 +577,30 @@ def create_reaction_network(
         model=model,
         weight=weight,
         directed=directed,
-        nodes_to_remove=nodes_to_remove,
-        remove_top_metabolites=remove_top_metabolites,
-        weight_scale_fn=weight_scale_fn,
-        zero_tolerance=zero_tolerance,
+        split_direction=split_direction,
         weight_by_metabolite_stoich=weight_by_metabolite_stoich,
         currency_metabolites=currency_metabolites,
         product_scale_fn=product_scale_fn,
         reactant_scale_fn=reactant_scale_fn,
+        nodes_to_remove=nodes_to_remove,
+        remove_top_metabolites=remove_top_metabolites,
+        weight_scale_fn=weight_scale_fn,
+        prune_lone_nodes=prune_lone_nodes,
+        zero_tolerance=zero_tolerance,
         **kwargs,
     )
     # Get the reaction nodes
-    rxn_nodes = set(metabolic_network.nodes) & {r.id for r in model.reactions}
+    if not split_direction:
+        rxn_nodes = set(metabolic_network.nodes) & {
+            r.id for r in model.reactions
+        }
+    else:
+        rxn_nodes = set(metabolic_network.nodes) & set(
+            itertools.chain(
+                (f"{r.id}_FORWARD" for r in model.reactions),
+                (f"{r.id}_REVERSE" for r in model.reactions),
+            )
+        )
 
     # Project onto only reactions
     if weight is not None:
@@ -1354,6 +1418,7 @@ def create_adjacency_matrix(
     | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
+    split_direction: bool = False,
     weight_by_metabolite_stoich: bool = True,
     currency_metabolites: Iterable[
         str | tuple[str | Iterable[str], str | Iterable[str]]
@@ -1388,6 +1453,16 @@ def create_adjacency_matrix(
         See `Notes` for more information.
     directed : bool
         Whether the network should be directed
+    split_direction : bool,default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If False, the result will be a matrix where the index
+        represents metabolites and then reactions (ordered according
+        to their order in the cobra Model object), and the edge
+        weights will be the maximum from the reaction to the metabolite
+        in either the forward or reverse direction. If True, the
+        result will be a matrix where the index represents the forward
+        reactions, then the reverse reactions, and finally the metabolites.
     weight_by_metabolite_stoich: bool, default=True
         Whether the reaction weights should be multiplied by
         a metabolite's stoichiometric coefficient to find
@@ -1433,6 +1508,8 @@ def create_adjacency_matrix(
     pd.DataFrame or np.ndarray or scipy.sparse.sparray
         The adjacency matrix, the index is ordered based on the
         cobra model's order, reactions first, and then metabolites.
+        If `split_direction` is True, then the order will be
+        forward reactions, reverse reactions, metabolites.
 
     Notes
     -----
@@ -1567,6 +1644,7 @@ def create_adjacency_matrix(
         reverse=reverse,
         directed=directed,
         weighted=weighted,
+        split_direction=split_direction,
         weight_by_metabolite_stoich=weight_by_metabolite_stoich,
         currency_metabolites=currency_metabolites,
         product_scale_fn=product_scale_fn,
@@ -1608,6 +1686,7 @@ def create_mass_flow_network(
     model: cobra.Model,
     weight: pd.Series | np.typing.ArrayLike | None = None,
     directed: bool = True,
+    split_direction: bool = False,
     currency_metabolites: Iterable[
         str | tuple[str | Iterable[str], str | Iterable[str]]
     ]
@@ -1631,6 +1710,12 @@ def create_mass_flow_network(
         which will be used to create a flux based mass flow network.
     directed : bool
         Whether the network should be directed
+    split_direction : bool, default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If True, each reaction will be represented by 2 nodes,
+        which will have ids that are the reaction id, with either
+        '_FORWARD', or '_REVERSE' as a suffix.
     currency_metabolites : iterable of currency metabolite groups, optional
         An iterable of currency metabolite groups to remove. These are 2-tuples,
         representing the forms of the metabolite on the 2 sides of a reaction
@@ -1707,6 +1792,7 @@ def create_mass_flow_network(
         model=model,
         weight=reaction_weights,
         directed=directed,
+        split_direction=True,
         weight_by_metabolite_stoich=True,
         currency_metabolites=currency_metabolites,
         product_scale_fn=product_scale_fn,
@@ -1768,6 +1854,7 @@ def _create_sparse_adjacency_matrix(
     reverse: sparse.sparray,
     directed: bool = True,
     weighted: bool = True,
+    split_direction: bool = False,
     weight_by_metabolite_stoich: bool = True,
     currency_metabolites: Iterable[
         str | tuple[str | Iterable[str], str | Iterable[str]]
@@ -1799,6 +1886,18 @@ def _create_sparse_adjacency_matrix(
         Whether the adjacency matrix should be weighted. If False,
         all weights above `zero_tolerance` are set to 1, and
         all weights below `zero_tolerance` are set to 0.
+    split_direction : bool,default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If False, the result will be a matrix where the index
+        represents reactions and then metabolites (ordered according
+        to their order in the cobra Model object), and the edge
+        weights will be the maximum from the reaction to the metabolite
+        in either the forward or reverse direction (these should generally
+        either be equal, for catalysts which are not consumed, or one
+        should be 0). If True, the result will be a matrix where
+        the index represents the forward reactions, then the reverse reactions,
+        then the metabolites.
     weight_by_metabolite_stoich: bool, default=True
         Whether the reaction weights should be multiplied by
         a metabolite's stoichiometric coefficient to find
@@ -1831,7 +1930,10 @@ def _create_sparse_adjacency_matrix(
     Returns
     -------
     adjacency_matrix : sparse.coo_array
-        The adjacency matrix in the form of a sparse COOrdinate array
+        The adjacency matrix in the form of a sparse COOrdinate array.
+        If `split_direction` is False, the order of the index reactions
+        and then metabolites. If `split_direction` is True, the order
+        will be forward reactions, then reverse reactions, and then metabolites.
     """
     # Get the sparse stoichiometric matrix
     stoichiometric_matrix = _create_stoichiometric_matrix(model=model)
@@ -1844,6 +1946,8 @@ def _create_sparse_adjacency_matrix(
         stoichiometric_matrix = stoichiometric_matrix.sign()  # ty: ignore[unresolved-attribute]
     # Get the number of reactions, and metabolites
     n_met, n_rxns = stoichiometric_matrix.shape
+    if split_direction:
+        n_rxns *= 2
     # Convert Forward and reverse to csr
     forward = sparse.csr_array(forward.reshape((1, -1)))  # ty: ignore[unresolved-attribute]
     reverse = sparse.csr_array(
@@ -1856,13 +1960,13 @@ def _create_sparse_adjacency_matrix(
     )
 
     # Split the stoichiomety into products and reactants
-    product_array = stoichiometric_matrix
-    reactant_array = stoichiometric_matrix.copy()
+    product_array: sparse.coo_array = stoichiometric_matrix
+    reactant_array: sparse.coo_array = stoichiometric_matrix.copy()
     product_array.data[product_array.data < 0.0] = 0.0
     reactant_array.data[reactant_array.data > 0.0] = 0.0
     product_array.eliminate_zeros()
     reactant_array.eliminate_zeros()
-    reactant_array = reactant_array * -1
+    reactant_array: sparse.coo_array = abs(reactant_array)
 
     # Convert to csr arrays for the multiplication
     product_array = product_array.tocsr()
@@ -1876,11 +1980,22 @@ def _create_sparse_adjacency_matrix(
     product_reverse: sparse.coo_array = (reactant_array * reverse).tocoo()
 
     # Create the reaction->metabolite, and the metabolite->reaction
-    # matrices, both of which will
-    product_array: sparse.coo_array = product_forward.maximum(product_reverse)
-    reactant_array: sparse.coo_array = reactant_forward.maximum(
-        reactant_reverse
-    )
+    # matrices
+    # If not splitting direction, take the maximum connection weight,
+    # if splitting direction, concatenate the arrays
+    if not split_direction:
+        # Take the maximum connection weight (this should only be between zero and non-zero)
+        product_array: sparse.coo_array = product_forward.maximum(
+            product_reverse
+        )
+        reactant_array: sparse.coo_array = reactant_forward.maximum(
+            reactant_reverse
+        )
+    else:
+        # Concatenate the arrays to create an array with rows representing metabolites,
+        # and columns representing [<Reactions forward><Reactions reverse>]
+        product_array = sparse.hstack([product_forward, product_reverse])
+        reactant_array = sparse.hstack([reactant_forward, reactant_reverse])
     if product_scale_fn is not None:
         product_array = product_scale_fn(product_array)
     if reactant_scale_fn is not None:
