@@ -1695,7 +1695,7 @@ def create_mass_flow_network(
     remove_top_metabolites: float | None = None,
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
     zero_tolerance: float = ALMOST_ZERO,
-):
+) -> nx.Graph | nx.DiGraph:
     """
     Create a mass flow network from the metabolic model,
     either based on stoichiometry or a provided flux vector
@@ -1745,13 +1745,6 @@ def create_mass_flow_network(
         to remove highly connected metabolites which can distort the topology of
         the network. Such as common currency metabolites like ATP, or solvent
         metabolites like H20.
-    weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
-        Optional function for scaling the weights, called with a 1-D numpy array of all the
-        weights in the network, and must return a 1-D numpy array of the same size.
-        This could be used to make the weights all fall in a specific range
-        (e.g. use a minmax scalar so they are all between 0 and 1),
-        or to invert the direction of the weights (so larger weights become smaller) by
-        taking the reciprocal of all the weights.
     projection_weight : str | Callable[[float, float], float] | None
         How to weight the projected graph. If None, the projected graph
         will not be weighted. If "ratio", the edges will be weighted
@@ -1767,6 +1760,13 @@ def create_mass_flow_network(
         a list of possible weights, and returns a single final weight. Python
         builtin `max` and `min` can be used for this. If not provided,
         `max` is used.
+    weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
+        Optional function for scaling the weights, called with a 1-D numpy array of all the
+        weights in the network, and must return a 1-D numpy array of the same size.
+        This could be used to make the weights all fall in a specific range
+        (e.g. use a minmax scalar so they are all between 0 and 1),
+        or to invert the direction of the weights (so larger weights become smaller) by
+        taking the reciprocal of all the weights.
     zero_tolerance : float
         Threshold, below which to consider a (absolute value of a) bound/flux
         to be 0 (this value MUST BE GREATER THAN 0).
@@ -1788,11 +1788,17 @@ def create_mass_flow_network(
         reaction_weights = weight
         product_scale_fn = None
         reactant_scale_fn = functools.partial(_normalize_array, axis=1)
+
+    n_met = len(model.metabolites)
+
+    def _combine_weights(weights: list[float]):
+        return np.sum(weights) / n_met
+
     return create_reaction_network(
         model=model,
         weight=reaction_weights,
         directed=directed,
-        split_direction=True,
+        split_direction=split_direction,
         weight_by_metabolite_stoich=True,
         currency_metabolites=currency_metabolites,
         product_scale_fn=product_scale_fn,
@@ -1801,7 +1807,7 @@ def create_mass_flow_network(
         remove_top_metabolites=remove_top_metabolites,
         weight_scale_fn=weight_scale_fn,
         projection_weight=operator.mul,
-        projection_weight_combine=sum,
+        projection_weight_combine=_combine_weights,
         zero_tolerance=zero_tolerance,
     )
 

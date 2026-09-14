@@ -25,6 +25,7 @@ from metworkpy.network.network_construction import (
     create_metabolite_mass_flow_network,
     create_mutual_information_network,
     create_target_set_neighborhood_network,
+    _normalize_array,
 )
 
 # Local Imports
@@ -1310,6 +1311,33 @@ class TestMassFlowNetwork(unittest.TestCase):
             pathlib.Path(__file__).parent.parent.absolute() / "data"
         )
         cls.textbook_model = read_model(cls.data_path / "textbook_model.xml")
+        # Create the network from Fig1 of https://www.nature.com/articles/s41540-018-0067-y
+        rxn_dict = {
+            f"R{idx}": cobra.Reaction(
+                f"R{idx}", f"Reaction {idx}", lower_bound=0, upper_bound=50
+            )
+            for idx in range(1, 9)
+        }
+        # Make R4 reversible
+        rxn_dict["R4"].bounds = (-50, 50)
+        # Create metabolites
+        met_dict = {
+            f"X{idx}": cobra.Metabolite(f"X{idx}") for idx in range(1, 6)
+        }
+        # Add Metabolites to appropriate reactions
+        rxn_dict["R1"].add_metabolites({met_dict["X1"]: 1})
+        rxn_dict["R2"].add_metabolites({met_dict["X1"]: -1, met_dict["X2"]: 1})
+        rxn_dict["R3"].add_metabolites({met_dict["X2"]: -1, met_dict["X3"]: 1})
+        rxn_dict["R4"].add_metabolites({met_dict["X2"]: -1, met_dict["X4"]: 1})
+        rxn_dict["R5"].add_metabolites({met_dict["X3"]: -1, met_dict["X5"]: 1})
+        rxn_dict["R6"].add_metabolites({met_dict["X4"]: -1, met_dict["X5"]: 1})
+        rxn_dict["R7"].add_metabolites({met_dict["X4"]: -1})
+        rxn_dict["R8"].add_metabolites(
+            {met_dict["X3"]: -1, met_dict["X4"]: -2, met_dict["X5"]: -1}
+        )
+        # Create the model
+        cls.mass_flow_graph_model = cobra.Model()
+        cls.mass_flow_graph_model.add_reactions(rxn_dict.values())
 
     def test_mass_flow_stoich_network_catch_fire(self):
         test_mfg = create_mass_flow_network(model=self.textbook_model)
@@ -1334,6 +1362,101 @@ class TestMassFlowNetwork(unittest.TestCase):
             weight=self.textbook_model.optimize().fluxes,
         )
         self.assertIsInstance(test_mfg, nx.DiGraph)
+
+    def test_normalize_array(self):
+        arr = sparse.dok_array((4, 3))
+        arr[0, 0] = 1
+        arr[0, 2] = 9
+        arr[1, 1] = 2
+        arr[1, 2] = 3
+        arr[2, 2] = 1
+        arr[3, 0] = 1
+        arr[3, 2] = 7
+        # Normalize the rows
+        row_norm = _normalize_array(arr.tocoo(), axis=1).todense()
+        assert row_norm.shape[0] == 4 and row_norm.shape[1] == 3, (
+            "Normalize array returned incorrect sized array"
+        )
+        expected_row_norm = np.array(
+            [
+                [0.1, 0, 0.9],
+                [0, 0.4, 0.6],
+                [0, 0, 1],
+                [1.0 / 8.0, 0, 7.0 / 8.0],
+            ]
+        )
+        np.testing.assert_allclose(expected_row_norm, row_norm)
+        # Normalize the columns
+        col_norm = _normalize_array(arr.tocoo(), axis=0).todense()
+        assert col_norm.shape[0] == 4 and col_norm.shape[1] == 3, (
+            "Normalize array returned incorrect sized array"
+        )
+        expected_col_norm = np.array(
+            [
+                [0.5, 0, 9.0 / 20.0],
+                [0, 1.0, 3.0 / 20.0],
+                [0, 0, 1.0 / 20.0],
+                [0.5, 0, 7.0 / 20.0],
+            ]
+        )
+        np.testing.assert_allclose(expected_col_norm, col_norm)
+
+    def test_mass_flow_nfg(self):
+        # Test the mass flow graph from Fig1 of https://www.nature.com/articles/s41540-018-0067-y
+        test_model = self.mass_flow_graph_model
+        # Create the normalized flow graph (nfg)
+        test_nfg: nx.DiGraph = create_mass_flow_network(
+            model=test_model,
+            weight=None,
+            directed=True,
+            split_direction=True,
+        )  # ty: ignore[invalid-assignment]
+        expected_edges = {
+            "R1_FORWARD": ["R2_FORWARD"],
+            "R2_FORWARD": ["R3_FORWARD", "R4_FORWARD"],
+            "R3_FORWARD": ["R5_FORWARD", "R8_FORWARD"],
+            "R4_FORWARD": [
+                "R6_FORWARD",
+                "R7_FORWARD",
+                "R8_FORWARD",
+                "R4_REVERSE",
+            ],
+            "R5_FORWARD": ["R8_FORWARD"],
+            "R6_FORWARD": ["R8_FORWARD"],
+            "R4_REVERSE": ["R3_FORWARD", "R4_FORWARD"],
+        }
+        for u, v_list in expected_edges.items():
+            for v in v_list:
+                assert test_nfg.has_edge(u, v), f"Missing edge ({u},{v})"
+        for u, v in itertools.product(test_nfg, test_nfg):
+            if u not in expected_edges:
+                assert not test_nfg.has_edge(u, v), (
+                    f"Incorrectly has edge ({u}, {v})"
+                )
+                continue
+            if v not in expected_edges[u]:
+                assert not test_nfg.has_edge(u, v), (
+                    f"Incorrectly has edge ({u}, {v})"
+                )
+                continue
+        # Check the weights
+        for u, v, w in [
+            ("R1_FORWARD", "R2_FORWARD", 0.2),
+            ("R2_FORWARD", "R3_FORWARD", 0.05),
+            ("R2_FORWARD", "R4_FORWARD", 0.05),
+            ("R3_FORWARD", "R5_FORWARD", 0.1),
+            ("R4_FORWARD", "R6_FORWARD", 0.04),
+            ("R4_FORWARD", "R7_FORWARD", 0.04),
+            ("R4_FORWARD", "R8_FORWARD", 0.08),
+            ("R4_FORWARD", "R4_REVERSE", 0.04),
+            ("R5_FORWARD", "R8_FORWARD", 0.1),
+            ("R6_FORWARD", "R8_FORWARD", 0.1),
+            ("R4_REVERSE", "R3_FORWARD", 0.05),
+            ("R4_REVERSE", "R4_FORWARD", 0.05),
+        ]:
+            assert np.isclose(test_nfg[u][v]["weight"], w), (
+                f"{u}->{v} weight incorrect, expected {w}, actual: {test_nfg[u][v]['weight']}"
+            )
 
 
 # region Mutual Information Network
