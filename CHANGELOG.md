@@ -66,6 +66,12 @@
   either forward/reverse nodes for reactions which can only operate in one
   direction (since the node representing the other direction will not be
   connected to any other nodes).
+- Added option for metabolite network creation methods to return networks as a
+  long-form dataframe, that is with one column which represents the metabolite
+  and another column which represents the members (either reactions or genes).
+  This can optionally include a column for weights depending on the method. This
+  allows for simplified interfacing to libraries which expect this format for
+  describing networks, for example decouplerpy.
 
 ## Version 0.11.0
 

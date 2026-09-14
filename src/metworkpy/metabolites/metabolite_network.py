@@ -31,7 +31,7 @@ from metworkpy.utils import (
 def find_metabolite_synthesis_network_reactions(
     model: cobra.Model,
     method: Literal["pfba", "gfba", "essential"] = "pfba",
-    return_type: Literal["dict", "DataFrame"] = "DataFrame",
+    return_type: Literal["dict", "DataFrame", "long"] = "DataFrame",
     metabolites: Iterable[str] | None = None,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
@@ -107,6 +107,11 @@ def find_metabolite_synthesis_network_reactions(
         to the flux associated with that reaction in the parsimonious/geometric
         FBA solution when optimizing for the production of the metabolite.
 
+        If `return_type` is 'long', returns the metabolite networks as a longform
+        dataframe, which includes columns for 'metabolite', 'gene', and optionally
+        'weight' (if method is pfba or gfba). Each row indicates that the
+        'gene' is in the 'metabolite' network with a weight of 'weight'.
+
     See Also
     --------
     find_metabolite_synthesis_network_genes : Equivalent method with genes
@@ -179,14 +184,44 @@ def find_metabolite_synthesis_network_reactions(
         return res_df
     elif return_type == "dict":
         if method == "essential":
-            return_dict = {}
+            return_dict: dict[str, list[str]] = {}
             for metabolite, rxn_id_series in res_df.items():
                 return_dict[metabolite] = list(
                     rxn_id_series[rxn_id_series].index
-                )
+                )  # ty: ignore[invalid-assignment]
             return return_dict
         elif method == "pfba" or method == "gfba":
-            return res_df.to_dict()
+            return res_df.to_dict()  # ty: ignore[invalid-return-type]
+        else:
+            raise ValueError(
+                f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
+            )
+    elif return_type == "long":
+        if method == "essential":
+            return (
+                res_df.reset_index(names="reaction")
+                .melt(
+                    id_vars="reaction",
+                    var_name="metabolite",
+                    value_name="_TO_KEEP",
+                )
+                .query("_TO_KEEP")[["metabolite", "reaction"]]
+            )
+        elif method == "pfba" or method == "gfba":
+            return (
+                res_df.reset_index(names="reaction")
+                .melt(
+                    id_vars="reaction",
+                    var_name="metabolite",
+                    value_name="weight",
+                )
+                .query(
+                    "weight > @SOLVER_TOLERANCE",
+                    local_dict={
+                        "SOLVER_TOLERANCE": cobra.Configuration().tolerance
+                    },
+                )[["metabolite", "reaction", "weight"]]
+            )
         else:
             raise ValueError(
                 f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
@@ -200,7 +235,7 @@ def find_metabolite_synthesis_network_reactions(
 def find_metabolite_synthesis_network_genes(
     model: cobra.Model,
     method: Literal["pfba", "gfba", "essential"] = "pfba",
-    return_type: Literal["DataFrame", "dict"] = "DataFrame",
+    return_type: Literal["DataFrame", "dict", "long"] = "DataFrame",
     metabolites: Iterable[str] | None = None,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
@@ -238,7 +273,7 @@ def find_metabolite_synthesis_network_genes(
             Find which genes are essential for each metabolite.
 
 
-    return_type : {'DataFrame', 'dict'}, default='DataFrame'
+    return_type : {'DataFrame', 'dict', 'long'}, default='DataFrame'
         How to return the networks, either a dataframe or dict
         (see returns for more information).
     metabolites : iterable of str, optional
@@ -288,9 +323,10 @@ def find_metabolite_synthesis_network_genes(
         found during parsimonious/geometric FBA required to maximally
         produce the metabolite.
 
-        with values corresponding
-        to the flux associated with that reaction in the parsimonious/geometric
-        FBA solution when optimizing for the production of the metabolite.
+        If `return_type` is 'long', returns the metabolite networks as a longform
+        dataframe, which includes columns for 'metabolite', 'gene', and optionally
+        'weight' (if method is pfba or gfba). Each row represents that the 'gene'
+        is in the 'metabolite' network, with a weight of 'weight'.
 
     Notes
     -----
@@ -402,6 +438,36 @@ def find_metabolite_synthesis_network_genes(
             raise ValueError(
                 f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
             )
+    elif return_type == "long":
+        if method == "essential":
+            return (
+                res_df.reset_index(names="gene")
+                .melt(
+                    id_vars="gene",
+                    var_name="metabolite",
+                    value_name="_TO_KEEP",
+                )
+                .query("_TO_KEEP")[["metabolite", "gene"]]
+            )
+        elif method == "pfba" or method == "gfba":
+            return (
+                res_df.reset_index(names="gene")
+                .melt(
+                    id_vars="gene",
+                    var_name="metabolite",
+                    value_name="weight",
+                )
+                .query(
+                    "weight > @SOLVER_TOLERANCE",
+                    local_dict={
+                        "SOLVER_TOLERANCE": cobra.Configuration().tolerance
+                    },
+                )[["metabolite", "gene", "weight"]]
+            )
+        else:
+            raise ValueError(
+                f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
+            )
     else:
         raise ValueError(
             f"Expected return type to be 'DataFrame', or 'dict' but received {return_type}"
@@ -411,7 +477,7 @@ def find_metabolite_synthesis_network_genes(
 def find_metabolite_consuming_network_reactions(
     model: cobra.Model,
     metabolites: Iterable[str] | None = None,
-    return_type: Literal["DataFrame", "dict"] = "DataFrame",
+    return_type: Literal["DataFrame", "dict", "long"] = "DataFrame",
     reaction_proportion: float = 0.05,
     add_sinks: bool = False,
     check_reverse: bool = True,
@@ -427,7 +493,7 @@ def find_metabolite_consuming_network_reactions(
     metabolites : iterable of str, optional
         Which metabolites to find the consuming networks for, if not provided will
         find the networks for all the metabolites in the model
-    return_type : {'DataFrame', 'dict'}, default='DataFrame'
+    return_type : {'DataFrame', 'dict', 'long'}, default='DataFrame'
         How to return the networks, either a dataframe or dict
         (see returns for more information).
     reaction_proportion : float
@@ -461,6 +527,10 @@ def find_metabolite_consuming_network_reactions(
         If `return_type` is 'dict', returns the network as a dict instead. The
         dictionary keyed by metabolite id, with values that are lists of
         the ids of reactions which consume a metabolite or its derivatives.
+
+        If `return_type` is 'long', returns the metabolite networks as a longform
+        dataframe, which includes columns for 'metabolite' and 'reaction'. Each
+        row represents that the 'reaction' is in the 'metabolite' network.
     """
     if metabolites is None:
         metabolites = model.metabolites.list_attr("id")
@@ -525,6 +595,16 @@ def find_metabolite_consuming_network_reactions(
                     res_df.loc[rxn, metabolite] = True
     if return_type == "DataFrame":
         return res_df
+    elif return_type == "long":
+        return (
+            res_df.reset_index(names="reaction")
+            .melt(
+                id_vars="reaction",
+                var_name="metabolite",
+                value_name="_TO_KEEP",
+            )
+            .query("_TO_KEEP")[["metabolite", "reaction"]]
+        )
     elif return_type == "dict":
         return {m: list(rs[rs].index) for m, rs in res_df.items()}  # ty: ignore[invalid-return-type]
     else:
@@ -536,7 +616,7 @@ def find_metabolite_consuming_network_reactions(
 def find_metabolite_consuming_network_genes(
     model: cobra.Model,
     metabolites: Iterable[str] | None = None,
-    return_type: Literal["DataFrame", "dict"] = "DataFrame",
+    return_type: Literal["DataFrame", "dict", "long"] = "DataFrame",
     reaction_proportion: float = 0.05,
     add_sinks: bool = False,
     essential: bool = False,
@@ -553,7 +633,7 @@ def find_metabolite_consuming_network_genes(
     metabolites : iterable of str, optional
         Which metabolites to find the consuming networks for, if not provided will
         find the networks for all the metabolites in the model
-    return_type : {'DataFrame', 'dict'}, default='DataFrame'
+    return_type : {'DataFrame', 'dict', 'long'}, default='DataFrame'
         How to return the networks, either a dataframe or dict
         (see returns for more information).
     reaction_proportion: float
@@ -577,10 +657,20 @@ def find_metabolite_consuming_network_genes(
 
     Returns
     -------
-    metabolite_network : pd.DataFrame[bool]
-        A dataframe with genes as the index, and metabolites as the columns,
-        a True value indicates that a particular gene is associated with a reaction
-        that consumes a metabolite or one of its derivatives
+    metabolite_network : pd.DataFrame or dict
+        If `return_type` is 'DataFrame' (the default), returns a dataframe with
+        genes as the index and metabolites as the columns, a True value
+        indicates that a reaction associated with a gene consumes a metabolite or one
+        of its derivatives.
+
+        If `return_type` is 'dict', returns the network as a dict instead. The
+        dictionary keyed by metabolite id, with values that are lists of
+        the ids of genes associated with reactions which consume a metabolite
+        or its derivatives.
+
+        If `return_type` is 'long', returns the metabolite networks as a longform
+        dataframe, which includes columns 'metabolite' and 'gene'. Each row represents
+        that the 'gene' is in the 'metabolite' network.
     """
     if metabolites is None:
         metabolites = model.metabolites.list_attr("id")
@@ -612,6 +702,16 @@ def find_metabolite_consuming_network_genes(
 
     if return_type == "DataFrame":
         return res_df
+    elif return_type == "long":
+        return (
+            res_df.reset_index(names="reaction")
+            .melt(
+                id_vars="reaction",
+                var_name="metabolite",
+                value_name="_TO_KEEP",
+            )
+            .query("_TO_KEEP")[["metabolite", "reaction"]]
+        )
     elif return_type == "dict":
         return {m: list(gs[gs].index) for m, gs in res_df.items()}  # ty: ignore[invalid-return-type]
     else:
