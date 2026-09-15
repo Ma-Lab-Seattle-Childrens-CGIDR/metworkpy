@@ -1745,21 +1745,6 @@ def create_mass_flow_network(
         to remove highly connected metabolites which can distort the topology of
         the network. Such as common currency metabolites like ATP, or solvent
         metabolites like H20.
-    projection_weight : str | Callable[[float, float], float] | None
-        How to weight the projected graph. If None, the projected graph
-        will not be weighted. If "ratio", the edges will be weighted
-        based on the ratio between actual shared neighbors and maximum
-        possible shared neighbors. If "count", the edges will be
-        weighted by the number of shared neighbors. A function can also
-        be provided, which takes two float arguments (the weights of two
-        edges), and returns a float.
-    projection_weight_combine : Callable[[list[float]], float], optional
-        How to combine multiple projected edges. If two nodes in the set
-        being projected onto, share multiple neighbors in the other node set,
-        they can have multiple possible edge weights. This function takes in
-        a list of possible weights, and returns a single final weight. Python
-        builtin `max` and `min` can be used for this. If not provided,
-        `max` is used.
     weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
         Optional function for scaling the weights, called with a 1-D numpy array of all the
         weights in the network, and must return a 1-D numpy array of the same size.
@@ -1789,10 +1774,15 @@ def create_mass_flow_network(
         product_scale_fn = None
         reactant_scale_fn = functools.partial(_normalize_array, axis=1)
 
-    n_met = len(model.metabolites)
+    if weight is None:
+        n_met = len(model.metabolites)
 
-    def _combine_weights(weights: list[float]):
-        return np.sum(weights) / n_met
+        def _combine_weights(weights: list[float]):
+            return np.sum(weights) / n_met
+    else:
+
+        def _combine_weights(weights: list[float]):
+            return np.sum(weights)
 
     return create_reaction_network(
         model=model,
@@ -1825,6 +1815,74 @@ def create_metabolite_mass_flow_network(
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
     zero_tolerance: float = ALMOST_ZERO,
 ):
+    """
+    Create a metabolite mass flow network from the metabolic model,
+    either based on stoichiometry or a provided flux vector
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model to create the network from
+    weight : ArrayLike, optional
+        The weight to use, if None (default) will create a mass flow network based on
+        stoichiometry. If an arraylike, represents the fluxes through reactions in the model
+        which will be used to create a flux based mass flow network.
+    directed : bool
+        Whether the network should be directed
+    split_direction : bool, default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If True, each reaction will be represented by 2 nodes,
+        which will have ids that are the reaction id, with either
+        '_FORWARD', or '_REVERSE' as a suffix.
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
+    nodes_to_remove : Iterable of str, optional
+        Iterable of nodes which will be removed from the network before it is returned
+    remove_top_metabolites : int or float, optional
+        Number of top most connected metabolites to remove. If an integer that
+        is 1 or greater, that number of top connected metabolites (based on the
+        number of reactions they participate in) are removed. If a float between
+        0.0 and 1.0, instead any metabolite participating in more than that
+        proportion of reactions is removed. So a value of 0.1 would indicate to
+        remove any metabolites which participate in more than 10% of reactions
+        in the model. Note that this removal is independent of the removal of
+        currency metabolites  that occurs if `currency_metabolites` is passed
+        (that the counts for how many reactions a metabolite is involved in is
+        calculated prior to removing currency metabolites). It is also independent
+        of the node removal caused by passing `nodes_to_remove`. This can be useful
+        to remove highly connected metabolites which can distort the topology of
+        the network. Such as common currency metabolites like ATP, or solvent
+        metabolites like H20.
+    weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
+        Optional function for scaling the weights, called with a 1-D numpy array of all the
+        weights in the network, and must return a 1-D numpy array of the same size.
+        This could be used to make the weights all fall in a specific range
+        (e.g. use a minmax scalar so they are all between 0 and 1),
+        or to invert the direction of the weights (so larger weights become smaller) by
+        taking the reciprocal of all the weights.
+    zero_tolerance : float
+        Threshold, below which to consider a (absolute value of a) bound/flux
+        to be 0 (this value MUST BE GREATER THAN 0).
+
+    Returns
+    -------
+    nx.Graph or nx.DiGraph
+        The metabolites mass flow network constructed from the provided `cobra.Model`,
+        with nodes for metabolites (using the metabolites id
+        as the node id). Edge weights represent the mass flow
+        between metabolites.
+    """
     if weight is None:
         reaction_weights = "stoichiometry"
         scale_fn = functools.partial(_normalize_array, axis=0)
@@ -1846,7 +1904,7 @@ def create_metabolite_mass_flow_network(
         remove_top_metabolites=remove_top_metabolites,
         weight_scale_fn=weight_scale_fn,
         projection_weight=operator.mul,
-        projection_weight_combine=sum,
+        projection_weight_combine=np.sum,
         zero_tolerance=zero_tolerance,
     )
 

@@ -1314,12 +1314,14 @@ class TestMassFlowNetwork(unittest.TestCase):
         # Create the network from Fig1 of https://www.nature.com/articles/s41540-018-0067-y
         rxn_dict = {
             f"R{idx}": cobra.Reaction(
-                f"R{idx}", f"Reaction {idx}", lower_bound=0, upper_bound=50
+                f"R{idx}", f"Reaction {idx}", lower_bound=0, upper_bound=10
             )
             for idx in range(1, 9)
         }
         # Make R4 reversible
-        rxn_dict["R4"].bounds = (-50, 50)
+        rxn_dict["R4"].bounds = (-10, 10)
+        # Force R1 to be active
+        rxn_dict["R1"].bounds = (10, 10)
         # Create metabolites
         met_dict = {
             f"X{idx}": cobra.Metabolite(f"X{idx}") for idx in range(1, 6)
@@ -1401,8 +1403,8 @@ class TestMassFlowNetwork(unittest.TestCase):
         )
         np.testing.assert_allclose(expected_col_norm, col_norm)
 
-    def test_mass_flow_nfg(self):
-        # Test the mass flow graph from Fig1 of https://www.nature.com/articles/s41540-018-0067-y
+    def test_nfg_creation(self):
+        # Test the normalized flow graph from Fig1 of https://www.nature.com/articles/s41540-018-0067-y
         test_model = self.mass_flow_graph_model
         # Create the normalized flow graph (nfg)
         test_nfg: nx.DiGraph = create_mass_flow_network(
@@ -1456,6 +1458,41 @@ class TestMassFlowNetwork(unittest.TestCase):
         ]:
             assert np.isclose(test_nfg[u][v]["weight"], w), (
                 f"{u}->{v} weight incorrect, expected {w}, actual: {test_nfg[u][v]['weight']}"
+            )
+
+    def test_mfg_creation(self):
+        flux_weight = pd.Series(
+            [10, 10, 4.992, 5.008, 2.492, 0.008, 0, 2.5],
+            index=pd.Index(f"R{idx}" for idx in range(1, 9)),
+        )[self.mass_flow_graph_model.reactions.list_attr("id")].to_numpy()
+        test_mfg: nx.DiGraph = create_mass_flow_network(
+            model=self.mass_flow_graph_model,
+            weight=flux_weight,
+            directed=True,
+            split_direction=False,
+        )  # ty: ignore[invalid-assignment]
+        for u, v, d in test_mfg.edges(data=True):
+            print(f"{u}->{v} has weight {d['weight']}")
+        expected_weights = {
+            "R1": {"R2": 10.0},
+            "R2": {"R3": 4.992, "R4": 5.008},
+            "R3": {"R5": 2.492, "R8": 2.5},
+            "R4": {"R6": 0.008, "R8": 5.0},
+            "R5": {"R8": 2.492},
+            "R6": {"R8": 0.008},
+        }
+        for u, v, d in test_mfg.edges(data=True):
+            assert u in expected_weights, (
+                f"Unexpected edge in graph: {u}->{v}, weight: {d['weight']}"
+            )
+            assert v in expected_weights[u], (
+                f"Unexpected edge in graph: {u}->{v}, weight: {d['weight']}"
+            )
+            self.assertAlmostEqual(
+                d["weight"],
+                expected_weights[u][v],
+                places=3,
+                msg=f"Expected edge {u}->{v} to have weight {expected_weights[u][v]}, but received {d['weight']}",
             )
 
 
