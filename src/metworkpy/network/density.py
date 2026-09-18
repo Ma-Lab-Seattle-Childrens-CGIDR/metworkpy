@@ -346,7 +346,7 @@ def gene_target_density(
         Dict with keys corresponding to nodes in the network,
         and values corresponding to the density of gene targets in the
         neighborhood of that node (`nodes` and `node_filter` can be
-                                   used to only )
+        used to only )
     """
     if isinstance(gene_targets, list):
         gene_targets = {g: 1 for g in gene_targets}
