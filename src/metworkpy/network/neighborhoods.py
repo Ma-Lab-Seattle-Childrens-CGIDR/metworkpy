@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import functools
 import operator
+from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from typing import NamedTuple, TypeVar, cast
 
@@ -240,6 +241,7 @@ def _graph_gene_neighborhood(
 ### Neighborhood Map ###
 ########################
 NodeType = TypeVar("NodeType")
+EdgeWeight = TypeVar("EdgeWeight")
 T = TypeVar("T")
 
 
@@ -401,6 +403,10 @@ def gene_neighborhood_map(
         when finding distances from a central node to
         define a neighborhood. If None, all edges are treated as having a
         weight of 1.
+    essential : bool,default=False
+        Whether, when finding which genes are associated with the
+        reaction nodes in the network, the mapping should require
+        a gene to be essential for the reaction to function.
     include_node : bool, default=True
         Whether to include the central node in a neighborhood
     processes : int, optional
@@ -485,6 +491,236 @@ def _gene_neighborhood_worker(
     return node, fn(neighborhood)
 
 
+#####################
+### Neighbors Map ###
+#####################
+
+
+# These functions map over direct neighbors, but
+# also provide the weights of the edges
+def weighted_neighbor_map(
+    fn: Callable[[NodeType, dict[NodeType, EdgeWeight]], T],
+    network: nx.Graph | nx.DiGraph,
+    nodes: Iterable[NodeType] | None = None,
+    node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
+    weight: str | None = None,
+    processes: int | None = None,
+) -> dict[NodeType, T]:
+    """
+    Map a function across all groups of node neighbors in a network,
+    weighted by the edge weight between the node and its neighbor.
+
+    Parameters
+    ----------
+    fn : Callable of (node id, dict of node id to edge weight) -> Any
+        Function to map over weighted neighbors in the network,
+        the function receives a node id of the central node, and then a
+        a dict of node id to weight of the edge between the central node
+        and the neighboring node.
+    network : nx.Graph or nx.DiGraph
+        The network to map over
+    nodes : Iterable of node id, optional
+        Nodes to use as neighborhood centers, other nodes will still be included
+        in neighborhoods but will not act as neighborhood centers.
+    node_filter : callable of node id->bool or set of node ids, optional
+        Filter nodes in the network to consider when finding neighborhoods.
+        If a Callable, should take node ids as the only argument and return
+        a bool, if True the node will be considered in neighborhoods,
+        if False it will not be. If a set, only nodes in the set will be included
+        in neighborhoods.
+    weight : str, optional
+        The edge attribute to use as weight, if None all edges are
+        given a weight of 1. The weight is passed as the
+        value of the dict in the second argument of `fn`.
+    processes : int, optional
+        The number of processes to use for parallel mapping of a
+        the function
+
+    Returns
+    -------
+    dict of node id to result
+        Dictionary of central node ids to the result of applying the passed function `fn`
+        to the neighboring nodes, weighted by an edge attribute.
+
+    Notes
+    -----
+    This function maps a function across all the direct neighbors
+    of nodes in a network, weighted by an edge attribute. That is, the
+    function is given the central node id, and then a dict keyed by
+    the neighboring node ids, with values equal to the `weight` of
+    the edge between the central node and the neighbor.
+    """
+    filter_set = _create_filter_set(network, node_filter)
+
+    if nodes is None:
+        nodes = network.nodes
+
+    map_res: dict[NodeType, T] = {}
+    for node_idx, ret_value in joblib.Parallel(
+        n_jobs=processes, return_as="generator_unordered"
+    )(
+        joblib.delayed(_weighted_neighbor_map_worker)(
+            node=node,
+            fn=fn,
+            network=network,
+            filter_set=filter_set,
+            weight=weight,
+        )
+        for node in nodes
+    ):
+        map_res[node_idx] = ret_value
+
+    return map_res
+
+
+def _weighted_neighbor_map_worker(
+    node: NodeType,
+    fn: Callable[[NodeType, dict[NodeType, EdgeWeight]], T],
+    network: nx.Graph | nx.DiGraph,
+    filter_set: set[NodeType],
+    weight: str | None = None,
+):
+    neighbors: dict[NodeType, EdgeWeight] = {}
+    for n, edata in network[node].items():
+        if n in filter_set:
+            continue
+        neighbors[n] = edata[weight] if weight is not None else 1  # ty: ignore[invalid-assignment]
+    return fn(node, neighbors)
+
+
+def weighted_gene_neighbor_map(
+    fn: Callable[[set[str], dict[str, EdgeWeight]], T],
+    network: nx.Graph | nx.DiGraph,
+    model: cobra.Model | None = None,
+    reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
+    essential: bool = False,
+    nodes: Iterable[NodeType] | None = None,
+    node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
+    weight: str | None = None,
+    weight_combine_fn: Callable[[list[EdgeWeight]], EdgeWeight] = max,  # ty: ignore[invalid-parameter-default]
+    processes: int | None = None,
+):
+    """
+    Map a function across all groups of gene neighbors in a network,
+    weighted by the edge weight between the node and its neighbor.
+
+    Parameters
+    ----------
+    fn : Callable of (set of gene ids, dict of gene id to edge weight) -> Any
+        Function to map over weighted gene neighbors in the network,
+        the function receives a set of gene ids of the central node, and then a
+        a dict of neighboring genes to weight of the edge between the central node
+        and the neighboring node.
+    network : nx.Graph or nx.DiGraph
+        The network to map over
+    model : cobra.Model, optional
+        Metabolic model that was used to create the metabolic network, used
+        to map reaction ids to gene id sets if `reaction_to_gene_set_dict`
+        is not provided. Must provide at least one of
+        `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
+        takes precedence if both are provided.
+    reaction_to_gene_set_dict : dict of reaction id to sets of gene ids, optional
+        Map between reaction ids and sets of gene ids. Must provide at least one of
+        `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
+        takes precedence if both are provided.
+    essential : bool,default=False
+        Whether, when finding which genes are associated with the
+        reaction nodes in the network, the mapping should require
+        a gene to be essential for the reaction to function.
+    nodes : Iterable of node id, optional
+        Nodes to use as neighborhood centers, other nodes will still be included
+        in neighborhoods but will not act as neighborhood centers.
+    node_filter : callable of node id->bool or set of node ids, optional
+        Filter nodes in the network to consider when finding neighborhoods.
+        If a Callable, should take node ids as the only argument and return
+        a bool, if True the node will be considered in neighborhoods,
+        if False it will not be. If a set, only nodes in the set will be included
+        in neighborhoods.
+    weight : str, optional
+        The edge attribute to use as weight, if None all edges are
+        given a weight of 1. The weight is passed as the
+        value of the dict in the second argument of `fn`.
+    weight_combine_fn : Callable of (list of edge weights)->single weight, default=maximum
+        If a gene is associated with multiple reactions in a neighborhood, how
+        should the weights be combined. Receives a list of the edge weights between
+        the central node and the neighboring nodes associated with the gene,
+        and should return a single weighting.
+    processes : int, optional
+        The number of processes to use for parallel mapping of a
+        the function
+
+    Returns
+    -------
+    dict of node id to result
+        Dictionary of central node ids to the result of applying the passed function `fn`
+        to the neighboring genes, weighted by an edge attribute.
+
+    Notes
+    -----
+    This function maps a function across all the direct neighbors
+    of nodes in a network, weighted by an edge attribute. That is, the
+    function is given the central node id, and then a dict keyed by
+    the neighboring node ids, with values equal to the `weight` of
+    the edge between the central node and the neighbor.
+    """
+    filter_set = _create_filter_set(network=network, node_filter=node_filter)
+
+    if nodes is None:
+        nodes = network.nodes
+
+    # Get a dict of reaction to gene set
+    # Filtering out empty sets, since if a key isn't
+    # found an empty set is assumed
+    rxn_to_gene_dict = {
+        r: gs
+        for r, gs in _create_rxn_to_gene_set_dict(
+            model=model,
+            reaction_to_gene_set_dict=reaction_to_gene_set_dict,
+            essential=essential,
+        ).items()
+        if len(gs) > 0
+    }
+    map_res: dict[NodeType, T] = {}
+    for node_idx, ret_value in joblib.Parallel(
+        n_jobs=processes, return_as="generator_unordered"
+    )(
+        joblib.delayed(_weighted_gene_neighborhor_map_worker)(
+            node=node,
+            fn=fn,
+            cmb_fn=weight_combine_fn,
+            network=network,
+            rxn_to_gene_dict=rxn_to_gene_dict,
+            filter_set=filter_set,
+            weight=weight,
+        )
+        for node in nodes
+    ):
+        map_res[node_idx] = ret_value
+
+    return map_res
+
+
+def _weighted_gene_neighborhor_map_worker(
+    node: NodeType,
+    fn: Callable[[set[str], dict[str, EdgeWeight]], T],
+    cmb_fn: Callable[[list[EdgeWeight]], EdgeWeight],
+    network: nx.Graph | nx.DiGraph,
+    rxn_to_gene_dict: dict[NodeType, set[str]],
+    filter_set: set[str],
+    weight: str | None = None,
+):
+    neighbors: dict[str, list[EdgeWeight]] = defaultdict(list)
+    for n, edata in network[node].items():
+        if n in filter_set:
+            continue
+        for g in rxn_to_gene_dict.get(n, ()):
+            neighbors[g].append(edata[weight] if weight is not None else 1)  # ty: ignore[invalid-argument-type]
+    neighbors_reduced = {
+        g: cmb_fn(weights) for g, weights in neighbors.items()
+    }
+    return fn(rxn_to_gene_dict.get(node, set()), neighbors_reduced)
+
+
 #########################
 ### Stouffer's method ###
 #########################
@@ -493,9 +729,138 @@ class CombinePvaluesResult(NamedTuple):
     pvalues: dict[Hashable, float]
 
 
-def combine_neighborhood_pvalues(
-    network: nx.Graph | nx.DiGraph,
+def combine_neighborhood_pvalues_weighted(
     gene_pvalues: Mapping[str, float],
+    network: nx.Graph | nx.DiGraph,
+    model: cobra.Model | None = None,
+    reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
+    essential: bool = False,
+    nodes: Iterable[NodeType] | None = None,
+    node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
+    weight: str | None = None,
+    central_genes_proportion: float = 0.5,
+    weight_combine_fn: Callable[[list[EdgeWeight]], EdgeWeight] = max,  # ty: ignore[invalid-parameter-default]
+    processes: int | None = None,
+    **kwargs,
+) -> CombinePvaluesResult:
+    """
+    Map a function across all groups of gene neighbors in a network,
+    weighted by the edge weight between the node and its neighbor.
+
+    Parameters
+    ----------
+    gene_pvalues : dict of str to float
+        P-values assigned to each gene, any genes with ids not in this dict
+        will be treated as having a p-value of NaN, the handling of which
+        can be modified by passing `nan_policy` as a keyword argument
+        (which will be passed to SciPy stats `combine_pvalues` function).
+    network : nx.Graph or nx.DiGraph
+        The network to map over
+    model : cobra.Model, optional
+        Metabolic model that was used to create the metabolic network, used
+        to map reaction ids to gene id sets if `reaction_to_gene_set_dict`
+        is not provided. Must provide at least one of
+        `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
+        takes precedence if both are provided.
+    reaction_to_gene_set_dict : dict of reaction id to sets of gene ids, optional
+        Map between reaction ids and sets of gene ids. Must provide at least one of
+        `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
+        takes precedence if both are provided.
+    essential : bool,default=False
+        Whether, when finding which genes are associated with the
+        reaction nodes in the network, the mapping should require
+        a gene to be essential for the reaction to function.
+    nodes : Iterable of node id, optional
+        Nodes to use as neighborhood centers, other nodes will still be included
+        in neighborhoods but will not act as neighborhood centers.
+    node_filter : callable of node id->bool or set of node ids, optional
+        Filter nodes in the network to consider when finding neighborhoods.
+        If a Callable, should take node ids as the only argument and return
+        a bool, if True the node will be considered in neighborhoods,
+        if False it will not be. If a set, only nodes in the set will be included
+        in neighborhoods.
+    weight : str, optional
+        The edge attribute to use as weight, if None all edges are
+        given a weight of 1. The weight is passed as the
+        value of the dict in the second argument of `fn`.
+    central_genes_proportion : float, default=0.5
+        The proportion of the total weighting of the p-values to be
+        taken by the genes associated with the central node. If the central
+        node is not associated with any genes, the weights of the
+        surrounding nodes are not scaled (as it wouldn't actually impact the
+        result).
+    weight_combine_fn : Callable of (list of edge weights)->single weight, default=maximum
+        If a gene is associated with multiple reactions in a neighborhood, how
+        should the weights be combined. Receives a list of the edge weights between
+        the central node and the neighboring nodes associated with the gene,
+        and should return a single weighting.
+    processes : int, optional
+        The number of processes to use for parallel mapping of a
+        the function
+
+    Returns
+    -------
+    dict of node id to result
+        Dictionary of central node ids to the result of applying the passed function `fn`
+        to the neighboring genes, weighted by an edge attribute.
+
+    Notes
+    -----
+    This function maps a function across all the direct neighbors
+    of nodes in a network, weighted by an edge attribute. That is, the
+    function is given the central node id, and then a dict keyed by
+    the neighboring node ids, with values equal to the `weight` of
+    the edge between the central node and the neighbor.
+    """
+
+    def combine_pvals(
+        central_genes: set[str],
+        weighted_gene_dict: dict[str, float],
+    ):
+        if len(central_genes) > 0:
+            pvalues = [gene_pvalues.get(g, np.nan) for g in central_genes] + [
+                gene_pvalues.get(g, np.nan) for g in weighted_gene_dict
+            ]
+            weights = [
+                w * (1 - central_genes_proportion)
+                for w in weighted_gene_dict.values()
+            ]
+            weights = [
+                sum(weights) * central_genes_proportion / len(central_genes)
+            ] * len(central_genes) + weights
+        else:
+            pvalues = [gene_pvalues.get(g, np.nan) for g in weighted_gene_dict]
+            weights = [w for w in weighted_gene_dict.values()]
+        return stats.combine_pvalues(
+            pvalues=pvalues,
+            weights=weights,
+            method="stouffer",
+            **kwargs,
+        )
+
+    res_dict = weighted_gene_neighbor_map(
+        fn=combine_pvals,  # ty: ignore[invalid-argument-type]
+        network=network,
+        model=model,
+        reaction_to_gene_set_dict=reaction_to_gene_set_dict,
+        essential=essential,
+        nodes=nodes,
+        node_filter=node_filter,
+        weight=weight,
+        weight_combine_fn=weight_combine_fn,  # ty: ignore[invalid-argument-type]
+        processes=processes,
+    )
+    stats_dict = {}
+    pvals_dict = {}
+    for node, (stat, pval) in res_dict.items():
+        stats_dict[node] = stat
+        pvals_dict[node] = pval
+    return CombinePvaluesResult(stats_dict, pvals_dict)
+
+
+def combine_neighborhood_pvalues(
+    gene_pvalues: Mapping[str, float],
+    network: nx.Graph | nx.DiGraph,
     gene_weights: Mapping[str, float] | None = None,
     model: cobra.Model | None = None,
     reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
@@ -509,17 +874,17 @@ def combine_neighborhood_pvalues(
     **kwargs,
 ) -> CombinePvaluesResult:
     """
-    Map a function across gene neighborhoods in a network
+    Combine the p-values for genes in neighborhoods of `network`
 
     Parameters
     ----------
-    network : nx.Graph or nx.DiGraph
-        The metabolic network to map over
     gene_pvalues : dict of str to float
         P-values assigned to each gene, any genes with ids not in this dict
         will be treated as having a p-value of NaN, the handling of which
         can be modified by passing `nan_policy` as a keyword argument
         (which will be passed to SciPy stats `combine_pvalues` function).
+    network : nx.Graph or nx.DiGraph
+        The metabolic network to map over
     gene_weights : dict of str to float, optional
         Optional weights to apply if using "stouffer" method
         `scipy.stats.combine_pvalues <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.combine_pvalues.html>`_,
@@ -561,7 +926,8 @@ def combine_neighborhood_pvalues(
         the function
     kwargs
         Keyword arguments are passed to
-        `scipy.stats.combine_pvalues <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.combine_pvalues.html>`_
+        `scipy.stats.combine_pvalues <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.combine_pvalues.html>`_,
+        don't pass 'method' since that is required to be 'stouffer' to allow for the weighting.
 
     Returns
     -------
@@ -576,6 +942,7 @@ def combine_neighborhood_pvalues(
             weights=[gene_weights.get(g, np.nan) for g in gene_ids]
             if gene_weights is not None
             else None,
+            method="stouffer",
             **kwargs,
         )
 

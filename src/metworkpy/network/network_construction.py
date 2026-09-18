@@ -1766,13 +1766,13 @@ def create_mass_flow_network(
     """
     if weight is None:
         reaction_weights = "stoichiometry"
-        scale_fn = functools.partial(_normalize_array, axis=1)
+        scale_fn = functools.partial(normalize_array, axis=1)
         product_scale_fn = scale_fn
         reactant_scale_fn = scale_fn
     else:
         reaction_weights = weight
         product_scale_fn = None
-        reactant_scale_fn = functools.partial(_normalize_array, axis=1)
+        reactant_scale_fn = functools.partial(normalize_array, axis=1)
 
     if weight is None:
         n_met = len(model.metabolites)
@@ -1885,13 +1885,13 @@ def create_metabolite_mass_flow_network(
     """
     if weight is None:
         reaction_weights = "stoichiometry"
-        scale_fn = functools.partial(_normalize_array, axis=0)
+        scale_fn = functools.partial(normalize_array, axis=0)
         product_scale_fn = scale_fn
         reactant_scale_fn = scale_fn
     else:
         reaction_weights = weight
         product_scale_fn = None
-        reactant_scale_fn = functools.partial(_normalize_array, axis=0)
+        reactant_scale_fn = functools.partial(normalize_array, axis=0)
     return create_metabolite_network(
         model=model,
         weight=reaction_weights,
@@ -2319,15 +2319,18 @@ def _remove_currency_metabolites(
     return stoichiometric_matrix
 
 
-def _normalize_array(array: sparse.sparray, axis: int) -> sparse.coo_array:
-    array: sparse.csr_array = array.tocsr()  # ty: ignore[unresolved-attribute]
-    totals = array.sum(axis=axis)
-    totals[totals > 0.0] = np.reciprocal(totals[totals > 0.0])
+def normalize_array(array: sparse.sparray, axis: int) -> sparse.coo_array:
     if axis == 1:
-        array = array.multiply(totals.reshape(-1, 1))
-        return array.tocoo()
+        array: sparse.csr_array = array.tocsr()  # ty: ignore[unresolved-attribute]
     elif axis == 0:
-        array = array.multiply(totals.reshape(1, -1))
-        return array.tocoo()
+        array: sparse.csc_array = array.tocsc()  # ty: ignore[unresolved-attribute]
     else:
         raise ValueError(f"Axis must be 0 or 1, received {axis}")
+    norm = array.sum(axis=axis)
+    norm[norm > 0.0] = np.reciprocal(norm[norm > 0.0])
+    if axis == 1:
+        array = array.multiply(norm.reshape(-1, 1))  # ty: ignore[conflicting-declarations]
+        return array.tocoo()
+    elif axis == 0:
+        array = array.multiply(norm.reshape(1, -1))  # ty: ignore[conflicting-declarations]
+        return array.tocoo()

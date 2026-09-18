@@ -25,7 +25,7 @@ from metworkpy.network.network_construction import (
     create_metabolite_mass_flow_network,
     create_mutual_information_network,
     create_target_set_neighborhood_network,
-    _normalize_array,
+    normalize_array,
 )
 
 # Local Imports
@@ -1375,7 +1375,7 @@ class TestMassFlowNetwork(unittest.TestCase):
         arr[3, 0] = 1
         arr[3, 2] = 7
         # Normalize the rows
-        row_norm = _normalize_array(arr.tocoo(), axis=1).todense()
+        row_norm = normalize_array(arr.tocoo(), axis=1).todense()
         assert row_norm.shape[0] == 4 and row_norm.shape[1] == 3, (
             "Normalize array returned incorrect sized array"
         )
@@ -1389,7 +1389,7 @@ class TestMassFlowNetwork(unittest.TestCase):
         )
         np.testing.assert_allclose(expected_row_norm, row_norm)
         # Normalize the columns
-        col_norm = _normalize_array(arr.tocoo(), axis=0).todense()
+        col_norm = normalize_array(arr.tocoo(), axis=0).todense()
         assert col_norm.shape[0] == 4 and col_norm.shape[1] == 3, (
             "Normalize array returned incorrect sized array"
         )
