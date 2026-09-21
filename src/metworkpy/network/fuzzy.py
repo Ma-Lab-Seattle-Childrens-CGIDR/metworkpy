@@ -291,7 +291,8 @@ def membership_distance_weighted_reaction_density(
 ) -> float:
     """
     Membership function which computes the membership based on how
-    many genes within distance `radius` are in the target gene set
+    many reactions within distance `radius` are associated with
+    genes in the target gene set
 
     Parameters
     ----------
