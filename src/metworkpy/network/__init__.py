@@ -3,6 +3,7 @@ from .centrality import (
     betweenness_centrality_subset,
     closeness_centrality_subset,
 )
+from .choke import find_choke_points
 from .cluster import (
     get_distance_matrix,
     get_network_target_set_clustering,
@@ -16,6 +17,7 @@ from .density import (
     node_target_density,
 )
 from .fuzzy import fuzzy_reaction_intersection, fuzzy_reaction_set
+from .load import find_load_values
 from .neighborhoods import (
     combine_neighborhood_pvalues,
     gene_neighborhood_map,
@@ -53,7 +55,9 @@ __all__ = [
     "create_target_set_distance_adjacency_matrix",
     "create_target_set_distance_network",
     "create_target_set_neighborhood_network",
+    "find_choke_points",
     "find_dense_clusters",
+    "find_load_values",
     "find_variable_components",
     "fuzzy_reaction_intersection",
     "fuzzy_reaction_set",

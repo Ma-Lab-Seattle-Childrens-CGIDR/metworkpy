@@ -72,6 +72,15 @@
   This can optionally include a column for weights depending on the method. This
   allows for simplified interfacing to libraries which expect this format for
   describing networks, for example decouplerpy.
+- Added functions for calculating load values and finding choke points in
+  metabolic networks based on (1).
+
+### References
+
+(1) Rahman, S. A.; Schomburg, D. Observing Local and Global Properties of
+Metabolic Pathways: ‘Load Points’ and ‘Choke Points’ in the Metabolic Networks.
+Bioinformatics 2006, 22 (14), 1767–1774.
+[https://doi.org/10.1093/bioinformatics/btl181](https://doi.org/10.1093/bioinformatics/btl181)
 
 ## Version 0.11.0
 
