@@ -74,6 +74,23 @@
   describing networks, for example decouplerpy.
 - Added functions for calculating load values and finding choke points in
   metabolic networks based on (1).
+- Added a function (in gpr submodule) for translating between genes and
+  reactions, while considering all the genes as a group instead of individually:
+  `gene_group_to_reaction_list`. The function `gene_to_reaction_list` in utils
+  is similar (identical in the case that the `essentiality` argument of both
+  functions is False), but considers the genes individually for translation.
+  This differs in situations where a single gene may not be essential for a
+  reaction, but the genes being translated includes all of the genes that would
+  be required for that reaction. For example, a reaction R1 with GPR: 'gene1 OR
+  gene2', in `gene_to_reaction_list` with `essential=True`, this reaction would
+  not be including when translating from `[g1, g2]` to a reaction list, however
+  it would be included with `gene_group_to_reaction_list`.
+- Updated functions in `metworkpy.network.neighborhoods` to allow for specifying
+  an edge weight parameter to use as an edge weight/distance.
+- Added functions for creating a subnetwork from a metabolic network by
+  selecting a subset of nodes, or nodes associated with selected genes. These
+  subnetworks can also optionally include paths between these selected nodes,
+  and neighborhoods around the nodes.
 
 ### References
 
