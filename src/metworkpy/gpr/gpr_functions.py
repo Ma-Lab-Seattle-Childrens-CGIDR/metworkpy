@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import ast
 import warnings
+from collections.abc import Iterable
 from typing import Any
 
 # External Imports
 import cobra
 import pandas as pd
+
+# Local imports
+from metworkpy.utils.translate import gene_to_reaction_list
 
 # Global function dictionary declarations
 METCHANGE_FUNC_DICT = {"AND": max, "OR": min}
@@ -132,3 +136,53 @@ def eval_gpr(
     elif gpr is None:
         return fill_val
     raise TypeError(f"Unsupported GPR type: {type(gpr)}")
+
+
+def gene_group_to_reaction_list(
+    model: cobra.Model, gene_list: Iterable[str], essential: bool = False
+):
+    """
+    Convert a list (or other Iterable) of gene ids into a list of
+    associated reaction ids
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Model to use for performing the translation
+    gene_list : list of str
+        list of gene ids to translate
+    essential : bool, default=False
+        Whether the reactions should only be those for
+        which the genes are required
+
+    Returns
+    -------
+    reaction_list : list[str]
+        list of reactions associated with the genes in `gene_list`
+
+    See Also
+    --------
+    metworkpy.utils.translate.gene_to_reaction_list : Individually translate genes to reactions
+
+    Notes
+    -----
+    Genes are translated as a group, so that when essential is True,
+    if a reaction requires an OR between genes to be True, if both
+    of the genes in the OR expression are in gene_list, then
+    the reaction is included. This contrasts with
+    `metworkpy.utils.translate.gene_to_reaction_list` which
+    translates genes individually.
+
+    """
+    if essential is False:
+        return gene_to_reaction_list(
+            model=model, gene_list=gene_list, essential=False
+        )
+    gene_series = pd.Series(-1, index=pd.Index(gene_list))
+    rxn_series = gene_to_rxn_weights(
+        model=model,
+        gene_weights=gene_series,
+        fn_dict=IMAT_FUNC_DICT,
+        fill_val=0,
+    )
+    return list(rxn_series[rxn_series == -1].index)
