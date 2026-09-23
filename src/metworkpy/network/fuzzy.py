@@ -30,7 +30,7 @@ from scipy.stats import gmean, rv_discrete
 
 # Local Imports
 from metworkpy.network.neighborhoods import (
-    _graph_gene_neighborhood,
+    graph_gene_neighborhood,
     get_graph_neighborhood,
 )
 from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
@@ -88,7 +88,7 @@ def membership_simple_gene_density(
     membership : float
         The membership of the reaciton in the reaction set
     """
-    gene_neighborhood = _graph_gene_neighborhood(
+    gene_neighborhood = graph_gene_neighborhood(
         network=network,
         radius=radius,
         node=reaction.id,
@@ -543,7 +543,7 @@ def membership_gene_enrichment(
     automatically be calculated and passed in if not provided, so you
     don't need to do that manually (though it can still be over ridden if desired).
     """
-    gene_neighborhood = _graph_gene_neighborhood(
+    gene_neighborhood = graph_gene_neighborhood(
         network=network,
         radius=radius,
         node=reaction.id,

@@ -21,9 +21,16 @@ from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
 
 # region Graph Neighborhoods
 
+NodeType = TypeVar("NodeType")
+EdgeWeight = TypeVar("EdgeWeight")
+
 
 def get_graph_neighborhoods(
-    network: nx.Graph | nx.DiGraph, radius: int
+    network: nx.Graph | nx.DiGraph,
+    radius: int,
+    *,
+    include_node: bool = True,
+    weight: str | None = None,
 ) -> dict[Hashable, set[Hashable]]:
     """
     Find the neighborhoods of a graph
@@ -34,6 +41,11 @@ def get_graph_neighborhoods(
         The network whose neighborhoods will be identified
     radius : int
         The radius determining the sizes of the neighborhoods
+    include_node : bool, default=True
+        Whether to include central nodes in the neighborhoods
+    weight : str,optional
+        Edge attribute to use as weight, if None
+        each edge has a weight of 1.
 
     Returns
     -------
@@ -45,7 +57,10 @@ def get_graph_neighborhoods(
     return {
         n: neighborhood
         for n, neighborhood in graph_neighborhood_iter(
-            network=network, radius=radius
+            network=network,
+            radius=radius,
+            include_node=include_node,
+            weight=weight,
         )
     }
 
@@ -54,7 +69,10 @@ def get_graph_gene_neighborhoods(
     network: nx.Graph,
     model: cobra.Model,
     radius: int,
+    *,
     essential: bool = False,
+    include_node: bool = True,
+    weight: str | None = None,
 ) -> dict[Hashable, set[str]]:
     """
     Find the neighborhoods of a graph
@@ -70,6 +88,11 @@ def get_graph_gene_neighborhoods(
     essential : bool
         Whether to only include genes essential for reactions in the
         neighborhood
+    include_node : bool, default=True
+        Whether to include central nodes in the neighborhoods
+    essential : bool
+        Whether to only include genes essential for reactions in the
+        neighborhood
 
     Returns
     -------
@@ -81,7 +104,12 @@ def get_graph_gene_neighborhoods(
     return {
         n: neighborhood
         for n, neighborhood in graph_gene_neighborhood_iter(
-            network=network, model=model, radius=radius, essential=essential
+            network=network,
+            model=model,
+            radius=radius,
+            essential=essential,
+            include_node=include_node,
+            weight=weight,
         )
     }
 
@@ -90,7 +118,11 @@ def get_graph_gene_neighborhoods(
 
 
 def graph_neighborhood_iter(
-    network: nx.Graph | nx.DiGraph, radius: int
+    network: nx.Graph | nx.DiGraph,
+    radius: int,
+    *,
+    include_node: bool = True,
+    weight: str | None = None,
 ) -> Iterator[tuple[Hashable, set[Hashable]]]:
     """
     Iterator over neighborhoods in a graph
@@ -101,6 +133,11 @@ def graph_neighborhood_iter(
         The network whose neighborhoods will be iterated over
     radius : int
         The radius determining the size of the neighborhood
+    include_node : bool, default=True
+        Whether to include central nodes in the neighborhoods
+    weight : str,optional
+        Edge attribute to use as weight, if None
+        each edge has a weight of 1.
 
     Yields
     ------
@@ -110,7 +147,13 @@ def graph_neighborhood_iter(
     for node in network.nodes:
         yield (
             node,
-            get_graph_neighborhood(network=network, radius=radius, node=node),
+            get_graph_neighborhood(
+                network=network,
+                radius=radius,
+                node=node,
+                include_node=include_node,
+                weight=weight,
+            ),
         )
 
 
@@ -118,7 +161,10 @@ def graph_gene_neighborhood_iter(
     network: nx.Graph,
     model: cobra.Model,
     radius: int,
+    *,
     essential: bool = False,
+    include_node: bool = True,
+    weight: str | None = None,
 ):
     """
     Iterator over gene neighborhoods in a graph
@@ -134,6 +180,12 @@ def graph_gene_neighborhood_iter(
     essential : bool
         Whether to only include genes essential for reactions in the
         neighborhood
+    include_node : bool, default=True
+        Whether to include `node` in the neighborhood
+    weight : str, optional
+        The edge attribute to use as the weight of an edge,
+        if not provided all edges have weight of 1
+        (weights are interpreted as distances for finding neighborhoods)
 
     Yields
     ------
@@ -146,11 +198,14 @@ def graph_gene_neighborhood_iter(
     for node in network:
         yield (
             node,
-            _graph_gene_neighborhood(
+            graph_gene_neighborhood(
                 network=network,
                 radius=radius,
                 node=cast(str, node),
                 rxn_to_gene_set_dict=rxn_to_gene_set_dict,
+                model=None,
+                include_node=include_node,
+                weight=weight,
             ),
         )
 
@@ -159,8 +214,13 @@ def graph_gene_neighborhood_iter(
 
 
 def get_graph_neighborhood(
-    network: nx.Graph | nx.DiGraph, radius: int, node: Hashable
-) -> set[Hashable]:
+    network: nx.Graph | nx.DiGraph,
+    node: Hashable,
+    radius: float,
+    *,
+    include_node: bool = True,
+    weight: str | None = None,
+) -> set[NodeType]:
     """
     Get the neighborhood around a node in the network
 
@@ -172,22 +232,39 @@ def get_graph_neighborhood(
         The radius of the neighborhood
     node : Hashable
         The node to find the neighborhood around
+    include_node : bool, default=True
+        Whether to include `node` in the neighborhood
+    weight : str,optional
+        Edge attribute to use as weight, if None
+        each edge has a weight of 1.
 
     Returns
     -------
     neighborhood : set of Hashable
         The neighborhood around `node` in `network`
     """
-    neighborhood = {node}
-    for _, successors in nx.bfs_successors(
-        network, source=node, depth_limit=radius
-    ):
-        neighborhood.update(successors)
+    neighborhood = {node} if include_node else set()
+    if weight is None:
+        for _, successors in nx.bfs_successors(
+            network, source=node, depth_limit=int(radius)
+        ):
+            neighborhood.update(successors)
+    else:
+        neighborhood.update(
+            nx.single_source_dijkstra_path_length(
+                network, source=node, cutoff=radius, weight=weight
+            ).keys()
+        )
     return neighborhood
 
 
 def get_target_set_graph_neighborhood(
-    network: nx.Graph | nx.DiGraph, radius: int, nodes: set[Hashable]
+    network: nx.Graph | nx.DiGraph,
+    nodes: set[Hashable],
+    radius: int,
+    *,
+    include_node: bool = True,
+    weight: str | None = None,
 ) -> set[Hashable]:
     """
     Get the neighborhood of a target set of nodes, that is all nodes reachable
@@ -197,10 +274,15 @@ def get_target_set_graph_neighborhood(
     ----------
     network : nx.Graph or nx.DiGraph
         The network to find the neighborhood in
-    radius : int
-        The radius of the neighborhood
     node : set of Hashable
         The target set of nodes to find the neighborhood for
+    radius : int
+        The radius of the neighborhood
+    include_node : bool, default=True
+        Whether to include `node` in the neighborhood
+    weight : str,optional
+        Edge attribute to use as weight, if None
+        each edge has a weight of 1.
 
     Returns
     -------
@@ -210,23 +292,81 @@ def get_target_set_graph_neighborhood(
     return functools.reduce(
         operator.or_,
         (
-            get_graph_neighborhood(network=network, radius=radius, node=n)
+            get_graph_neighborhood(
+                network=network,
+                radius=radius,
+                node=n,
+                include_node=include_node,
+                weight=weight,
+            )
             for n in nodes
         ),
         set(),
     )
 
 
-def _graph_gene_neighborhood(
+def graph_gene_neighborhood(
     network: nx.Graph,
-    radius: int,
     node: str,
-    rxn_to_gene_set_dict: dict[str, set[str]],
+    radius: int,
+    *,
+    model: cobra.Model | None = None,
+    rxn_to_gene_set_dict: dict[str, set[str]] | None = None,
+    essential: bool = False,
+    include_node: bool = True,
+    weight: str | None = None,
 ) -> set[str]:
-    """Get the neighborhood of genes around a node in the network"""
+    """
+    Get the neighborhood of genes around a node in the network
+
+    Parameters
+    ----------
+    network : nx.Graph
+        The network whose neighborhoods will be identified
+    node : Hashable
+        The node to find the neighborhood around
+    radius : int
+        The radius determining the sizes of the neighborhoods
+    model : cobra.Model, optional
+        The cobra model associated with the metabolic network.
+        Either `model` of `rxn_to_gene_set_dict` must be provided
+        for mapping between reactions and genes, if both are provided
+        `rxn_to_gene_set_dict` takes priority.
+    rxn_to_gene_set_dict : dict of reaction id to set of gene ids, optional
+        A dictionary mapping reaction ids to sets of gene ids which
+        are associated with the reaction. Either `model` of `rxn_to_gene_set_dict`
+        must be provided for mapping between reactions and genes, if both are
+        provided `rxn_to_gene_set_dict` takes priority.
+    essential : bool
+        Whether to only include genes essential for reactions in the
+        neighborhood
+    include_node : bool, default=True
+        Whether to include `node` in the neighborhood
+    weight : str, optional
+        The edge attribute to use as the weight of an edge,
+        if not provided all edges have weight of 1
+        (weights are interpreted as distances for finding neighborhoods)
+
+    Returns
+    -------
+    neighborhood : set of str
+        The ids of genes in the neighborhood around `node` in `network`
+    """
+    if rxn_to_gene_set_dict is None:
+        if model is None:
+            raise ValueError(
+                "At least one of 'model' or 'rxn_to_gene_set_dict' must be provided, but both are None"
+            )
+        rxn_to_gene_set_dict = get_reaction_to_gene_translation_dict(
+            model=model, essential=essential
+        )
     neighborhood = set()
     for rxn_id in get_graph_neighborhood(
-        network=network, radius=radius, node=node
+        network=network,
+        radius=radius,
+        node=node,
+        include_node=include_node,
+        weight=weight,
     ):
         if rxn_id in rxn_to_gene_set_dict:
             rxn_id = cast(str, rxn_id)
@@ -240,8 +380,6 @@ def _graph_gene_neighborhood(
 ########################
 ### Neighborhood Map ###
 ########################
-NodeType = TypeVar("NodeType")
-EdgeWeight = TypeVar("EdgeWeight")
 T = TypeVar("T")
 
 
