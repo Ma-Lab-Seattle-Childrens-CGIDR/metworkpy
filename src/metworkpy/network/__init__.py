@@ -2,6 +2,7 @@ from .centrality import (
     betweenness_centrality_bipartite_subset,
     betweenness_centrality_subset,
     closeness_centrality_subset,
+    find_load_values,
 )
 from .choke import find_choke_points
 from .cluster import (
@@ -17,7 +18,6 @@ from .density import (
     node_target_density,
 )
 from .fuzzy import fuzzy_reaction_intersection, fuzzy_reaction_set
-from .load import find_load_values
 from .neighborhoods import (
     combine_neighborhood_pvalues,
     gene_neighborhood_map,
@@ -39,6 +39,7 @@ from .network_construction import (
     get_top_metabolites,
 )
 from .projection import bipartite_project
+from .subnetwork import get_gene_subnetwork, get_subnetwork
 
 __all__ = [
     "betweenness_centrality_bipartite_subset",
@@ -65,8 +66,10 @@ __all__ = [
     "gene_target_density",
     "gene_target_enrichment",
     "get_distance_matrix",
+    "get_gene_subnetwork",
     "get_network_target_set_clustering",
     "get_network_target_set_linkage",
+    "get_subnetwork",
     "get_top_metabolite_pairs",
     "get_top_metabolites",
     "graph_gene_neighborhood_iter",
