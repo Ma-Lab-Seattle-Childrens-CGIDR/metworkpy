@@ -1929,7 +1929,7 @@ requires-dist = [
     { name = "osqp", marker = "extra == 'hybrid'", specifier = ">=1.0.3" },
     { name = "pandas", specifier = ">=2.2.0" },
     { name = "pyarrow", specifier = ">=16.0.0" },
-    { name = "robustrankaggregpy", specifier = ">=0.3.0" },
+    { name = "robustrankaggregpy", specifier = ">=0.4.0" },
     { name = "scipy", specifier = ">=1.15.0" },
     { name = "sympy", specifier = ">=1.12" },
     { name = "tqdm", specifier = ">=4.66.4" },
@@ -3294,7 +3294,7 @@ wheels = [
 
 [[package]]
 name = "robustrankaggregpy"
-version = "0.3.0"
+version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -3305,9 +3305,9 @@ dependencies = [
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/85/bd/4d0041b347aa7ffa15483dc1eca339a31c477b9509d7bfdd9e19802346a8/robustrankaggregpy-0.3.0.tar.gz", hash = "sha256:b40c5c19ba3addfaaa601e3e99ba6c50db33dd55ed403475c60854deb1bc5086", size = 5859, upload-time = "2026-02-26T22:58:08.493Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/37/a2/67ee1bfbd5ba8db90115ef2e59421b2653b7a87a2220d0730b12be768470/robustrankaggregpy-0.4.0.tar.gz", hash = "sha256:364e8a239d44d14fd6d711d8d4a01911e45d450ec7e4817229b38035433b9af9", size = 6367, upload-time = "2026-08-25T20:34:55.761Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fa/ac/6252bbb89f6aba02efe67490f352b8345e0bad044f59c1a3e6776d2c44d3/robustrankaggregpy-0.3.0-py3-none-any.whl", hash = "sha256:f432d5b509d8f330feeedf65898d816dc4b52f48264f2d4b5ca31bd726668272", size = 6902, upload-time = "2026-02-26T22:58:07.108Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/79/e1988a4f965a75609a4bd4f1bbfa71ff484bf82e8fc5ecaec00165de39e3/robustrankaggregpy-0.4.0-py3-none-any.whl", hash = "sha256:8451b765adabb66f4c7c55094ed99f8b340690535497a86ef1483c2e9d26f50a", size = 7272, upload-time = "2026-08-25T20:34:54.699Z" },
 ]
 
 [[package]]

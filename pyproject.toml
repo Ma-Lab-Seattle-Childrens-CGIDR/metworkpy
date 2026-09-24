@@ -18,7 +18,7 @@ dependencies = [
   "tqdm>=4.66.4",
   "pyarrow>=16.0.0",
   "joblib>=1.4.2",
-  "robustrankaggregpy>=0.3.0",
+  "robustrankaggregpy>=0.4.0",
   "docrep>=0.3.2",
 ]
 
@@ -75,7 +75,7 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 filterwarnings = [
-  # This warning just occurs with essentially all multi-processing calls
+# This warning just occurs with essentially all multi-processing calls
   'ignore:This process \(pid=\d+\) is multi-threaded, use of fork\(\) may lead to deadlocks in the child\.:DeprecationWarning',
 ]
 
@@ -111,4 +111,4 @@ exclude = [
   "site-packages",
   "venv",
   "*.ipynb",
-]
+  ]
