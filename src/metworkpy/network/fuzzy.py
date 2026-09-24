@@ -25,6 +25,7 @@ from joblib import Parallel, delayed
 from robustrankaggregpy.aggregate_ranks import (
     rank_matrix_from_df,
 )
+import scipy.special
 from scipy import stats
 from scipy.stats import gmean, rv_discrete
 
@@ -510,7 +511,7 @@ def membership_gene_enrichment(
     Membership function which computes the membership by calculating the
     enrichment of target set genes which are in a neighborhood defined
     by the `radius` around the reaction. The membership will be
-    1-pvalue where pvalue is calculated using a Fisher's exact test
+    -log10(pvalue) where pvalue is calculated using a Fisher's exact test
     to quantify the enrichment.
 
     Parameters
@@ -535,7 +536,9 @@ def membership_gene_enrichment(
     -------
     membership : float
         The membership of the reaction in the reaction set, calculated
-        as 1-(p-value), where p-value is the enrichment p-value
+        as -log10(p-value), where p-value is the enrichment p-value. This
+        membership will not be between 0 and 1, but that can be adjusted in
+        the `scale` parameter of `fuzzy_reaction_set` (recomended is 'softmax').
 
     Notes
     -----
@@ -573,7 +576,7 @@ def membership_gene_enrichment(
             ]
         )
     ).pvalue
-    return 1 - pval
+    return -np.log10(pval)
 
 
 # endregion Membership Functions
@@ -596,7 +599,7 @@ def fuzzy_reaction_set(
     metabolic_model: cobra.Model,
     gene_set: Iterable[str],
     membership_fn: str | FuzzyMembershipFunction = "simple gene density",
-    scale: bool | float | None = None,
+    scale: Literal["minmax", "softmax"] | float | None = None,
     essential: bool = False,
     processes: int | None = None,
     **kwargs,
@@ -618,12 +621,13 @@ def fuzzy_reaction_set(
         The membership function to use, can be a string giving the
         functions name, or the function itself which must match the
         signature of `FuzzyMembershipFunction`
-    scale : bool or float, optional
-        Whether to scale the results of the membership values. If
-        False or None, no scaling will be applied. If True, will
-        be scaled to be between 0 and 1 using a min-max scaler.
-        If a float, the scaling will use a min-max scaler, but
-        treat `scale` as the max.
+    scale : {'minmax', 'softmax'} or float, optional
+        How to scale the results of the membership values.
+        If None (default) no scaling is applied, if 'minmax'
+        the values will be scaled by (value-min(values))/max(values).
+        If 'softmax', the softmax function will be used to scale the values.
+        If a float, the scaling will be the same as for 'minmax', but
+        the float will be used as the maximum of values.
     essential : bool
         Whether, when translating from reactions to genes, only
         genes required for a reaction to function should be associated
@@ -729,12 +733,21 @@ def fuzzy_reaction_set(
     ):
         rxn_set[rxn] = membership
 
-    if scale:
-        if isinstance(scale, float):
-            max_val = scale
-        else:
-            max_val = rxn_set.max()
-        rxn_set = (rxn_set - rxn_set.min()) / max_val
+    if scale is not None:
+        if isinstance(scale, str):
+            if scale == "minmax":
+                rxn_set = (rxn_set - rxn_set.min()) / rxn_set.max()
+            elif scale == "softmax":
+                rxn_set = pd.Series(
+                    scipy.special.softmax(rxn_set), index=rxn_set.index
+                )
+            else:
+                raise ValueError(
+                    f"Expected 'minmax' or 'softmax' for scaling, received {scale}"
+                )
+
+        elif isinstance(scale, float):
+            rxn_set = (rxn_set - rxn_set.min()) / scale
     return rxn_set
 
 
