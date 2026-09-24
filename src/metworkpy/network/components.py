@@ -61,7 +61,7 @@ def find_variable_components(
     # If a network isn't passed, construct a simple one to use
     if network is None:
         network = create_metabolic_network(
-            model=model, weighted=False, directed=False
+            model=model, weighted=False, directed=directed
         )
     # Perform FVA
     fva_solution = cobra.flux_analysis.flux_variability_analysis(
@@ -78,8 +78,9 @@ def find_variable_components(
     # Get the induced subgraph
     subgraph = network.subgraph(variable_reactions)
     if subgraph.is_directed():
+        assert isinstance(subgraph, nx.DiGraph)
         if strongly_connected:
-            return list(nx.strongly_connected_components(subgraph))
+            return list(nx.strongly_connected_components(subgraph))  # ty: ignore[invalid-argument-type]
         else:
-            return list(nx.weakly_connected_components(subgraph))
-    return nx.connected_components(subgraph)
+            return list(nx.weakly_connected_components(subgraph))  # ty: ignore[invalid-argument-type]
+    return list(nx.connected_components(subgraph))
