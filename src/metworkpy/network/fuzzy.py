@@ -4,7 +4,6 @@ Sub-module for finding fuzzy sets of reactions
 
 # Standard Library Imports
 from __future__ import annotations
-import robustrankaggregpy.aggregate_ranks
 
 import functools
 import math
@@ -21,11 +20,12 @@ import cobra
 import networkx as nx
 import numpy as np
 import pandas as pd
+import robustrankaggregpy.aggregate_ranks
+import scipy.special
 from joblib import Parallel, delayed
 from robustrankaggregpy.aggregate_ranks import (
     rank_matrix_from_df,
 )
-import scipy.special
 from scipy import stats
 from scipy.stats import gmean, rv_discrete
 
@@ -623,8 +623,9 @@ def fuzzy_reaction_set(
         signature of `FuzzyMembershipFunction`
     scale : {'minmax', 'softmax'} or float, optional
         How to scale the results of the membership values.
-        If None (default) no scaling is applied, if 'minmax'
-        the values will be scaled by (value-min(values))/max(values).
+        If None (default) no scaling is applied (unless 'gene enrichment'
+        is the `membership_fn`, in which case 'softmax' is used),
+        if 'minmax' the values will be scaled by (value-min(values))/max(values).
         If 'softmax', the softmax function will be used to scale the values.
         If a float, the scaling will be the same as for 'minmax', but
         the float will be used as the maximum of values.
@@ -679,6 +680,8 @@ def fuzzy_reaction_set(
                 f"Unable to find correct membership function, options are "
                 f"{list(MEMBERSHIP_FUNCTIONS.keys())}"
             )
+        if membership_fn == "gene enrichment" and scale is None:
+            scale = "softmax"
 
         membership_fn = MEMBERSHIP_FUNCTIONS[membership_fn]  # type: ignore
 
