@@ -4,6 +4,7 @@ Sub-module for finding fuzzy sets of reactions
 
 # Standard Library Imports
 from __future__ import annotations
+import robustrankaggregpy.aggregate_ranks
 
 import functools
 import math
@@ -23,15 +24,14 @@ import pandas as pd
 from joblib import Parallel, delayed
 from robustrankaggregpy.aggregate_ranks import (
     rank_matrix_from_df,
-    rho_scores,
 )
 from scipy import stats
 from scipy.stats import gmean, rv_discrete
 
 # Local Imports
 from metworkpy.network.neighborhoods import (
-    graph_gene_neighborhood,
     get_graph_neighborhood,
+    graph_gene_neighborhood,
 )
 from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
 
@@ -748,9 +748,9 @@ def fuzzy_reaction_intersection(
     metabolic_network: nx.Graph | nx.DiGraph,
     metabolic_model: cobra.Model,
     intersection_fn: Callable[[pd.DataFrame], pd.Series]
-    | Literal["mean", "min", "max", "geom", "rra"],
+    | Literal["mean", "min", "max", "geom", "rank-agg"],
     intersection_fn_kwargs: dict[str, Any] | None = None,
-    rank_method: Literal["average", "min", "max", "first", "dense"] = "max",
+    rank_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> pd.Series:
     """
@@ -767,16 +767,20 @@ def fuzzy_reaction_intersection(
     metabolic_model : cobra.Model
         Metabolic model from which the metabolic network was constructed
         (used for translating reactions to genes)
-    intersection_fn : {"mean", "min", "max", "geom", "rra"} or Callable[[pd.DataFrame], pd.Series]
+    intersection_fn : {"mean", "min", "max", "geom", "rank-agg"} or Callable[[pd.DataFrame], pd.Series]
         Either a str specifying an intersection function (see notes), or
         a Callable which takes a DataFrame, where each column is a fuzzy reaction
         set and returns a Series which is a new fuzzy reaction set representing
         the intersection of the input fuzzy reaction sets.
     intersection_fn_kwargs : dict of str to Any
-        kwargs passed to the intersection function
-    rank_method : {"average", "min", "max", "first", "dense"}
-        If the `intersection_fn` is 'rra', how are ties in the
-        membership values handled when performing ranking
+        kwargs passed to the intersection function,
+        if method is 'rank-agg' passed to the `aggregate_ranks`
+        function of robustrankaggregpy.
+    rank_kwargs : dict of str to Any
+        If the `intersection_fn` is 'rank-agg', this is passed
+        as keyword arguments to the
+        `rank_matrix_from_df <https://robustrankaggregpy.readthedocs.io/en/latest/api_reference/api_index.html#robustrankaggregpy.aggregate_ranks.rank_matrix_from_df>`_ how are ties in the
+        function of `robustrankaggregpy`.
     kwargs
         Keyword arguments are passed to `fuzzy_reaction_set`
 
@@ -795,8 +799,13 @@ def fuzzy_reaction_intersection(
     * min: Take the minimum of the membership values
     * max: Take the max of the membership values
     * geom: Take the geometric mean of the membership values
-    * rra: Perform robust rank aggregation on the membership values,
-      and the subtract the resulting rho-score from 1.0
+    * rank-agg: Perform rank aggregation on the membership values
+      using `robustrankaggregpy <https://robustrankaggregpy.readthedocs.io/en/latest/index.html>`_, and the subtract the resulting
+      score from 1.0 (since the scores resulting from the rank
+      aggregation methods are closer to 0 for items that tend
+      to be ranked near the top, so subtracting from 1 ensures
+      they have the same directionality as the membership
+      function)
     """
     # Construct the DataFrame from the gene sets
     rxn_set_list = []
@@ -824,18 +833,19 @@ def fuzzy_reaction_intersection(
         rxn_intersect_series = rxn_set_df.max(axis=1)
     elif intersection_fn == "geom":
         rxn_intersect_series = rxn_set_df.aggregate(gmean, axis=1)
-    elif intersection_fn == "rra":
+    elif intersection_fn == "rank-agg":
+        if rank_kwargs is None:
+            rank_kwargs = {}
         rank_mat = rank_matrix_from_df(
             rxn_set_df,
             ascending=False,
-            rank_method=rank_method,
-            **intersection_fn_kwargs,
+            **rank_kwargs,
         )
-        rxn_intersect_series = 1 - pd.Series(
-            np.apply_along_axis(
-                rho_scores, 1, rank_mat.to_numpy(), **intersection_fn_kwargs
-            ),
-            index=rank_mat.index,
+        rxn_intersect_series = (
+            1
+            - robustrankaggregpy.aggregate_ranks.aggregate_ranks(
+                rank_matrix=rank_mat, **intersection_fn_kwargs
+            )
         )
     else:
         raise ValueError(f"Invalid intersection_fn: {intersection_fn}")
