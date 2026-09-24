@@ -91,6 +91,13 @@
   selecting a subset of nodes, or nodes associated with selected genes. These
   subnetworks can also optionally include paths between these selected nodes,
   and neighborhoods around the nodes.
+- Updated fuzzy reaction functionality to allow for softmax scaling in
+  `fuzzy_reaction_set` function in addition to minmax scaling. Modified the gene
+  enrichment membership function so it uses -log10(pvalue) instead of the
+  1-pvalue. This allows for more differentiation of the membership values, and
+  when combined with the scaling='softmax' (which is also selected by default
+  with this membership function), still provides a membership function scaled
+  between 0 and 1.
 
 ### References
 
