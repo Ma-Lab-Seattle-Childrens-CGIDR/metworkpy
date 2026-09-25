@@ -13,19 +13,23 @@ import cobra
 import numpy as np
 import optlang
 import pandas as pd
-import tqdm
 from cobra.exceptions import OptimizationError
 from docrep import DocstringProcessor
 
-from metworkpy.imat import model_creation
-
 # Local Imports
+from metworkpy.imat import model_creation
 from metworkpy.imat.imat_functions import (
     _get_rxn_imat_binary_variable_name,
     add_imat_constraints_,
     add_imat_objective_,
 )
+from metworkpy.utils._notebook import is_notebook
 from metworkpy.utils.metworkpy_defaults import IMAT_DEFAULTS
+
+if is_notebook():
+    from tqdm.notebook import tqdm
+else:
+    from tqdm import tqdm
 
 # Make sure optlang has Variable
 assert "Variable" in optlang.__dir__()
@@ -922,7 +926,7 @@ def imat_iter_essential(
         )
         # Iterate through the iMAT models
         for idx, imat_model in enumerate(
-            tqdm.tqdm(
+            tqdm(
                 ImatIterModels(*args, **kwargs),
                 disable=not progress_bar,
                 total=max_iter,

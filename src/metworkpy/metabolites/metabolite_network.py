@@ -17,7 +17,6 @@ import pandas as pd
 import sympy
 from cobra.exceptions import OptimizationError
 from scipy import stats
-from tqdm import tqdm
 
 # Local Imports
 from metworkpy.utils import (
@@ -25,6 +24,12 @@ from metworkpy.utils import (
     get_reaction_to_gene_translation_dict,
     reaction_to_gene_list,
 )
+from metworkpy.utils._notebook import is_notebook
+
+if is_notebook():
+    from tqdm.notebook import tqdm
+else:
+    from tqdm import tqdm
 
 
 # region Main Functions
