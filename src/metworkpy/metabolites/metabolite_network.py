@@ -38,9 +38,11 @@ def find_metabolite_synthesis_network_reactions(
     method: Literal["pfba", "gfba", "essential"] = "pfba",
     return_type: Literal["dict", "DataFrame", "long"] = "DataFrame",
     metabolites: Iterable[str] | None = None,
+    reaction_filter: Iterable[str] | dict[str, Iterable[str]] | None = None,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
+    processes: int | None = None,
     **kwargs,
 ) -> pd.DataFrame | dict[str, list[str]] | dict[str, dict[str, float]]:
     """Find which reactions are used to generate each metabolite in the model
@@ -74,6 +76,16 @@ def find_metabolite_synthesis_network_reactions(
     metabolites : iterable of str, optional
         Which metabolites to find the synthesis networks for, if not provided will
         find the networks for all the metabolites in the model
+    reaction_filter : iterable of str or dict of str to iterable of str,optional
+        Filter which reactions are considered for each metabolite network.
+        If a list of str (or other iterable of str), should be a list of
+        reaction ids, which will be the only reactions that can appear
+        in any metabolite network. If a dict, should be keyed by metabolite
+        id with lists (or other iterable) of reactions as the values. For
+        a particular metabolite network, only the reactions in the list
+        corresponding to that metabolite in the dict will be able to appear
+        in that metabolite's network. If None, all reactions will be considered
+        possible for each metabolites network.
     pfba_proportion : float
         Proportion to use for pfba analysis. This represents the
         fraction of optimum constraint applied before minimizing the sum
@@ -84,15 +96,17 @@ def find_metabolite_synthesis_network_reactions(
         maximum_objective` are considered essential.
     progress_bar : bool
         Whether a progress bar should be displayed
+    processes : int,optional
+        Number of parallel processes to use when finding essential
+        reactions (if `method` is 'essential')
     **kwargs : dict
         Keyword arguments passed to
-        `cobra.flux_analysis.variability.find_essential_genes`,
         `cobra.flux_analysis.geometric_fba`, or to
         `cobra.flux_analysis.pfba` depending on the chosen method.
 
     Returns
     -------
-    pd.DataFrame[bool|float] or dict
+    metabolite_network_df : pd.DataFrame[bool|float] or dict
         If `return_type` is 'DataFrame' (the default), returns
         a dataframe with reactions as the index and metabolites as the
         columns, containing either
@@ -100,7 +114,10 @@ def find_metabolite_synthesis_network_reactions(
         #. Flux values if pfba or gfba are used.
            For a given reaction and metabolite,
            this represents the reaction flux found during pFBA required to maximally
-           produce the metabolite.
+           produce the metabolite. Note that these can be negative, representing
+           that the reaction is required in the reverse direction. Can
+           be converted to absolute values (`metabolite_network_df.abs()`)
+           if that is not desired.
         #. Boolean values if essentiality is used. For a given reaction and metabolite,
            this represents whether the reaction is essential for producing the
            metabolite.
@@ -137,22 +154,34 @@ def find_metabolite_synthesis_network_reactions(
         index=model.reactions.list_attr("id"),
         dtype=res_dtype,
     )
+    match reaction_filter:
+        case None:
+            rxn_filter_dict = {}
+        case dict():
+            rxn_filter_dict = {
+                m: list(set(s))  # ty: ignore[invalid-argument-type]
+                for m, s in reaction_filter.items()
+            }
+        case l:
+            rxn_filter_dict = {m: list(l) for m in res_df.columns}
     for metabolite in tqdm(res_df.columns, disable=not progress_bar):
+        met_rxn_filter = rxn_filter_dict.get(metabolite, None)
         with model as m:
             metabolite_sink_reaction_id = add_metabolite_objective_(
                 m, metabolite
             )
             if method == "essential":
                 ess_rxns = [
-                    rxn.id
+                    rxn
                     for rxn in (
-                        cobra.flux_analysis.variability.find_essential_reactions(
+                        _find_essential_reactions(
                             model=m,
+                            reaction_list=met_rxn_filter,  # ty: ignore[invalid-argument-type]
                             threshold=essential_proportion * m.slim_optimize(),
-                            **kwargs,
+                            processes=processes,
                         )
                     )
-                    if rxn.id != metabolite_sink_reaction_id
+                    if rxn != metabolite_sink_reaction_id
                 ]
                 res_df.loc[ess_rxns, metabolite] = True
                 res_df.loc[~res_df.index.isin(ess_rxns), metabolite] = False
@@ -180,6 +209,8 @@ def find_metabolite_synthesis_network_reactions(
                     "Invalid return from COBRApy pfba or geometric_fba function"
                 )
                 flux_series.drop(metabolite_sink_reaction_id, inplace=True)
+                if met_rxn_filter is not None:
+                    flux_series = flux_series[met_rxn_filter]  # ty: ignore[invalid-argument-type]
                 res_df.loc[flux_series.index, metabolite] = flux_series
             else:
                 raise ValueError(
@@ -242,10 +273,12 @@ def find_metabolite_synthesis_network_genes(
     method: Literal["pfba", "gfba", "essential"] = "pfba",
     return_type: Literal["DataFrame", "dict", "long"] = "DataFrame",
     metabolites: Iterable[str] | None = None,
+    gene_filter: Iterable[str] | dict[str, Iterable[str]] | None = None,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
     essential: bool = False,
+    processes: int | None = None,
     **kwargs,
 ) -> pd.DataFrame | dict[str, list[str]] | dict[str, dict[str, float]]:
     """Find which genes are used to generate each metabolite in the model
@@ -284,6 +317,16 @@ def find_metabolite_synthesis_network_genes(
     metabolites : iterable of str, optional
         Which metabolites to find the synthesis networks for, if not provided will
         find the networks for all the metabolites in the model
+    gene_filter : iterable of str or dict of str to iterable of str,optional
+        Filter which genes are considered for each metabolite network.
+        If a list of str (or other iterable of str), should be a list of
+        gene ids, which will be the only genes that can appear
+        in any metabolite network. If a dict, should be keyed by metabolite
+        id with lists (or other iterable) of genes as the values. For
+        a particular metabolite network, only the genes in the list
+        corresponding to that metabolite in the dict will be able to appear
+        in that metabolite's network. If None, all genes will be considered
+        possible for each metabolites network.
     pfba_proportion : float
         Proportion to use for pfba analysis. This represents the
         fraction of optimum constraint applied before minimizing the sum
@@ -299,9 +342,11 @@ def find_metabolite_synthesis_network_genes(
         gene metabolite network for the pFBA method, whether
         to only include genes which are essential for a reaction
         in the genes associated with said reaction.
+    processes : int,optional
+        Number of parallel processes to use when finding essential
+        genes (if `method` is 'essential')
     kwargs : dict
         Keyword arguments passed to
-        `cobra.flux_analysis.variability.find_essential_genes`,
         `cobra.flux_analysis.geometric_fba` or to
         `cobra.flux_analysis.pfba` depending on the chosen method.
 
@@ -336,11 +381,8 @@ def find_metabolite_synthesis_network_genes(
     Notes
     -----
     For converting from the reaction fluxes to gene fluxes, the gene is assigned
-    a value corresponding to the maximum magnitude flux the gene is associated
-    with (but the value assigned keeps the sign). For example, if a gene was
-    associated with reactions which had parsimonious flux values of -10, and 1 the
-    gene would be assigned a value of -10.
-
+    a value corresponding to the maximum absolute value flux the gene is associated
+    with.
 
     See Also
     --------
@@ -362,17 +404,29 @@ def find_metabolite_synthesis_network_genes(
         index=model.genes.list_attr("id"),
         dtype=res_dtype,
     )
+    match gene_filter:
+        case None:
+            gene_filter_dict = {}
+        case dict():
+            gene_filter_dict = {
+                m: list(set(s))  # ty: ignore[invalid-argument-type]
+                for m, s in gene_filter.items()
+            }
+        case l:
+            gene_filter_dict = {m: list(l) for m in res_df.columns}
     for metabolite in tqdm(res_df.columns, disable=not progress_bar):
+        met_gene_filter = gene_filter_dict.get(metabolite, None)
         with model as m:
             _ = add_metabolite_objective_(m, metabolite)
             if method == "essential":
                 ess_genes = [
-                    gene.id
+                    gene
                     for gene in (
-                        cobra.flux_analysis.variability.find_essential_genes(
+                        _find_essential_genes(
                             model=m,
+                            gene_list=met_gene_filter,  # ty: ignore[invalid-argument-type]
                             threshold=essential_proportion * m.slim_optimize(),
-                            **kwargs,
+                            processes=processes,
                         )
                     )
                 ]
@@ -402,8 +456,8 @@ def find_metabolite_synthesis_network_genes(
                     .explode()
                     .to_frame(name="gene")
                 )
-                pfba_frame = flux_series.to_frame(name="fluxes")
-                gene_fluxes = pfba_frame.merge(
+                flux_frame = flux_series.to_frame(name="fluxes")
+                gene_fluxes = flux_frame.merge(
                     rxn_to_gene_frame,
                     how="left",
                     left_index=True,
@@ -413,16 +467,12 @@ def find_metabolite_synthesis_network_genes(
                 # maximum value in terms of magnitude, but sign is maintained,
                 gene_fluxes_max = gene_fluxes.groupby("gene").max()["fluxes"]
                 gene_fluxes_min = gene_fluxes.groupby("gene").min()["fluxes"]
-                res_df.loc[
-                    gene_fluxes_max.abs() >= gene_fluxes_min.abs(), metabolite
-                ] = gene_fluxes_max[
-                    gene_fluxes_max.abs() >= gene_fluxes_min.abs()
-                ]
-                res_df.loc[
-                    gene_fluxes_max.abs() < gene_fluxes_min.abs(), metabolite
-                ] = gene_fluxes_min[
-                    gene_fluxes_max.abs() < gene_fluxes_min.abs()
-                ]
+                gene_max_abs = np.maximum(
+                    gene_fluxes_max.abs(), gene_fluxes_min.abs()
+                )
+                if met_gene_filter is not None:
+                    gene_max_abs = gene_max_abs[met_gene_filter]
+                res_df.loc[gene_max_abs.index, metabolite] = gene_max_abs
             else:
                 raise ValueError(
                     f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
@@ -957,6 +1007,44 @@ def add_all_metabolite_sinks_(model: cobra.Model):
     """
     for met_id in model.metabolites.list_attr("id"):
         add_metabolite_sink_(model, met_id)
+
+
+def _find_essential_reactions(
+    model: cobra.Model,
+    reaction_list: list[str] | None,
+    threshold: float,
+    processes: int | None = None,
+):
+    deletion_df = cobra.flux_analysis.single_reaction_deletion(
+        model,
+        reaction_list=reaction_list,  # ty: ignore[invalid-argument-type]
+        method="fba",
+        processes=processes,
+    )
+    essential = deletion_df.loc[
+        deletion_df["growth"].isna() | (deletion_df["growth"] < threshold),
+        :,
+    ].ids
+    return {r for ids in essential for r in ids}
+
+
+def _find_essential_genes(
+    model: cobra.Model,
+    gene_list: list[str] | None,
+    threshold: float,
+    processes: int | None = None,
+):
+    deletion_df = cobra.flux_analysis.single_gene_deletion(
+        model,
+        gene_list=gene_list,  # ty: ignore[invalid-argument-type]
+        method="fba",
+        processes=processes,
+    )
+    essential = deletion_df.loc[
+        deletion_df["growth"].isna() | (deletion_df["growth"] < threshold),
+        :,
+    ].ids
+    return {g for ids in essential for g in ids}
 
 
 # endregion Helper Functions

@@ -98,6 +98,11 @@
   when combined with the scaling='softmax' (which is also selected by default
   with this membership function), still provides a membership function scaled
   between 0 and 1.
+- Added options to metabolite synthesis network methods to filter which genes
+  and reactions are allowed to be in the network of each metabolite. This can be
+  global, across all metabolites, or metabolite specific. When combined with the
+  neighborhood methods, this can allow for filtering metabolite neighborhoods to
+  only include reactions/genes within a certain distance of the metabolite.
 
 ### References
 
