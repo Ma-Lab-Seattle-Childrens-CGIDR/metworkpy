@@ -39,8 +39,6 @@ ALMOST_ZERO = 1e-15
 ##################################
 ### Mutual Information Network ###
 ##################################
-
-
 def create_mutual_information_network(
     model: cobra.Model | None = None,
     flux_samples: pd.DataFrame | np.ndarray | None = None,
@@ -49,6 +47,7 @@ def create_mutual_information_network(
     n_samples: int = 10_000,
     reciprocal_weights: bool = False,
     processes: int = 1,
+    sampler_kwargs=None,
     **kwargs,
 ) -> nx.Graph:
     """Create a mutual information network from the provided metabolic model
@@ -79,6 +78,10 @@ def create_mutual_information_network(
     processes : int
         Number of processes to use during the flux sampling and
         mutual information calculation
+    sampler_kwargs : dict of str to Any
+        Dict of keyword arguments to pass to COBRApy's
+        `cobra.sampling.sample <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/sampling/sampling/index.html#cobra.sampling.sampling.sample>`_
+        function
     kwargs
         Keyword arguments passed to the `mi_pairwise` function
 
@@ -94,8 +97,10 @@ def create_mutual_information_network(
                 "Requires either a metabolic model, or flux samples but received "
                 "neither"
             )
+        if sampler_kwargs is None:
+            sampler_kwargs = {}
         flux_samples = cobra.sampling.sample(
-            model=model, n=n_samples, processes=processes
+            model=model, n=n_samples, processes=processes, **sampler_kwargs
         )
     if isinstance(flux_samples, np.ndarray):
         if not reaction_names:
