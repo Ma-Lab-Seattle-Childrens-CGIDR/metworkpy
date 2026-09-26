@@ -149,7 +149,7 @@ def ko_divergence(
     unperturbed_sample = cobra.sampling.sample(
         model=model,
         n=sample_count,
-        seed=rng.integers(low=0, high=np.iinfo(np.intp).max),
+        seed=int(rng.integers(low=0, high=np.iinfo(np.intp).max)),
         **sampler_kwargs,
     )
 
@@ -160,7 +160,7 @@ def ko_divergence(
                 perturbed_sample = cobra.sampling.sample(
                     model=ko_model,
                     n=sample_count,
-                    seed=rng.integers(low=0, high=np.iinfo(np.intp).max),
+                    seed=int(rng.integers(low=0, high=np.iinfo(np.intp).max)),
                     **sampler_kwargs,
                 )
             except ValueError:
