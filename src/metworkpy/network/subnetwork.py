@@ -14,7 +14,7 @@ from metworkpy.gpr.gpr_functions import gene_group_to_reaction_list
 from .neighborhoods import NodeType, get_graph_neighborhood
 
 
-def get_subnetwork(
+def get_kpaths_subnetwork(
     network: nx.Graph | nx.DiGraph,
     nodes: Iterable[NodeType],
     *,
@@ -84,7 +84,7 @@ def get_subnetwork(
     return network.subgraph(subnetwork_node_set)
 
 
-def get_gene_subnetwork(
+def get_gene_kpaths_subnetwork(
     network: nx.Graph | nx.DiGraph,
     model: cobra.Model,
     genes: Iterable[str],
@@ -136,6 +136,6 @@ def get_gene_subnetwork(
             model=model, gene_list=genes, essential=essential
         )
     )
-    return get_subnetwork(
+    return get_kpaths_subnetwork(
         network=network, nodes=nodes, k=k, radius=radius, weight=weight
     )

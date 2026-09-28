@@ -39,7 +39,7 @@ from .network_construction import (
     get_top_metabolites,
 )
 from .projection import bipartite_project
-from .subnetwork import get_gene_subnetwork, get_subnetwork
+from .subnetwork import get_gene_kpaths_subnetwork, get_kpaths_subnetwork
 
 __all__ = [
     "betweenness_centrality_bipartite_subset",
@@ -66,10 +66,10 @@ __all__ = [
     "gene_target_density",
     "gene_target_enrichment",
     "get_distance_matrix",
-    "get_gene_subnetwork",
+    "get_gene_kpaths_subnetwork",
+    "get_kpaths_subnetwork",
     "get_network_target_set_clustering",
     "get_network_target_set_linkage",
-    "get_subnetwork",
     "get_top_metabolite_pairs",
     "get_top_metabolites",
     "graph_gene_neighborhood_iter",
