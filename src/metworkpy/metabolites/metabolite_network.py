@@ -40,6 +40,7 @@ def find_metabolite_synthesis_network_reactions(
     return_type: Literal["dict", "DataFrame", "long"] = "DataFrame",
     metabolites: Iterable[str] | None = None,
     reaction_filter: Iterable[str] | dict[str, Iterable[str]] | None = None,
+    eliminate_maintenance: bool = False,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
@@ -87,6 +88,10 @@ def find_metabolite_synthesis_network_reactions(
         corresponding to that metabolite in the dict will be able to appear
         in that metabolite's network. If None, all reactions will be considered
         possible for each metabolites network.
+    eliminate_maintenance : bool,default=False
+        Eliminate maintenance reactions (for example ATP maintenance)
+        (by setting their lower bounds to 0) before finding the metabolite
+        networks.
     pfba_proportion : float
         Proportion to use for pfba analysis. This represents the
         fraction of optimum constraint applied before minimizing the sum
@@ -166,58 +171,64 @@ def find_metabolite_synthesis_network_reactions(
         case l:
             filter_list = list(l)
             rxn_filter_dict = {m: filter_list for m in res_df.columns}
-    for metabolite in tqdm(res_df.columns, disable=not progress_bar):
-        met_rxn_filter = rxn_filter_dict.get(metabolite, None)
-        with model as m:
-            metabolite_sink_reaction_id = add_metabolite_objective_(
-                m, metabolite
-            )
-            if method == "essential":
-                ess_rxns = [
-                    rxn
-                    for rxn in (
-                        _find_essential_reactions(
-                            model=m,
-                            reaction_list=met_rxn_filter,  # ty: ignore[invalid-argument-type]
-                            threshold=essential_proportion * m.slim_optimize(),
-                            processes=processes,
+    with model as model_:
+        if eliminate_maintenance:
+            eliminate_maintenance_requirements_(model_)
+        for metabolite in tqdm(res_df.columns, disable=not progress_bar):
+            met_rxn_filter = rxn_filter_dict.get(metabolite, None)
+            with model_ as m:
+                metabolite_sink_reaction_id = add_metabolite_objective_(
+                    m, metabolite
+                )
+                if method == "essential":
+                    ess_rxns = [
+                        rxn
+                        for rxn in (
+                            _find_essential_reactions(
+                                model=m,
+                                reaction_list=met_rxn_filter,  # ty: ignore[invalid-argument-type]
+                                threshold=essential_proportion
+                                * m.slim_optimize(),
+                                processes=processes,
+                            )
                         )
+                        if rxn != metabolite_sink_reaction_id
+                    ]
+                    res_df.loc[ess_rxns, metabolite] = True
+                    res_df.loc[~res_df.index.isin(ess_rxns), metabolite] = (
+                        False
                     )
-                    if rxn != metabolite_sink_reaction_id
-                ]
-                res_df.loc[ess_rxns, metabolite] = True
-                res_df.loc[~res_df.index.isin(ess_rxns), metabolite] = False
-            elif method == "pfba" or method == "gfba":
-                if method == "pfba":
-                    flux_series = (
-                        cobra.flux_analysis.pfba(
-                            model=m,
-                            objective=m.objective,
-                            fraction_of_optimum=pfba_proportion,
-                            **kwargs,
-                        )
-                    ).fluxes
-                elif method == "gfba":
-                    try:
+                elif method == "pfba" or method == "gfba":
+                    if method == "pfba":
                         flux_series = (
-                            cobra.flux_analysis.geometric.geometric_fba(
-                                model=m, **kwargs
-                            ).fluxes
-                        )
-                    except RuntimeError:
-                        flux_series = pd.Series(np.nan, res_df.index)
+                            cobra.flux_analysis.pfba(
+                                model=m,
+                                objective=m.objective,
+                                fraction_of_optimum=pfba_proportion,
+                                **kwargs,
+                            )
+                        ).fluxes
+                    elif method == "gfba":
+                        try:
+                            flux_series = (
+                                cobra.flux_analysis.geometric.geometric_fba(
+                                    model=m, **kwargs
+                                ).fluxes
+                            )
+                        except RuntimeError:
+                            flux_series = pd.Series(np.nan, res_df.index)
 
-                assert isinstance(flux_series, pd.Series), (
-                    "Invalid return from COBRApy pfba or geometric_fba function"
-                )
-                flux_series.drop(metabolite_sink_reaction_id, inplace=True)
-                if met_rxn_filter is not None:
-                    flux_series = flux_series[met_rxn_filter]  # ty: ignore[invalid-argument-type]
-                res_df.loc[flux_series.index, metabolite] = flux_series
-            else:
-                raise ValueError(
-                    f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
-                )
+                    assert isinstance(flux_series, pd.Series), (
+                        "Invalid return from COBRApy pfba or geometric_fba function"
+                    )
+                    flux_series.drop(metabolite_sink_reaction_id, inplace=True)
+                    if met_rxn_filter is not None:
+                        flux_series = flux_series[met_rxn_filter]  # ty: ignore[invalid-argument-type]
+                    res_df.loc[flux_series.index, metabolite] = flux_series
+                else:
+                    raise ValueError(
+                        f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
+                    )
     if return_type == "DataFrame":
         return res_df
     elif return_type == "dict":
@@ -276,6 +287,7 @@ def find_metabolite_synthesis_network_genes(
     return_type: Literal["DataFrame", "dict", "long"] = "DataFrame",
     metabolites: Iterable[str] | None = None,
     gene_filter: Iterable[str] | dict[str, Iterable[str]] | None = None,
+    eliminate_maintenance: bool = False,
     pfba_proportion: float = 0.95,
     essential_proportion: float = 0.05,
     progress_bar: bool = False,
@@ -319,6 +331,10 @@ def find_metabolite_synthesis_network_genes(
     metabolites : iterable of str, optional
         Which metabolites to find the synthesis networks for, if not provided will
         find the networks for all the metabolites in the model
+    eliminate_maintenance : bool,default=False
+        Eliminate maintenance reactions (for example ATP maintenance)
+        (by setting their lower bounds to 0) before finding the metabolite
+        networks.
     gene_filter : iterable of str or dict of str to iterable of str,optional
         Filter which genes are considered for each metabolite network.
         If a list of str (or other iterable of str), should be a list of
@@ -416,69 +432,79 @@ def find_metabolite_synthesis_network_genes(
             }
         case l:
             gene_filter_dict = {m: list(l) for m in res_df.columns}
-    for metabolite in tqdm(res_df.columns, disable=not progress_bar):
-        met_gene_filter = gene_filter_dict.get(metabolite, None)
-        with model as m:
-            _ = add_metabolite_objective_(m, metabolite)
-            if method == "essential":
-                ess_genes = [
-                    gene
-                    for gene in (
-                        _find_essential_genes(
-                            model=m,
-                            gene_list=met_gene_filter,  # ty: ignore[invalid-argument-type]
-                            threshold=essential_proportion * m.slim_optimize(),
-                            processes=processes,
+    with model as model_:
+        if eliminate_maintenance:
+            eliminate_maintenance_requirements_(model_)
+        for metabolite in tqdm(res_df.columns, disable=not progress_bar):
+            met_gene_filter = gene_filter_dict.get(metabolite, None)
+            with model_ as m:
+                _ = add_metabolite_objective_(m, metabolite)
+                if method == "essential":
+                    ess_genes = [
+                        gene
+                        for gene in (
+                            _find_essential_genes(
+                                model=m,
+                                gene_list=met_gene_filter,  # ty: ignore[invalid-argument-type]
+                                threshold=essential_proportion
+                                * m.slim_optimize(),
+                                processes=processes,
+                            )
                         )
+                    ]
+                    res_df.loc[ess_genes, metabolite] = True
+                    res_df.loc[~res_df.index.isin(ess_genes), metabolite] = (
+                        False
                     )
-                ]
-                res_df.loc[ess_genes, metabolite] = True
-                res_df.loc[~res_df.index.isin(ess_genes), metabolite] = False
-            elif method == "pfba" or method == "gfba":
-                if method == "pfba":
-                    flux_series = (
-                        cobra.flux_analysis.pfba(
-                            model=m,
-                            fraction_of_optimum=pfba_proportion,
-                            **kwargs,
+                elif method == "pfba" or method == "gfba":
+                    if method == "pfba":
+                        flux_series = (
+                            cobra.flux_analysis.pfba(
+                                model=m,
+                                fraction_of_optimum=pfba_proportion,
+                                **kwargs,
+                            )
+                        ).fluxes
+                    elif method == "gfba":
+                        flux_series = cobra.flux_analysis.geometric_fba(
+                            model=m, **kwargs
+                        ).fluxes
+                    flux_series.name = "fluxes"
+                    # Create a dataframe indexed by reaction, with a column for genes
+                    rxn_to_gene_frame = (
+                        pd.Series(
+                            get_reaction_to_gene_translation_dict(
+                                model=model, essential=essential
+                            ),
                         )
-                    ).fluxes
-                elif method == "gfba":
-                    flux_series = cobra.flux_analysis.geometric_fba(
-                        model=m, **kwargs
-                    ).fluxes
-                flux_series.name = "fluxes"
-                # Create a dataframe indexed by reaction, with a column for genes
-                rxn_to_gene_frame = (
-                    pd.Series(
-                        get_reaction_to_gene_translation_dict(
-                            model=model, essential=essential
-                        ),
+                        .explode()
+                        .to_frame(name="gene")
                     )
-                    .explode()
-                    .to_frame(name="gene")
-                )
-                flux_frame = flux_series.to_frame(name="fluxes")
-                gene_fluxes = flux_frame.merge(
-                    rxn_to_gene_frame,
-                    how="left",
-                    left_index=True,
-                    right_index=True,
-                ).reset_index(drop=True)
-                # Set the values of res_df such that the value reflects the
-                # maximum value in terms of magnitude, but sign is maintained,
-                gene_fluxes_max = gene_fluxes.groupby("gene").max()["fluxes"]
-                gene_fluxes_min = gene_fluxes.groupby("gene").min()["fluxes"]
-                gene_max_abs = np.maximum(
-                    gene_fluxes_max.abs(), gene_fluxes_min.abs()
-                )
-                if met_gene_filter is not None:
-                    gene_max_abs = gene_max_abs[met_gene_filter]
-                res_df.loc[gene_max_abs.index, metabolite] = gene_max_abs
-            else:
-                raise ValueError(
-                    f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
-                )
+                    flux_frame = flux_series.to_frame(name="fluxes")
+                    gene_fluxes = flux_frame.merge(
+                        rxn_to_gene_frame,
+                        how="left",
+                        left_index=True,
+                        right_index=True,
+                    ).reset_index(drop=True)
+                    # Set the values of res_df such that the value reflects the
+                    # maximum value in terms of magnitude, but sign is maintained,
+                    gene_fluxes_max = gene_fluxes.groupby("gene").max()[
+                        "fluxes"
+                    ]
+                    gene_fluxes_min = gene_fluxes.groupby("gene").min()[
+                        "fluxes"
+                    ]
+                    gene_max_abs = np.maximum(
+                        gene_fluxes_max.abs(), gene_fluxes_min.abs()
+                    )
+                    if met_gene_filter is not None:
+                        gene_max_abs = gene_max_abs[met_gene_filter]
+                    res_df.loc[gene_max_abs.index, metabolite] = gene_max_abs
+                else:
+                    raise ValueError(
+                        f"Method must be 'pfba', 'gfba', or 'essential' but received {method}"
+                    )
     if return_type == "DataFrame":
         return res_df
     elif return_type == "dict":
