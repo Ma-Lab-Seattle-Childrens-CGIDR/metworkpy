@@ -21,6 +21,7 @@ from scipy import stats
 # Local Imports
 from metworkpy.utils import (
     fisher_enrichment,
+    gene_to_reaction_list,
     get_reaction_to_gene_translation_dict,
     reaction_to_gene_list,
 )
@@ -163,7 +164,8 @@ def find_metabolite_synthesis_network_reactions(
                 for m, s in reaction_filter.items()
             }
         case l:
-            rxn_filter_dict = {m: list(l) for m in res_df.columns}
+            filter_list = list(l)
+            rxn_filter_dict = {m: filter_list for m in res_df.columns}
     for metabolite in tqdm(res_df.columns, disable=not progress_bar):
         met_rxn_filter = rxn_filter_dict.get(metabolite, None)
         with model as m:
@@ -532,6 +534,7 @@ def find_metabolite_synthesis_network_genes(
 def find_metabolite_consuming_network_reactions(
     model: cobra.Model,
     metabolites: Iterable[str] | None = None,
+    reaction_filter: Iterable[str] | dict[str, Iterable[str]] | None = None,
     return_type: Literal["DataFrame", "dict", "long"] = "DataFrame",
     reaction_proportion: float = 0.05,
     add_sinks: bool = False,
@@ -548,6 +551,16 @@ def find_metabolite_consuming_network_reactions(
     metabolites : iterable of str, optional
         Which metabolites to find the consuming networks for, if not provided will
         find the networks for all the metabolites in the model
+    reaction_filter : iterable of str or dict of str to iterable of str,optional
+        Filter which reactions are considered for each metabolite network.
+        If a list of str (or other iterable of str), should be a list of
+        reaction ids, which will be the only reactions that can appear
+        in any metabolite network. If a dict, should be keyed by metabolite
+        id with lists (or other iterable) of reactions as the values. For
+        a particular metabolite network, only the reactions in the list
+        corresponding to that metabolite in the dict will be able to appear
+        in that metabolite's network. If None, all reactions will be considered
+        possible for each metabolites network.
     return_type : {'DataFrame', 'dict', 'long'}, default='DataFrame'
         How to return the networks, either a dataframe or dict
         (see returns for more information).
@@ -595,59 +608,70 @@ def find_metabolite_consuming_network_reactions(
         index=model.reactions.list_attr("id"),
         dtype=bool,
     )
-    with model as m:
+    match reaction_filter:
+        case None:
+            rxn_filter_dict: dict[str, list[str]] = {}
+        case dict():
+            rxn_filter_dict = {
+                m: list(set(s))  # ty: ignore[invalid-argument-type]
+                for m, s in reaction_filter.items()
+            }
+        case l:
+            filter_list = list(l)
+            rxn_filter_dict = {m: filter_list for m in res_df.columns}
+    with model as no_maint_model:
         # Remove maintenance reactions to avoid issues with infeasibility
-        eliminate_maintenance_requirements_(m)
+        eliminate_maintenance_requirements_(no_maint_model)
         if add_sinks:
-            add_all_metabolite_sinks_(m)
+            add_all_metabolite_sinks_(no_maint_model)
         # Perform FVA for the model
         fva_results = (
             cobra.flux_analysis.variability.flux_variability_analysis(
-                m, fraction_of_optimum=0.0, **kwargs
+                no_maint_model, fraction_of_optimum=0.0, **kwargs
             )
         )
-    for metabolite in tqdm(res_df.columns, disable=not progress_bar):
-        with model as m:
-            # Remove maintenance reactions to avoid issues with infeasibility
-            eliminate_maintenance_requirements_(m)
-            # Add all metabolite sinks if desired
-            if add_sinks:
-                add_all_metabolite_sinks_(m)
-            # Add the absorbing reaction
-            add_metabolite_absorb_reaction_(m, metabolite)
-            try:
-                fva_results_remove_metabolite = (
-                    cobra.flux_analysis.variability.flux_variability_analysis(
-                        m, fraction_of_optimum=0.0, **kwargs
+        for metabolite in tqdm(res_df.columns, disable=not progress_bar):
+            with no_maint_model as met_model:
+                # Get the reaction filter
+                met_rxn_filter = rxn_filter_dict.get(metabolite, None)
+                # Add the absorbing reaction
+                add_metabolite_absorb_reaction_(met_model, metabolite)
+                try:
+                    fva_results_remove_metabolite = cobra.flux_analysis.variability.flux_variability_analysis(
+                        met_model,
+                        reaction_list=met_rxn_filter,  # ty: ignore[invalid-argument-type]
+                        fraction_of_optimum=0.0,
+                        **kwargs,
                     )
-                )
-            except OptimizationError:
-                warnings.warn(
-                    f"Optimization error occurred when finding consuming reactions "
-                    f"for metabolite {metabolite}, no reactions will be marked as consuming "
-                    f"this metabolite."
-                )
-                continue
-            # Now determine which reactions consume the metabolite
-            for rxn in res_df.index:
-                rxn_max = fva_results.loc[rxn, "maximum"]
-                rxn_min = fva_results.loc[rxn, "minimum"]
-                rxn_max_no_met = fva_results_remove_metabolite.loc[
-                    rxn, "maximum"
-                ]
-                rxn_min_no_met = fva_results_remove_metabolite.loc[
-                    rxn, "minimum"
-                ]
-                if (rxn_max > 0.0) and (
-                    rxn_max_no_met < rxn_max * reaction_proportion
-                ):
-                    res_df.loc[rxn, metabolite] = True
-                if (
-                    check_reverse
-                    and (rxn_min < 0.0)
-                    and (rxn_min_no_met > rxn_min * reaction_proportion)
-                ):
-                    res_df.loc[rxn, metabolite] = True
+                except OptimizationError:
+                    warnings.warn(
+                        f"Optimization error occurred when finding consuming reactions "
+                        f"for metabolite {metabolite}, no reactions will be marked as consuming "
+                        f"this metabolite."
+                    )
+                    continue
+                # Now determine which reactions consume the metabolite
+                for rxn in fva_results_remove_metabolite.index:
+                    if rxn not in res_df.index:
+                        continue
+                    rxn_max = fva_results.loc[rxn, "maximum"]
+                    rxn_min = fva_results.loc[rxn, "minimum"]
+                    rxn_max_no_met = fva_results_remove_metabolite.loc[
+                        rxn, "maximum"
+                    ]
+                    rxn_min_no_met = fva_results_remove_metabolite.loc[
+                        rxn, "minimum"
+                    ]
+                    if (rxn_max > 0.0) and (
+                        rxn_max_no_met < rxn_max * reaction_proportion
+                    ):
+                        res_df.loc[rxn, metabolite] = True
+                    if (
+                        check_reverse
+                        and (rxn_min < 0.0)
+                        and (rxn_min_no_met > rxn_min * reaction_proportion)
+                    ):
+                        res_df.loc[rxn, metabolite] = True
     if return_type == "DataFrame":
         return res_df
     elif return_type == "long":
@@ -671,6 +695,7 @@ def find_metabolite_consuming_network_reactions(
 def find_metabolite_consuming_network_genes(
     model: cobra.Model,
     metabolites: Iterable[str] | None = None,
+    gene_filter: Iterable[str] | dict[str, Iterable[str]] | None = None,
     return_type: Literal["DataFrame", "dict", "long"] = "DataFrame",
     reaction_proportion: float = 0.05,
     add_sinks: bool = False,
@@ -688,6 +713,16 @@ def find_metabolite_consuming_network_genes(
     metabolites : iterable of str, optional
         Which metabolites to find the consuming networks for, if not provided will
         find the networks for all the metabolites in the model
+    gene_filter : iterable of str or dict of str to iterable of str,optional
+        Filter which genes are considered for each metabolite network.
+        If a list of str (or other iterable of str), should be a list of
+        gene ids, which will be the only genes that can appear
+        in any metabolite network. If a dict, should be keyed by metabolite
+        id with lists (or other iterable) of genes as the values. For
+        a particular metabolite network, only the genes in the list
+        corresponding to that metabolite in the dict will be able to appear
+        in that metabolite's network. If None, all genes will be considered
+        possible for each metabolites network.
     return_type : {'DataFrame', 'dict', 'long'}, default='DataFrame'
         How to return the networks, either a dataframe or dict
         (see returns for more information).
@@ -729,6 +764,25 @@ def find_metabolite_consuming_network_genes(
     """
     if metabolites is None:
         metabolites = model.metabolites.list_attr("id")
+    # Create a reaction filter from the gene filter
+    match gene_filter:
+        case None:
+            reaction_filter = None
+        case dict():
+            reaction_filter = {
+                m: list(
+                    gene_to_reaction_list(
+                        model=model,
+                        gene_list=s,  # ty: ignore[invalid-argument-type]
+                        essential=essential,
+                    )
+                )
+                for m, s in gene_filter.items()
+            }
+        case l:
+            reaction_filter = gene_to_reaction_list(
+                model=model, gene_list=list(l), essential=essential
+            )
     res_df = pd.DataFrame(
         False,
         columns=pd.Index(metabolites),
@@ -738,6 +792,7 @@ def find_metabolite_consuming_network_genes(
     metabolite_reaction_network = find_metabolite_consuming_network_reactions(
         model=model,
         reaction_proportion=reaction_proportion,
+        reaction_filter=reaction_filter,  # ty: ignore[invalid-argument-type]
         progress_bar=progress_bar,
         add_sinks=add_sinks,
         **kwargs,
