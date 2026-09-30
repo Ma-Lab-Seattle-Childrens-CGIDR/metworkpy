@@ -2,7 +2,7 @@
 name = "metworkpy"
 description = "Tools for creating and working with network models of metabolism."
 authors = [{ name = "Braden Griebel", email = "bgriebel@uw.edu" }]
-version = "0.11.0"
+version = "0.12.0"
 readme = "README.md"
 keywords = ["FBA", "metabolism", "IMAT", "metchange"]
 license = { text = "MIT" }
@@ -76,7 +76,7 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 filterwarnings = [
-# This warning just occurs with essentially all multi-processing calls
+  # This warning just occurs with essentially all multi-processing calls
   'ignore:This process \(pid=\d+\) is multi-threaded, use of fork\(\) may lead to deadlocks in the child\.:DeprecationWarning',
 ]
 
@@ -112,4 +112,4 @@ exclude = [
   "site-packages",
   "venv",
   "*.ipynb",
-  ]
+]

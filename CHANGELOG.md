@@ -3,7 +3,8 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
-  - [Version DEV](#version-dev)
+  - [Version 0.12.0](#version-0120)
+    - [References](#references)
   - [Version 0.11.0](#version-0110)
   - [Version 0.10.0](#version-0100)
   - [Version 0.9.0](#version-090)
@@ -20,7 +21,7 @@
 
 <!--toc:end-->
 
-## Version DEV
+## Version 0.12.0
 
 - Dropping support for python 3.9
 - Increasing minimum SciPy version to 1.15 for associated sparse array
@@ -103,6 +104,13 @@
   global, across all metabolites, or metabolite specific. When combined with the
   neighborhood methods, this can allow for filtering metabolite neighborhoods to
   only include reactions/genes within a certain distance of the metabolite.
+- Added parameter to neighborhood map/density functions for specifying if
+  reactions are split into 2 nodes for forward and reverse, or just a single
+  node. This fixes the mapping from nodes to genes, so that these methods can be
+  used with a network that splits reactions into 2 nodes. This option wasn't
+  added to the node focused methods (where there is not gene->reaction mapping),
+  since in these cases nodes are selected directly (as opposed to being selected
+  by translating genes into reactions).
 
 ### References
 
