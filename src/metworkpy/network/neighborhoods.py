@@ -70,6 +70,7 @@ def get_graph_gene_neighborhoods(
     model: cobra.Model,
     radius: int,
     *,
+    direction_split: bool = False,
     essential: bool = False,
     include_node: bool = True,
     weight: str | None = None,
@@ -85,6 +86,8 @@ def get_graph_gene_neighborhoods(
         The cobra model associated with the metabolic network
     radius : int
         The radius determining the sizes of the neighborhoods
+    direction_split : bool, default=False
+        Whether the network has had reactions split into _FORWARD and _REVERSE versions
     essential : bool
         Whether to only include genes essential for reactions in the
         neighborhood
@@ -107,6 +110,7 @@ def get_graph_gene_neighborhoods(
             network=network,
             model=model,
             radius=radius,
+            direction_split=direction_split,
             essential=essential,
             include_node=include_node,
             weight=weight,
@@ -162,6 +166,7 @@ def graph_gene_neighborhood_iter(
     model: cobra.Model,
     radius: int,
     *,
+    direction_split: bool = False,
     essential: bool = False,
     include_node: bool = True,
     weight: str | None = None,
@@ -177,6 +182,8 @@ def graph_gene_neighborhood_iter(
         The cobra model associated with the metabolic network
     radius : int
         The radius determining the size of the neighborhood
+    direction_split : bool, default=False
+        Whether the network has had reactions split into _FORWARD and _REVERSE versions
     essential : bool
         Whether to only include genes essential for reactions in the
         neighborhood
@@ -192,8 +199,8 @@ def graph_gene_neighborhood_iter(
     tuple of Hashable and set of str
         Tuple of node and gene ids in neighborhood
     """
-    rxn_to_gene_set_dict = get_reaction_to_gene_translation_dict(
-        model=model, essential=essential
+    rxn_to_gene_set_dict = _create_rxn_to_gene_set_dict(
+        model=model, essential=essential, direction_split=direction_split
     )
     for node in network:
         yield (
@@ -202,8 +209,10 @@ def graph_gene_neighborhood_iter(
                 network=network,
                 radius=radius,
                 node=cast(str, node),
-                rxn_to_gene_set_dict=rxn_to_gene_set_dict,
                 model=None,
+                rxn_to_gene_set_dict=rxn_to_gene_set_dict,
+                direction_split=direction_split,
+                essential=essential,
                 include_node=include_node,
                 weight=weight,
             ),
@@ -312,6 +321,7 @@ def graph_gene_neighborhood(
     *,
     model: cobra.Model | None = None,
     rxn_to_gene_set_dict: dict[str, set[str]] | None = None,
+    direction_split: bool = False,
     essential: bool = False,
     include_node: bool = True,
     weight: str | None = None,
@@ -337,6 +347,8 @@ def graph_gene_neighborhood(
         are associated with the reaction. Either `model` of `rxn_to_gene_set_dict`
         must be provided for mapping between reactions and genes, if both are
         provided `rxn_to_gene_set_dict` takes priority.
+    direction_split : bool, default=False
+        Whether the network has had reactions split into _FORWARD and _REVERSE versions
     essential : bool
         Whether to only include genes essential for reactions in the
         neighborhood
@@ -352,14 +364,12 @@ def graph_gene_neighborhood(
     neighborhood : set of str
         The ids of genes in the neighborhood around `node` in `network`
     """
-    if rxn_to_gene_set_dict is None:
-        if model is None:
-            raise ValueError(
-                "At least one of 'model' or 'rxn_to_gene_set_dict' must be provided, but both are None"
-            )
-        rxn_to_gene_set_dict = get_reaction_to_gene_translation_dict(
-            model=model, essential=essential
-        )
+    rxn_to_gene_set_dict = _create_rxn_to_gene_set_dict(
+        model=model,
+        reaction_to_gene_set_dict=rxn_to_gene_set_dict,
+        essential=essential,
+        direction_split=direction_split,
+    )
     neighborhood = set()
     for rxn_id in get_graph_neighborhood(
         network=network,
@@ -493,6 +503,7 @@ def gene_neighborhood_map(
     network: nx.Graph | nx.DiGraph,
     model: cobra.Model | None = None,
     reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
+    direction_split: bool = False,
     radius: float = 2,
     essential: bool = False,
     nodes: Iterable[NodeType] | None = None,
@@ -521,6 +532,8 @@ def gene_neighborhood_map(
         Map between reaction ids and sets of gene ids. Must provide at least one of
         `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
         takes precedence if both are provided.
+    direction_split : bool, default=False
+        Whether the network has had reactions split into _FORWARD and _REVERSE versions
     radius : float
         The size of the neighborhood to map over.
         Any nodes within radius distance of the central node will be included
@@ -571,6 +584,7 @@ def gene_neighborhood_map(
             model=model,
             reaction_to_gene_set_dict=reaction_to_gene_set_dict,
             essential=essential,
+            direction_split=direction_split,
         ).items()
         if len(gs) > 0
     }
@@ -731,6 +745,7 @@ def weighted_gene_neighbor_map(
     network: nx.Graph | nx.DiGraph,
     model: cobra.Model | None = None,
     reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
+    direction_split: bool = False,
     essential: bool = False,
     nodes: Iterable[NodeType] | None = None,
     node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
@@ -761,6 +776,8 @@ def weighted_gene_neighbor_map(
         Map between reaction ids and sets of gene ids. Must provide at least one of
         `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
         takes precedence if both are provided.
+    direction_split : bool, default=False
+        Whether the network has had reactions split into _FORWARD and _REVERSE versions
     essential : bool,default=False
         Whether, when finding which genes are associated with the
         reaction nodes in the network, the mapping should require
@@ -815,6 +832,7 @@ def weighted_gene_neighbor_map(
             model=model,
             reaction_to_gene_set_dict=reaction_to_gene_set_dict,
             essential=essential,
+            direction_split=direction_split,
         ).items()
         if len(gs) > 0
     }
@@ -872,6 +890,7 @@ def combine_neighborhood_pvalues_weighted(
     network: nx.Graph | nx.DiGraph,
     model: cobra.Model | None = None,
     reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
+    direction_split: bool = False,
     essential: bool = False,
     nodes: Iterable[NodeType] | None = None,
     node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
@@ -904,6 +923,8 @@ def combine_neighborhood_pvalues_weighted(
         Map between reaction ids and sets of gene ids. Must provide at least one of
         `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
         takes precedence if both are provided.
+    direction_split : bool, default=False
+        Whether the network has had reactions split into _FORWARD and _REVERSE versions
     essential : bool,default=False
         Whether, when finding which genes are associated with the
         reaction nodes in the network, the mapping should require
@@ -981,6 +1002,7 @@ def combine_neighborhood_pvalues_weighted(
         network=network,
         model=model,
         reaction_to_gene_set_dict=reaction_to_gene_set_dict,
+        direction_split=direction_split,
         essential=essential,
         nodes=nodes,
         node_filter=node_filter,
@@ -1002,6 +1024,7 @@ def combine_neighborhood_pvalues(
     gene_weights: Mapping[str, float] | None = None,
     model: cobra.Model | None = None,
     reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
+    direction_split: bool = False,
     radius: float = 2,
     essential: bool = False,
     nodes: Iterable[NodeType] | None = None,
@@ -1037,6 +1060,8 @@ def combine_neighborhood_pvalues(
         Map between reaction ids and sets of gene ids. Must provide at least one of
         `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
         takes precedence if both are provided.
+    direction_split : bool, default=False
+        Whether the network has had reactions split into _FORWARD and _REVERSE versions
     radius : float
         The size of the neighborhood to map over.
         Any nodes within radius distance of the central node will be included
@@ -1089,6 +1114,7 @@ def combine_neighborhood_pvalues(
         network=network,
         model=model,
         reaction_to_gene_set_dict=reaction_to_gene_set_dict,
+        direction_split=direction_split,
         radius=radius,
         essential=essential,
         nodes=nodes,
@@ -1126,6 +1152,7 @@ def _create_rxn_to_gene_set_dict(
     model: cobra.Model | None = None,
     reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
     essential: bool = False,
+    direction_split: bool = False,
 ):
     # Get a dict of reaction to gene set
     if reaction_to_gene_set_dict is None:
@@ -1139,4 +1166,8 @@ def _create_rxn_to_gene_set_dict(
             )
     else:
         rxn_to_gene_dict = reaction_to_gene_set_dict
+    if direction_split:
+        rxn_to_gene_dict = {
+            f"{k}_FORWARD": v for k, v in rxn_to_gene_dict.items()
+        } | {f"{k}_REVERSE": v for k, v in rxn_to_gene_dict.items()}
     return rxn_to_gene_dict

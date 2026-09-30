@@ -16,14 +16,16 @@ from metworkpy.network.network_construction import create_metabolic_network
 def find_variable_components(
     model: cobra.Model,
     network: nx.Graph | nx.DiGraph | None = None,
+    *,
     tolerance: float = 1e-7,
+    split_direction: bool = False,
     directed: bool = False,
     strongly_connected: bool = False,
     **kwargs,
 ) -> list[set[Hashable]]:
     """
     Identify the variable components in the metabolic network,
-    that is the components of the network which can vary under at the
+    that is the components of the network which can vary at the
     optimum solution
 
     Parameters
@@ -37,6 +39,8 @@ def find_variable_components(
     tolerance : float, default=1e-7
         The tolerance, reactions which have minimum and maximum fluxes less
         than this value will be considered constant
+    direction_split : bool, default=False
+        Whether the network has had reactions split into _FORWARD and _REVERSE versions
     directed : bool, default=False
         If network is not passed, this decides if the constructed network is
         directed or not
@@ -67,14 +71,21 @@ def find_variable_components(
     fva_solution = cobra.flux_analysis.flux_variability_analysis(
         model=model, **kwargs
     )
-    variable_reactions = [
+    variable_reactions = {
         r
         for r in fva_solution[
             (fva_solution["maximum"] - fva_solution["minimum"]).abs()
             >= tolerance
         ].index
-        if r in network.nodes
-    ]
+    }
+    if split_direction:
+        variable_reactions = {
+            f"{r}_{d}"
+            for r in variable_reactions
+            for d in ["FORWARD", "REVERSE"]
+        }
+    # NOTE: Subgraph allows for nodes which are not in the graph
+
     # Get the induced subgraph
     subgraph = network.subgraph(variable_reactions)
     if subgraph.is_directed():

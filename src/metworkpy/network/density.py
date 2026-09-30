@@ -38,6 +38,7 @@ def node_target_density(
     targets: list[Hashable] | Mapping[Hashable, float | int] | pd.Series,
     radius: int = DEFAULT_RADIUS,
     nodes: Iterable[NodeType] | None = None,
+    *,
     node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
     weight: str | None = None,
     include_node: bool = True,
@@ -131,6 +132,7 @@ def node_target_enrichment(
     targets: Iterable[NodeType],
     radius: int = DEFAULT_RADIUS,
     nodes: Iterable[NodeType] | None = None,
+    *,
     node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
     weight: str | None = None,
     include_node: bool = True,
@@ -275,7 +277,9 @@ def gene_target_density(
     metabolic_network: nx.Graph | nx.DiGraph,
     gene_targets: pd.Series | list[str] | Mapping[str, float],
     metabolic_model: cobra.Model | None = None,
+    *,
     reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
+    direction_split: bool = False,
     radius: int = DEFAULT_RADIUS,
     essential: bool = False,
     nodes: Iterable[NodeType] | None = None,
@@ -307,6 +311,8 @@ def gene_target_density(
         Map between reaction ids and sets of gene ids. Must provide at least one of
         `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
         takes precedence if both are provided.
+    direction_split : bool, default=False
+        Whether the network has had reactions split into _FORWARD and _REVERSE versions
     radius : int, default=2
         The radius to use for finding density, specifies how far out from
         a given node targets are counted towards density. A radius of 0 only
@@ -365,6 +371,7 @@ def gene_target_density(
         network=metabolic_network,
         model=metabolic_model,
         reaction_to_gene_set_dict=reaction_to_gene_set_dict,
+        direction_split=direction_split,
         radius=radius,
         essential=essential,
         nodes=nodes,
@@ -379,7 +386,9 @@ def gene_target_enrichment(
     metabolic_network: nx.Graph | nx.DiGraph,
     gene_targets: Iterable[str],
     metabolic_model: cobra.Model | None = None,
+    *,
     reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
+    direction_split: bool = False,
     radius: int = DEFAULT_RADIUS,
     essential: bool = False,
     nodes: Iterable[NodeType] | None = None,
@@ -411,6 +420,9 @@ def gene_target_enrichment(
         Map between reaction ids and sets of gene ids. Must provide at least one of
         `model` or `reaction_to_gene_set_dict`, `reaction_to_gene_set_dict`
         takes precedence if both are provided.
+    direction_split : bool, default=False
+        Whether the reactions in the network were split into
+        forward and reverse nodes
     radius : int, default=2
         The radius to use for defining a neighborhood around the reaction for
         finding enrichment, specifies how far out from a given node targets are
@@ -431,7 +443,9 @@ def gene_target_enrichment(
         If a Callable, should take node ids as the only argument and return
         a bool, if True the node will be considered in neighborhoods,
         if False it will not be. If a set, only nodes in the set will be included
-        in neighborhoods.
+        in neighborhoods. Note that this filter will not be modified to account
+        for split reaction directions, if the reactions have been split into
+        forward and reverse in the network.
     weight : str, optional
         If provided indicates the edge parameter to be used as weights
         when finding distances from a central node to
@@ -470,6 +484,7 @@ def gene_target_enrichment(
         model=metabolic_model,
         reaction_to_gene_set_dict=reaction_to_gene_set_dict,
         essential=essential,
+        direction_split=direction_split,
     )
     # Get the filter set
     filter_set = _create_filter_set(
@@ -544,6 +559,7 @@ def gene_target_enrichment(
         network=metabolic_network,
         model=None,
         reaction_to_gene_set_dict=rxn_to_gene_dict,
+        direction_split=direction_split,
         radius=radius,
         essential=essential,
         nodes=nodes,
@@ -558,6 +574,7 @@ def find_dense_clusters(
     network: nx.Graph | nx.DiGraph,
     targets: list[Hashable] | Mapping[Hashable, float | int] | pd.Series,
     radius: int = DEFAULT_RADIUS,
+    *,
     top_quantile_cutoff: float = 0.20,
     target_type: Literal["genes", "nodes"] = "nodes",
     **kwargs,

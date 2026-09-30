@@ -294,7 +294,8 @@ def get_distance_matrix(
     """
     node_index = pd.Index(network.nodes)
     distance_matrix = pd.DataFrame(0.0, index=node_index, columns=node_index)
-    for source, target_dict in nx.shortest_path_length(network, **kwargs):
+    # NOTE: The shortest path returns iterable if source/target not specified
+    for source, target_dict in nx.shortest_path_length(network, **kwargs):  # ty: ignore[not-iterable]
         for target, dist in target_dict.items():
             distance_matrix.loc[source, target] = dist
     return distance_matrix

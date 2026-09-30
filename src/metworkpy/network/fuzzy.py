@@ -31,10 +31,10 @@ from scipy.stats import gmean, rv_discrete
 
 # Local Imports
 from metworkpy.network.neighborhoods import (
+    _create_rxn_to_gene_set_dict,
     get_graph_neighborhood,
     graph_gene_neighborhood,
 )
-from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
 
 
 class FuzzyMembershipFunction(Protocol):
@@ -598,7 +598,9 @@ def fuzzy_reaction_set(
     metabolic_network: nx.Graph | nx.DiGraph,
     metabolic_model: cobra.Model,
     gene_set: Iterable[str],
+    *,
     membership_fn: str | FuzzyMembershipFunction = "simple gene density",
+    direction_split: bool = False,
     scale: Literal["minmax", "softmax"] | float | None = None,
     essential: bool = False,
     processes: int | None = None,
@@ -621,10 +623,12 @@ def fuzzy_reaction_set(
         The membership function to use, can be a string giving the
         functions name, or the function itself which must match the
         signature of `FuzzyMembershipFunction`
+    direction_split : bool,default=False
+        Whether the reactions in the network have been
+        split into 'FORWARD' and 'REVERSE' nodes
     scale : {'minmax', 'softmax'} or float, optional
         How to scale the results of the membership values.
-        If None (default) no scaling is applied (unless 'gene enrichment'
-        is the `membership_fn`, in which case 'softmax' is used),
+        If None (default) no scaling is applied,
         if 'minmax' the values will be scaled by (value-min(values))/max(values).
         If 'softmax', the softmax function will be used to scale the values.
         If a float, the scaling will be the same as for 'minmax', but
@@ -680,8 +684,6 @@ def fuzzy_reaction_set(
                 f"Unable to find correct membership function, options are "
                 f"{list(MEMBERSHIP_FUNCTIONS.keys())}"
             )
-        if membership_fn == "gene enrichment" and scale is None:
-            scale = "softmax"
 
         membership_fn = MEMBERSHIP_FUNCTIONS[membership_fn]  # type: ignore
 
@@ -698,10 +700,11 @@ def fuzzy_reaction_set(
     # Ensure the gene_set is a set of genes
     gene_set = set(gene_set)
     # Get a mapping from reactions to genes
-    rxn_to_gene_dict: dict[str, set[str]] = (
-        get_reaction_to_gene_translation_dict(
-            model=metabolic_model, essential=essential
-        )
+    rxn_to_gene_dict: dict[str, set[str]] = _create_rxn_to_gene_set_dict(
+        model=metabolic_model,
+        reaction_to_gene_set_dict=None,
+        essential=essential,
+        direction_split=direction_split,
     )
     # If the membership function is gene enrichment, pre-calculate the
     # number of genes in the network if needed
@@ -763,6 +766,7 @@ def fuzzy_reaction_intersection(
     gene_sets: Iterable[Iterable[str]],
     metabolic_network: nx.Graph | nx.DiGraph,
     metabolic_model: cobra.Model,
+    *,
     intersection_fn: Callable[[pd.DataFrame], pd.Series]
     | Literal["mean", "min", "max", "geom", "rank-agg"],
     intersection_fn_kwargs: dict[str, Any] | None = None,
