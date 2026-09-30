@@ -100,7 +100,7 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
         self.assertEqual(pfba_f.dtype, "float")
 
         for rxn in ["R_A_e_ex", "R_B_e_ex", "R_C_e_ex"]:
-            self.assertAlmostEqual(pfba_f[rxn], -50)
+            self.assertAlmostEqual(pfba_f[rxn], -50)  # ty: ignore[no-matching-overload]
         for rxn in [
             "R_G_e_ex",
             "R_A_imp",
@@ -111,9 +111,9 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
             "r_C_E_F",
             "r_D_G",
         ]:
-            self.assertAlmostEqual(pfba_f[rxn], 50)
+            self.assertAlmostEqual(pfba_f[rxn], 50)  # ty: ignore[no-matching-overload]
         for rxn in ["R_F_e_ex", "R_H_e_ex", "R_F_exp", "r_C_H", "R_H_exp"]:
-            self.assertAlmostEqual(pfba_f[rxn], 0.0)
+            self.assertAlmostEqual(pfba_f[rxn], 0.0)  # ty: ignore[no-matching-overload]
 
     def test_find_metabolite_network_genes_essential(self):
         assert self.model is not None
@@ -131,9 +131,9 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
             "g_C_E_F",
             "g_D_G",
         ]:
-            self.assertTrue(ess_f[gene])
+            self.assertTrue(ess_f[gene])  # ty: ignore[invalid-argument-type]
         for rxn in ["g_C_H"]:
-            self.assertFalse(ess_f[rxn])
+            self.assertFalse(ess_f[rxn])  # ty: ignore[invalid-argument-type]
 
     def test_find_metabolite_network_genes_pfba(self):
         assert self.model is not None
@@ -151,9 +151,9 @@ class TestFindMetaboliteNetwork(unittest.TestCase):
             "g_C_E_F",
             "g_D_G",
         ]:
-            self.assertAlmostEqual(pfba_f[gene], 50)
+            self.assertAlmostEqual(pfba_f[gene], 50)  # ty: ignore[invalid-argument-type]
         for gene in ["g_C_H"]:
-            self.assertAlmostEqual(pfba_f[gene], 0)
+            self.assertAlmostEqual(pfba_f[gene], 0)  # ty: ignore[invalid-argument-type]
 
 
 class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
@@ -183,7 +183,7 @@ class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
             "R_A_e_ex",  # Can't run without metabolite
             "R_A_imp",  # Due to the products not having anywhere to go
         ]
-        actual_network_rxns = list(b_network[b_network].index)
+        actual_network_rxns = list(b_network[b_network].index)  # ty: ignore[invalid-argument-type]
         self.assertCountEqual(expected_network_rxns, actual_network_rxns)
 
     def test_find_metabolite_consuming_network_reactions_add_sinks(self):
@@ -206,7 +206,7 @@ class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
             "R_G_e_ex",
             "R_F_e_ex",
         ]
-        actual_network_rxns = list(b_network[b_network].index)
+        actual_network_rxns = list(b_network[b_network].index)  # ty: ignore[invalid-argument-type]
         self.assertCountEqual(expected_network_rxns, actual_network_rxns)
 
     def test_find_metabolite_consuming_network_reactions_ignore_reverse(self):
@@ -230,7 +230,7 @@ class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
             "R_F_e_ex",
             "R_A_imp",  # Can't run because there is nowhere for the internal A to go...
         ]
-        actual_network_rxns = list(b_network[b_network].index)
+        actual_network_rxns = list(b_network[b_network].index)  # ty: ignore[invalid-argument-type]
         self.assertCountEqual(expected_network_rxns, actual_network_rxns)
 
     def test_find_metabolite_consuming_network_genes(self):
@@ -249,7 +249,7 @@ class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
             "g_G_exp",
             "g_F_exp",
         ]
-        actual_network_rxns = list(b_network[b_network].index)
+        actual_network_rxns = list(b_network[b_network].index)  # ty: ignore[invalid-argument-type]
         self.assertCountEqual(expected_network_rxns, actual_network_rxns)
 
     def test_find_metabolite_consuming_network_genes_add_sinks(self):
@@ -270,7 +270,7 @@ class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
             "g_G_exp",
             "g_F_exp",
         ]
-        actual_network_rxns = list(b_network[b_network].index)
+        actual_network_rxns = list(b_network[b_network].index)  # ty: ignore[invalid-argument-type]
         self.assertCountEqual(expected_network_rxns, actual_network_rxns)
 
     def test_find_metabolite_consuming_network_genes_ignore_reverse(self):
@@ -289,7 +289,7 @@ class TestFindMetaboliteConsumingNetwork(unittest.TestCase):
             "g_G_exp",
             "g_F_exp",
         ]
-        actual_network_rxns = list(b_network[b_network].index)
+        actual_network_rxns = list(b_network[b_network].index)  # ty: ignore[invalid-argument-type]
         self.assertCountEqual(expected_network_rxns, actual_network_rxns)
 
 

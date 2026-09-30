@@ -5,7 +5,7 @@ Submodule implementing methods for performing Corner Based Sampling
 # Standard Library Imports
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 # External Imports
 import cobra
@@ -19,8 +19,12 @@ def corner_sampling(
     model: cobra.Model,
     n_samples: int = 1_000,
     reaction_list: list[str] | None = None,
+    min_n_reactions: int = 1,
+    max_n_reactions: int | None = None,
     processes: int | None = None,
     fva_scale: bool = True,
+    min_obj_weight: float = -1,
+    max_obj_weight: float = 1,
     seed: int | np.random.Generator | None = None,
     fva_kwargs: dict[str, Any] | None = None,
 ) -> pd.DataFrame:
@@ -38,6 +42,9 @@ def corner_sampling(
         to be a part of the objective during corner
         sampling (so, for example, you could remove pseudo reactions).
         Must be a list of reaction ids.
+    min_n_reactions,max_n_reactions : int, optional
+        The minimum/maximum number of reactions to include in the
+        randomized objective function.
     processes : int, optional
         The number of processes to use (note uses joblib,
         so can be managed via a joblib context)
@@ -45,6 +52,9 @@ def corner_sampling(
         Whether to scale the weights assigned to reactions in the randomized
         objectives by the maximum (absolute) flux value the associated reaction
         could achieve.
+    min_obj_weight,max_obj_weight : float, optional
+        The minimum and maximum values to use for the randomized objective weights.
+        This is prior to the FVA scaling (if that is desired).
     seed : int or np.random.Generator, optional
         Optional seed to use for selection of reactions/weights.
         Note that this doesn't garuntee the generated solutions will
@@ -90,9 +100,9 @@ def corner_sampling(
     # passed with the id to generate reproducible results
     if seed is None:
         rng = np.random.default_rng()
-        seed = rng.integers(0, np.iinfo(np.int_).max)
+        seed = cast(int, rng.integers(0, np.iinfo(np.int_).max))
     if isinstance(seed, np.random.Generator):
-        seed = seed.integers(0, np.iinfo(np.int_).max)
+        seed = cast(int, seed.integers(0, np.iinfo(np.int_).max))
     model_ = (
         model.copy()
     )  # Copy model to ensure we aren't going to change original model
@@ -120,6 +130,11 @@ def corner_sampling(
         reaction_list = list(set(reaction_list) - zero_reactions)
     else:
         fva_max = None
+    if max_n_reactions is None:
+        max_n_reactions = len(reaction_list)
+    assert min_n_reactions <= max_n_reactions, (
+        f"min_n_reactions must be less than max_n_reactions, but min_n_reactions is {min_n_reactions}, and max_n_reactions is {max_n_reactions}"
+    )
     sample_df = pd.DataFrame(
         np.nan,
         index=pd.Index(range(n_samples)),
@@ -130,8 +145,12 @@ def corner_sampling(
             delayed(_corner_sampling_worker)(
                 model=model_,
                 reaction_list=reaction_list,
+                min_n_reactions=min_n_reactions,
+                max_n_reactions=max_n_reactions,
                 fva_max=fva_max,
                 fva_scale=fva_scale,
+                min_obj_weight=min_obj_weight,
+                max_obj_weight=max_obj_weight,
                 seed=[i, seed],
             )
             for i in range(n_samples)
@@ -144,20 +163,26 @@ def corner_sampling(
 def _corner_sampling_worker(
     model: cobra.Model,  # Model to sample from
     reaction_list: list[str],  # List of reactions to consider for objective
+    min_n_reactions: int,
+    max_n_reactions: int,
     fva_max: pd.Series | None,  # Maximum fva to divide weights by
     fva_scale: bool,
+    min_obj_weight: float,
+    max_obj_weight: float,
     seed: list[int],  # List so that the seed can include the worker ID
 ) -> pd.Series | None:
     # Create an RNG from the seed
     rng = np.random.default_rng(seed)
     # Decide how many reactions from the reaction list to consider
     num_reactions = rng.integers(
-        1, len(reaction_list) + 1
+        min_n_reactions, max_n_reactions + 1
     )  # Pick at least 1 reactions
     # Select reactions
     objective_dict = {}
     for rxn in rng.choice(reaction_list, num_reactions, replace=False):
-        weight = rng.random() * 2 - 1
+        weight = (
+            rng.random() * (max_obj_weight - min_obj_weight) + min_obj_weight
+        )
         if fva_scale:
             assert fva_max is not None
             weight /= fva_max[rxn]

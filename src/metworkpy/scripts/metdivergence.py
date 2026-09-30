@@ -11,11 +11,16 @@ import warnings
 
 # External imports
 import pandas as pd
-from tqdm import tqdm  # type: ignore
 
 # Local Imports
 import metworkpy
 from metworkpy.utils._arguments import _parse_metric, _parse_str_args_dict
+from metworkpy.utils._notebook import is_notebook
+
+if is_notebook():
+    from tqdm.notebook import tqdm
+else:
+    from tqdm import tqdm
 
 
 # region Parse Arguments

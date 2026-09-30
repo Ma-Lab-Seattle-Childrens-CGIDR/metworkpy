@@ -12,10 +12,14 @@ from functools import reduce
 import cobra
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
 # Local Imports
+from metworkpy.utils._notebook import is_notebook
 
+if is_notebook():
+    from tqdm.notebook import tqdm
+else:
+    from tqdm import tqdm
 
 # region Metchange
 

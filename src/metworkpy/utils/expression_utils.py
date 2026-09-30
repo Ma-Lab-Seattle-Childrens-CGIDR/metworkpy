@@ -4,10 +4,10 @@ data, and converting it into qualitative weights
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 
 # Standard library imports
-from typing import Callable, cast
+from typing import cast
 from warnings import warn
 
 # External imports

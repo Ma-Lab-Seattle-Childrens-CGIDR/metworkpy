@@ -169,9 +169,17 @@ def gene_to_reaction_list(
     reaction_list : list[str]
         list of reactions associated with the genes in `gene_list`
 
+    See Also
+    --------
+    metworkpy.gpr.gpr_functions.gene_group_to_reaction_list : Translate genes as a group
+
     Notes
     -----
-    The order of the genes is not perseved in the order of the reactions
+    The order of the genes is not perseved in the order of the reactions,
+    and each gene is translated individually (even if both genes in an OR
+    relationship are included `gene_list`, that reaction won't be included
+    if `essential` is True). For treating the genes as a group,
+    see `metworkpy.gpr.gpr_functions.gene_group_to_reaction_list`.
     """
     return list(
         functools.reduce(

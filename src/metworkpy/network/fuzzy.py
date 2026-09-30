@@ -7,10 +7,9 @@ from __future__ import annotations
 
 import functools
 import math
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import (
     Any,
-    Callable,
     Literal,
     Protocol,
     cast,
@@ -21,20 +20,21 @@ import cobra
 import networkx as nx
 import numpy as np
 import pandas as pd
+import robustrankaggregpy.aggregate_ranks
+import scipy.special
 from joblib import Parallel, delayed
 from robustrankaggregpy.aggregate_ranks import (
     rank_matrix_from_df,
-    rho_scores,
 )
 from scipy import stats
 from scipy.stats import gmean, rv_discrete
 
 # Local Imports
 from metworkpy.network.neighborhoods import (
-    _graph_gene_neighborhood,
+    _create_rxn_to_gene_set_dict,
     get_graph_neighborhood,
+    graph_gene_neighborhood,
 )
-from metworkpy.utils.translate import get_reaction_to_gene_translation_dict
 
 
 class FuzzyMembershipFunction(Protocol):
@@ -89,7 +89,7 @@ def membership_simple_gene_density(
     membership : float
         The membership of the reaciton in the reaction set
     """
-    gene_neighborhood = _graph_gene_neighborhood(
+    gene_neighborhood = graph_gene_neighborhood(
         network=network,
         radius=radius,
         node=reaction.id,
@@ -292,7 +292,8 @@ def membership_distance_weighted_reaction_density(
 ) -> float:
     """
     Membership function which computes the membership based on how
-    many genes within distance `radius` are in the target gene set
+    many reactions within distance `radius` are associated with
+    genes in the target gene set
 
     Parameters
     ----------
@@ -510,7 +511,7 @@ def membership_gene_enrichment(
     Membership function which computes the membership by calculating the
     enrichment of target set genes which are in a neighborhood defined
     by the `radius` around the reaction. The membership will be
-    1-pvalue where pvalue is calculated using a Fisher's exact test
+    -log10(pvalue) where pvalue is calculated using a Fisher's exact test
     to quantify the enrichment.
 
     Parameters
@@ -535,7 +536,9 @@ def membership_gene_enrichment(
     -------
     membership : float
         The membership of the reaction in the reaction set, calculated
-        as 1-(p-value), where p-value is the enrichment p-value
+        as -log10(p-value), where p-value is the enrichment p-value. This
+        membership will not be between 0 and 1, but that can be adjusted in
+        the `scale` parameter of `fuzzy_reaction_set` (recomended is 'softmax').
 
     Notes
     -----
@@ -543,7 +546,7 @@ def membership_gene_enrichment(
     automatically be calculated and passed in if not provided, so you
     don't need to do that manually (though it can still be over ridden if desired).
     """
-    gene_neighborhood = _graph_gene_neighborhood(
+    gene_neighborhood = graph_gene_neighborhood(
         network=network,
         radius=radius,
         node=reaction.id,
@@ -573,7 +576,7 @@ def membership_gene_enrichment(
             ]
         )
     ).pvalue
-    return 1 - pval
+    return -np.log10(pval)
 
 
 # endregion Membership Functions
@@ -595,8 +598,10 @@ def fuzzy_reaction_set(
     metabolic_network: nx.Graph | nx.DiGraph,
     metabolic_model: cobra.Model,
     gene_set: Iterable[str],
+    *,
     membership_fn: str | FuzzyMembershipFunction = "simple gene density",
-    scale: bool | float | None = None,
+    direction_split: bool = False,
+    scale: Literal["minmax", "softmax"] | float | None = None,
     essential: bool = False,
     processes: int | None = None,
     **kwargs,
@@ -618,12 +623,16 @@ def fuzzy_reaction_set(
         The membership function to use, can be a string giving the
         functions name, or the function itself which must match the
         signature of `FuzzyMembershipFunction`
-    scale : bool or float, optional
-        Whether to scale the results of the membership values. If
-        False or None, no scaling will be applied. If True, will
-        be scaled to be between 0 and 1 using a min-max scaler.
-        If a float, the scaling will use a min-max scaler, but
-        treat `scale` as the max.
+    direction_split : bool,default=False
+        Whether the reactions in the network have been
+        split into 'FORWARD' and 'REVERSE' nodes
+    scale : {'minmax', 'softmax'} or float, optional
+        How to scale the results of the membership values.
+        If None (default) no scaling is applied,
+        if 'minmax' the values will be scaled by (value-min(values))/max(values).
+        If 'softmax', the softmax function will be used to scale the values.
+        If a float, the scaling will be the same as for 'minmax', but
+        the float will be used as the maximum of values.
     essential : bool
         Whether, when translating from reactions to genes, only
         genes required for a reaction to function should be associated
@@ -691,10 +700,11 @@ def fuzzy_reaction_set(
     # Ensure the gene_set is a set of genes
     gene_set = set(gene_set)
     # Get a mapping from reactions to genes
-    rxn_to_gene_dict: dict[str, set[str]] = (
-        get_reaction_to_gene_translation_dict(
-            model=metabolic_model, essential=essential
-        )
+    rxn_to_gene_dict: dict[str, set[str]] = _create_rxn_to_gene_set_dict(
+        model=metabolic_model,
+        reaction_to_gene_set_dict=None,
+        essential=essential,
+        direction_split=direction_split,
     )
     # If the membership function is gene enrichment, pre-calculate the
     # number of genes in the network if needed
@@ -729,12 +739,21 @@ def fuzzy_reaction_set(
     ):
         rxn_set[rxn] = membership
 
-    if scale:
-        if isinstance(scale, float):
-            max_val = scale
-        else:
-            max_val = rxn_set.max()
-        rxn_set = (rxn_set - rxn_set.min()) / max_val
+    if scale is not None:
+        if isinstance(scale, str):
+            if scale == "minmax":
+                rxn_set = (rxn_set - rxn_set.min()) / rxn_set.max()
+            elif scale == "softmax":
+                rxn_set = pd.Series(
+                    scipy.special.softmax(rxn_set), index=rxn_set.index
+                )
+            else:
+                raise ValueError(
+                    f"Expected 'minmax' or 'softmax' for scaling, received {scale}"
+                )
+
+        elif isinstance(scale, float):
+            rxn_set = (rxn_set - rxn_set.min()) / scale
     return rxn_set
 
 
@@ -747,10 +766,11 @@ def fuzzy_reaction_intersection(
     gene_sets: Iterable[Iterable[str]],
     metabolic_network: nx.Graph | nx.DiGraph,
     metabolic_model: cobra.Model,
+    *,
     intersection_fn: Callable[[pd.DataFrame], pd.Series]
-    | Literal["mean", "min", "max", "geom", "rra"],
+    | Literal["mean", "min", "max", "geom", "rank-agg"],
     intersection_fn_kwargs: dict[str, Any] | None = None,
-    rank_method: Literal["average", "min", "max", "first", "dense"] = "max",
+    rank_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> pd.Series:
     """
@@ -767,16 +787,20 @@ def fuzzy_reaction_intersection(
     metabolic_model : cobra.Model
         Metabolic model from which the metabolic network was constructed
         (used for translating reactions to genes)
-    intersection_fn : {"mean", "min", "max", "geom", "rra"} or Callable[[pd.DataFrame], pd.Series]
+    intersection_fn : {"mean", "min", "max", "geom", "rank-agg"} or Callable[[pd.DataFrame], pd.Series]
         Either a str specifying an intersection function (see notes), or
         a Callable which takes a DataFrame, where each column is a fuzzy reaction
         set and returns a Series which is a new fuzzy reaction set representing
         the intersection of the input fuzzy reaction sets.
     intersection_fn_kwargs : dict of str to Any
-        kwargs passed to the intersection function
-    rank_method : {"average", "min", "max", "first", "dense"}
-        If the `intersection_fn` is 'rra', how are ties in the
-        membership values handled when performing ranking
+        kwargs passed to the intersection function,
+        if method is 'rank-agg' passed to the `aggregate_ranks`
+        function of robustrankaggregpy.
+    rank_kwargs : dict of str to Any
+        If the `intersection_fn` is 'rank-agg', this is passed
+        as keyword arguments to the
+        `rank_matrix_from_df <https://robustrankaggregpy.readthedocs.io/en/latest/api_reference/api_index.html#robustrankaggregpy.aggregate_ranks.rank_matrix_from_df>`_ how are ties in the
+        function of `robustrankaggregpy`.
     kwargs
         Keyword arguments are passed to `fuzzy_reaction_set`
 
@@ -795,8 +819,13 @@ def fuzzy_reaction_intersection(
     * min: Take the minimum of the membership values
     * max: Take the max of the membership values
     * geom: Take the geometric mean of the membership values
-    * rra: Perform robust rank aggregation on the membership values,
-      and the subtract the resulting rho-score from 1.0
+    * rank-agg: Perform rank aggregation on the membership values
+      using `robustrankaggregpy <https://robustrankaggregpy.readthedocs.io/en/latest/index.html>`_, and the subtract the resulting
+      score from 1.0 (since the scores resulting from the rank
+      aggregation methods are closer to 0 for items that tend
+      to be ranked near the top, so subtracting from 1 ensures
+      they have the same directionality as the membership
+      function)
     """
     # Construct the DataFrame from the gene sets
     rxn_set_list = []
@@ -824,18 +853,19 @@ def fuzzy_reaction_intersection(
         rxn_intersect_series = rxn_set_df.max(axis=1)
     elif intersection_fn == "geom":
         rxn_intersect_series = rxn_set_df.aggregate(gmean, axis=1)
-    elif intersection_fn == "rra":
+    elif intersection_fn == "rank-agg":
+        if rank_kwargs is None:
+            rank_kwargs = {}
         rank_mat = rank_matrix_from_df(
             rxn_set_df,
             ascending=False,
-            rank_method=rank_method,
-            **intersection_fn_kwargs,
+            **rank_kwargs,
         )
-        rxn_intersect_series = 1 - pd.Series(
-            np.apply_along_axis(
-                rho_scores, 1, rank_mat.to_numpy(), **intersection_fn_kwargs
-            ),
-            index=rank_mat.index,
+        rxn_intersect_series = (
+            1
+            - robustrankaggregpy.aggregate_ranks.aggregate_ranks(
+                rank_matrix=rank_mat, **intersection_fn_kwargs
+            )
         )
     else:
         raise ValueError(f"Invalid intersection_fn: {intersection_fn}")

@@ -6,10 +6,11 @@ Functions for constructing networks based on genome scale metabolic models
 # Standard Library Imports
 from __future__ import annotations
 
+import functools
 import itertools
-from collections.abc import Hashable, Iterable
+import operator
+from collections.abc import Callable, Hashable, Iterable
 from typing import (
-    Callable,
     Literal,
     cast,
 )
@@ -26,10 +27,11 @@ from metworkpy.information.mutual_information_network import (
     mi_pairwise,
 )
 from metworkpy.network.neighborhoods import (
-    get_graph_neighborhood_group,
+    get_target_set_graph_neighborhood,
 )
 from metworkpy.network.projection import bipartite_project
 from metworkpy.utils import reaction_to_gene_ids, reaction_to_gene_list
+from metworkpy.utils._scipy_compat import _check_scipy_version_greater
 
 ALMOST_ZERO = 1e-15
 
@@ -37,8 +39,6 @@ ALMOST_ZERO = 1e-15
 ##################################
 ### Mutual Information Network ###
 ##################################
-
-
 def create_mutual_information_network(
     model: cobra.Model | None = None,
     flux_samples: pd.DataFrame | np.ndarray | None = None,
@@ -47,6 +47,7 @@ def create_mutual_information_network(
     n_samples: int = 10_000,
     reciprocal_weights: bool = False,
     processes: int = 1,
+    sampler_kwargs=None,
     **kwargs,
 ) -> nx.Graph:
     """Create a mutual information network from the provided metabolic model
@@ -77,6 +78,10 @@ def create_mutual_information_network(
     processes : int
         Number of processes to use during the flux sampling and
         mutual information calculation
+    sampler_kwargs : dict of str to Any
+        Dict of keyword arguments to pass to COBRApy's
+        `cobra.sampling.sample <https://cobrapy.readthedocs.io/en/latest/autoapi/cobra/sampling/sampling/index.html#cobra.sampling.sampling.sample>`_
+        function
     kwargs
         Keyword arguments passed to the `mi_pairwise` function
 
@@ -92,8 +97,10 @@ def create_mutual_information_network(
                 "Requires either a metabolic model, or flux samples but received "
                 "neither"
             )
+        if sampler_kwargs is None:
+            sampler_kwargs = {}
         flux_samples = cobra.sampling.sample(
-            model=model, n=n_samples, processes=processes
+            model=model, n=n_samples, processes=processes, **sampler_kwargs
         )
     if isinstance(flux_samples, np.ndarray):
         if not reaction_names:
@@ -153,14 +160,20 @@ def create_metabolic_network(
     | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
+    split_direction: bool = False,
     weight_by_metabolite_stoich: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     product_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     reactant_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     nodes_to_remove: Iterable[str] | None = None,
-    remove_top_metabolites: int | None = None,
+    remove_top_metabolites: float | None = None,
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
+    prune_lone_nodes: bool = False,
     zero_tolerance: float = ALMOST_ZERO,
     **kwargs,
 ) -> nx.Graph | nx.DiGraph:
@@ -183,24 +196,59 @@ def create_metabolic_network(
         See `Notes` for more information.
     directed : bool
         Whether the network should be directed
+    split_direction : bool,default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If True, each reaction will be represented by 2 nodes,
+        which will have ids that are the reaction id, with either
+        '_FORWARD', or '_REVERSE' as a suffix.
     weight_by_metabolite_stoich: bool, default=true
         whether the reaction weights should be multiplied by
         a metabolite's stoichiometric coefficient to find
         the edge weight between a reation and a metabolite
         (or a metabolite and a reaction).
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
     product_scale_fn, reactant_scale_fn : callable of coo_array to coo_array, optional
         if provided function will be called on the reactant and product
         edge weight arrays (both with columns for reactions and rows for
-        metabolites). the product array is all the weights of edges connecting a
+        metabolites). The product array is all the weights of edges connecting a
         reaction to a metabolite, and the reactant array represents all of the
-        edges connecting a metabolite to a reaction. these functions must return a
-        coo_array of the same dimension of the passed array. this allows for rescaling
+        edges connecting a metabolite to a reaction. These functions must return a
+        coo_array of the same dimension of the passed array. This allows for rescaling
         or otherwise modifying the edge weights prior to network construction if that is desired.
+        Note that if `split_direction` is True, then there will be a column for both
+        the forward and the reverse reaction.
     nodes_to_remove : Iterable of str, optional
-        Iterable of nodes which will be removed from the network before it is returned
-    remove_top_metabolites : int, optional
-        Number of top most connected metabolites to remove. This can be useful to remove
-        common currency metabolites such as ATP, or solvent metabolites like H20.
+        Iterable of nodes which will be removed from the network before it is returned.
+        Note, that if `split_direction` is True, then the reaction nodes have
+        '_FORWARD' and '_REVERSE' suffixes.
+    remove_top_metabolites : int or float, optional
+        Number of top most connected metabolites to remove. If an integer that
+        is 1 or greater, that number of top connected metabolites (based on the
+        number of reactions they participate in) are removed. If a float between
+        0.0 and 1.0, instead any metabolite participating in more than that
+        proportion of reactions is removed. So a value of 0.1 would indicate to
+        remove any metabolites which participate in more than 10% of reactions
+        in the model. Note that this removal is independent of the removal of
+        currency metabolites  that occurs if `currency_metabolites` is passed
+        (that the counts for how many reactions a metabolite is involved in is
+        calculated prior to removing currency metabolites). It is also independent
+        of the node removal caused by passing `nodes_to_remove`. This can be useful
+        to remove highly connected metabolites which can distort the topology of
+        the network. Such as common currency metabolites like ATP, or solvent
+        metabolites like H20. Note that this doesn't depend on `split_direction`,
+        (so each reaction is only counted a single time).
     weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
         Optional function for scaling the weights, called with a 1-D numpy array of all the
         weights in the network, and must return a 1-D numpy array of the same size.
@@ -208,6 +256,8 @@ def create_metabolic_network(
         (e.g. use a minmax scalar so they are all between 0 and 1),
         or to invert the direction of the weights (so larger weights become smaller) by
         taking the reciprocal of all the weights.
+    prune_lone_nodes : bool,default=False
+        Remove nodes which have degree of 0.
     zero_tolerance : float
         Threshold, below which to consider a (absolute value of a) bound/flux
         to be 0
@@ -223,7 +273,10 @@ def create_metabolic_network(
     nx.Graph or nx.DiGraph
         The bipartite network constructed from the provided `cobra.Model`,
         with nodes for reactions and metabolites (using the reaction/metabolite id
-        as the node id).
+        as the node id). If `split_direction` is True, then there will be two nodes
+        for each reaction, one with '_FORWARD' as a suffix representing
+        the reaction in the forward direction, and one with '_REVERSE'
+        representing the reaction in the reverse direction.
 
     Notes
     -----
@@ -271,9 +324,11 @@ def create_metabolic_network(
             model=model,
             weight=weight,
             directed=directed,
+            split_direction=split_direction,
             array_type="coo",
             zero_tolerance=zero_tolerance,
             weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+            currency_metabolites=currency_metabolites,
             product_scale_fn=product_scale_fn,
             reactant_scale_fn=reactant_scale_fn,
             **kwargs,
@@ -300,16 +355,39 @@ def create_metabolic_network(
         adj_mat, create_using=nx.DiGraph if directed else nx.Graph
     )
 
-    met_network = nx.relabel_nodes(
-        met_network,
-        {
-            idx: node.id
-            for idx, node in enumerate(
-                itertools.chain(model.reactions, model.metabolites)
-            )
-        },
-    )
+    if split_direction:
+        met_network = nx.relabel_nodes(
+            met_network,
+            {
+                idx: node
+                for idx, node in enumerate(
+                    itertools.chain(
+                        (f"{r.id}_FORWARD" for r in model.reactions),
+                        (f"{r.id}_REVERSE" for r in model.reactions),
+                        (x.id for x in model.metabolites),
+                    )
+                )
+            },
+        )
+    else:
+        met_network = nx.relabel_nodes(
+            met_network,
+            {
+                idx: node
+                for idx, node in enumerate(
+                    itertools.chain(
+                        (r.id for r in model.reactions),
+                        (x.id for x in model.metabolites),
+                    )
+                )
+            },
+        )
+
     met_network.remove_nodes_from(nodes_to_remove)
+    if prune_lone_nodes:
+        met_network.remove_nodes_from(
+            [n for (n, deg) in met_network.degree() if deg == 0]
+        )
     return met_network
 
 
@@ -322,16 +400,22 @@ def create_reaction_network(
     | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
+    split_direction: bool = False,
     weight_by_metabolite_stoich: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     product_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     reactant_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     nodes_to_remove: Iterable[str] | None = None,
-    remove_top_metabolites: int | None = None,
+    remove_top_metabolites: float | None = None,
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
     projection_weight: str | Callable[[float, float], float] | None = None,
     projection_weight_combine: Callable[[list[float]], float] | None = None,
+    prune_lone_nodes: bool = False,
     zero_tolerance: float = ALMOST_ZERO,
     **kwargs,
 ):
@@ -355,11 +439,29 @@ def create_reaction_network(
         See `Notes` for more information.
     directed : bool
         Whether the network should be directed
+    split_direction : bool,default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If True, each reaction will be represented by 2 nodes,
+        which will have ids that are the reaction id, with either
+        '_FORWARD', or '_REVERSE' as a suffix.
     weight_by_metabolite_stoich: bool, default=True
         Whether the reaction weights should be multiplied by
         a metabolite's stoichiometric coefficient to find
         the edge weight between a reation and a metabolite
         (or a metabolite and a reaction).
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
     product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
         If provided function will be called on the reactant and product
         edge weight arrays (both with columns for reactions and rows for
@@ -370,9 +472,21 @@ def create_reaction_network(
         or otherwise modifying the edge weights prior to network construction if that is desired.
     nodes_to_remove : Iterable of str, optional
         Iterable of nodes which will be removed from the network before it is returned
-    remove_top_metabolites : int, optional
-        Number of top most connected metabolites to remove. This can be useful to remove
-        common currency metabolites such as ATP, or solvent metabolites like H20.
+    remove_top_metabolites : int or float, optional
+        Number of top most connected metabolites to remove. If an integer that
+        is 1 or greater, that number of top connected metabolites (based on the
+        number of reactions they participate in) are removed. If a float between
+        0.0 and 1.0, instead any metabolite participating in more than that
+        proportion of reactions is removed. So a value of 0.1 would indicate to
+        remove any metabolites which participate in more than 10% of reactions
+        in the model. Note that this removal is independent of the removal of
+        currency metabolites  that occurs if `currency_metabolites` is passed
+        (that the counts for how many reactions a metabolite is involved in is
+        calculated prior to removing currency metabolites). It is also independent
+        of the node removal caused by passing `nodes_to_remove`. This can be useful
+        to remove highly connected metabolites which can distort the topology of
+        the network. Such as common currency metabolites like ATP, or solvent
+        metabolites like H20.
     weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
         Optional function for scaling the weights, called with a 1-D numpy array of all the
         weights in the network, and must return a 1-D numpy array of the same size.
@@ -395,6 +509,8 @@ def create_reaction_network(
         a list of possible weights, and returns a single final weight. Python
         builtin `max` and `min` can be used for this. If not provided,
         `max` is used.
+    prune_lone_nodes : bool,default=False
+        Remove nodes which have degree of 0.
     zero_tolerance : float
         Threshold, below which to consider a (absolute value of a) bound/flux
         to be 0
@@ -407,23 +523,89 @@ def create_reaction_network(
     kwargs
         Keyword arguments are passed to the cobra flux_variability_analysis method
         when weight_by is flux
+
+    Returns
+    -------
+    nx.Graph or nx.DiGraph
+        The reaction network constructed from the provided `cobra.Model`,
+        with nodes for reactions (using the reaction id
+        as the node id). Constructed by projecting the metabolic network
+        onto the reaction nodes.
+
+    Notes
+    -----
+    To create this network, first a bipartite network is created (weighting
+    as described below), and then this network is projected onto the reaction nodes,
+    with nodes being connected based on if they share a metabolite neighbor. Weighting
+    of the edges is controlled by `projection_weight`, and `projection_weight_combine`.
+
+    When creating a weighted network, for each (reaction, metabolite) edge the weight
+    is the reaction weight multiplied by the stoichiometric coefficient of the metabolite.
+    Each reaction is allowed a forward, and a reverse weight. The forward weights
+    are used to connect reactions to their products, and the reverse weights are
+    used to connect reactions to their reactants.
+
+    As an example, take a reaction named rxn1 with formula 2A + B -> 3C, a forward weight of
+    2.5, and a reverse weight of 5.0. The reaction will connect to the A,B and C
+    metabolites, and the edges will have weights 10.0, 5.0, and 7.5 respectively.
+
+    For the weights parameter, these forward and reverse weights can be supplied
+    directly as a tuple of (forward, reverse), where forward and reverse can be
+    either numpy arrays or pandas series (they should have length equal to the number
+    of reactions in the model). Alternatively, they can be supplied as a single
+    numpy array or series, where each reaction has only a forward or (exclusive) a
+    reverse weight. In this case positive values will be treated as the forward
+    weight, and negative values will be treated as reverse weights (but their
+    absolute value will be the actual weight value).
+
+    Another option is to use the stoichiometry directly as weights, this is equivalent
+    to supplying 1 for all forward weights for reactions which can run in the forward
+    direction, and 0 for all reactions that can't. Simmilarly for the reverse weights,
+    values of 1 for all reactions which can run in reverse, and 0 for all reactions
+    that can't.
+
+    Alternatively, several strategies of using flux to weight to edges can be employed,
+    specifically flux variability analysis (fva), parsimonious flux balance analysis (pfba),
+    or geometric flux balance analysis (gfba).
+
+    For fva, the maximum possible positive flux through a reaction is used as its forward
+    weight (reactions whose maximum flux is negative are given forward weights of 0), and
+    the minimum possible negative flux is used as its reverse weight.
+
+    For pfba, the resulting flux is used as the weights, with positive values
+    being used for forward weights, and negative values being used for reverse weights.
+    gfba is the same as pfba, except using geometric instead of parsimonious flux balance
+    analysis.
     """
     # Create the metabolic network
     metabolic_network = create_metabolic_network(
         model=model,
         weight=weight,
         directed=directed,
+        split_direction=split_direction,
+        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        currency_metabolites=currency_metabolites,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
         nodes_to_remove=nodes_to_remove,
         remove_top_metabolites=remove_top_metabolites,
         weight_scale_fn=weight_scale_fn,
+        prune_lone_nodes=prune_lone_nodes,
         zero_tolerance=zero_tolerance,
-        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
-        product_scale_fn=product_scale_fn,
-        reactant_scale_fn=reactant_scale_fn,
         **kwargs,
     )
     # Get the reaction nodes
-    rxn_nodes = set(metabolic_network.nodes) & {r.id for r in model.reactions}
+    if not split_direction:
+        rxn_nodes = set(metabolic_network.nodes) & {
+            r.id for r in model.reactions
+        }
+    else:
+        rxn_nodes = set(metabolic_network.nodes) & set(
+            itertools.chain(
+                (f"{r.id}_FORWARD" for r in model.reactions),
+                (f"{r.id}_REVERSE" for r in model.reactions),
+            )
+        )
 
     # Project onto only reactions
     if weight is not None:
@@ -454,12 +636,16 @@ def create_metabolite_network(
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
     weight_by_metabolite_stoich: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     product_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     reactant_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     nodes_to_remove: Iterable[str] | None = None,
-    remove_top_metabolites: int | None = None,
+    remove_top_metabolites: float | None = None,
     weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
     projection_weight: str | Callable[[float, float], float] | None = None,
     projection_weight_combine: Callable[[list[float]], float] | None = None,
@@ -486,11 +672,48 @@ def create_metabolite_network(
         See `Notes` for more information.
     directed : bool
         Whether the network should be directed
+    weight_by_metabolite_stoich: bool, default=True
+        Whether the reaction weights should be multiplied by
+        a metabolite's stoichiometric coefficient to find
+        the edge weight between a reation and a metabolite
+        (or a metabolite and a reaction).
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
+    product_scale_fn, reactant_scale_fn : callable of coo_array to coo_array, optional
+        if provided function will be called on the reactant and product
+        edge weight arrays (both with columns for reactions and rows for
+        metabolites). the product array is all the weights of edges connecting a
+        reaction to a metabolite, and the reactant array represents all of the
+        edges connecting a metabolite to a reaction. these functions must return a
+        coo_array of the same dimension of the passed array. this allows for rescaling
+        or otherwise modifying the edge weights prior to network construction if that is desired.
     nodes_to_remove : Iterable of str, optional
         Iterable of nodes which will be removed from the network before it is returned
-    remove_top_metabolites : int, optional
-        Number of top most connected metabolites to remove. This can be useful to remove
-        common currency metabolites such as ATP, or solvent metabolites like H20.
+    remove_top_metabolites : int or float, optional
+        Number of top most connected metabolites to remove. If an integer that
+        is 1 or greater, that number of top connected metabolites (based on the
+        number of reactions they participate in) are removed. If a float between
+        0.0 and 1.0, instead any metabolite participating in more than that
+        proportion of reactions is removed. So a value of 0.1 would indicate to
+        remove any metabolites which participate in more than 10% of reactions
+        in the model. Note that this removal is independent of the removal of
+        currency metabolites  that occurs if `currency_metabolites` is passed
+        (that the counts for how many reactions a metabolite is involved in is
+        calculated prior to removing currency metabolites). It is also independent
+        of the node removal caused by passing `nodes_to_remove`. This can be useful
+        to remove highly connected metabolites which can distort the topology of
+        the network. Such as common currency metabolites like ATP, or solvent
+        metabolites like H20.
     weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
         Optional function for scaling the weights, called with a 1-D numpy array of all the
         weights in the network, and must return a 1-D numpy array of the same size.
@@ -525,19 +748,73 @@ def create_metabolite_network(
     kwargs
         Keyword arguments are passed to the cobra flux_variability_analysis method
         when weight_by is flux
+
+    Returns
+    -------
+    nx.Graph or nx.DiGraph
+        The metabolite network constructed from the provided `cobra.Model`,
+        with nodes for metabolite (using the metabolite id
+        as the node id). Constructed by projecting the metabolic network
+        onto the metabolite nodes.
+
+    Notes
+    -----
+    To create this network, first a bipartite network is created (weighting
+    as described below), and then this network is projected onto the metabolite nodes,
+    with nodes being connected based on if they share a reaction neighbor. Weighting
+    of the edges is controlled by `projection_weight`, and `projection_weight_combine`.
+
+    When creating a weighted network, for each (reaction, metabolite) edge the weight
+    is the reaction weight multiplied by the stoichiometric coefficient of the metabolite.
+    Each reaction is allowed a forward, and a reverse weight. The forward weights
+    are used to connect reactions to their products, and the reverse weights are
+    used to connect reactions to their reactants.
+
+    As an example, take a reaction named rxn1 with formula 2A + B -> 3C, a forward weight of
+    2.5, and a reverse weight of 5.0. The reaction will connect to the A,B and C
+    metabolites, and the edges will have weights 10.0, 5.0, and 7.5 respectively.
+
+    For the weights parameter, these forward and reverse weights can be supplied
+    directly as a tuple of (forward, reverse), where forward and reverse can be
+    either numpy arrays or pandas series (they should have length equal to the number
+    of reactions in the model). Alternatively, they can be supplied as a single
+    numpy array or series, where each reaction has only a forward or (exclusive) a
+    reverse weight. In this case positive values will be treated as the forward
+    weight, and negative values will be treated as reverse weights (but their
+    absolute value will be the actual weight value).
+
+    Another option is to use the stoichiometry directly as weights, this is equivalent
+    to supplying 1 for all forward weights for reactions which can run in the forward
+    direction, and 0 for all reactions that can't. Simmilarly for the reverse weights,
+    values of 1 for all reactions which can run in reverse, and 0 for all reactions
+    that can't.
+
+    Alternatively, several strategies of using flux to weight to edges can be employed,
+    specifically flux variability analysis (fva), parsimonious flux balance analysis (pfba),
+    or geometric flux balance analysis (gfba).
+
+    For fva, the maximum possible positive flux through a reaction is used as its forward
+    weight (reactions whose maximum flux is negative are given forward weights of 0), and
+    the minimum possible negative flux is used as its reverse weight.
+
+    For pfba, the resulting flux is used as the weights, with positive values
+    being used for forward weights, and negative values being used for reverse weights.
+    gfba is the same as pfba, except using geometric instead of parsimonious flux balance
+    analysis.
     """
     # Create the metabolic network
     metabolic_network = create_metabolic_network(
         model=model,
         weight=weight,
         directed=directed,
+        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        currency_metabolites=currency_metabolites,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
         nodes_to_remove=nodes_to_remove,
         remove_top_metabolites=remove_top_metabolites,
         weight_scale_fn=weight_scale_fn,
         zero_tolerance=zero_tolerance,
-        weight_by_metabolite_stoich=weight_by_metabolite_stoich,
-        product_scale_fn=product_scale_fn,
-        reactant_scale_fn=reactant_scale_fn,
         **kwargs,
     )
     # Get the metabolite nodes
@@ -567,8 +844,12 @@ def create_metabolite_network(
 def create_gene_network(
     model: cobra.Model,
     directed: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     nodes_to_remove: list[str] | None = None,
-    remove_top_metabolites: int | None = None,
+    remove_top_metabolites: float | None = None,
     essential: bool = False,
 ) -> nx.Graph | nx.DiGraph:
     """
@@ -585,15 +866,39 @@ def create_gene_network(
         directionality of the reaction network, and
         multiple genes associated with a single reaction
         will have two (reciprocal) edges connecting them.
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
     nodes_to_remove : list[str] or None
         List of any metabolites or reactions to remove
         from the metabolic network prior to projecting
         it onto the reactions and constructing the gene network.
         Each metabolite/reaction to remove should be the string
         id associated with them in the cobra Model
-    remove_top_metabolites : int, optional
-        Number of top most connected metabolites to remove. This can be useful to remove
-        common currency metabolites such as ATP, or solvent metabolites like H20.
+    remove_top_metabolites : int or float, optional
+        Number of top most connected metabolites to remove. If an integer that
+        is 1 or greater, that number of top connected metabolites (based on the
+        number of reactions they participate in) are removed. If a float between
+        0.0 and 1.0, instead any metabolite participating in more than that
+        proportion of reactions is removed. So a value of 0.1 would indicate to
+        remove any metabolites which participate in more than 10% of reactions
+        in the model. Note that this removal is independent of the removal of
+        currency metabolites  that occurs if `currency_metabolites` is passed
+        (that the counts for how many reactions a metabolite is involved in is
+        calculated prior to removing currency metabolites). It is also independent
+        of the node removal caused by passing `nodes_to_remove`. This can be useful
+        to remove highly connected metabolites which can distort the topology of
+        the network. Such as common currency metabolites like ATP, or solvent
+        metabolites like H20.
     essential : bool
         Whether a gene should be required for a reaction to function
         in order for that reaction to be used in assigning the
@@ -633,6 +938,7 @@ def create_gene_network(
         model=model,
         weight=None,
         directed=directed,
+        currency_metabolites=currency_metabolites,
         nodes_to_remove=nodes_to_remove,
         remove_top_metabolites=remove_top_metabolites,
     )
@@ -644,100 +950,92 @@ def create_gene_network(
     )
 
 
-######################
-### Group Networks ###
-######################
+###########################
+### Target Set Networks ###
+###########################
 
 
-def create_group_neighborhood_network(
+def create_target_set_neighborhood_network(
     network: nx.Graph | nx.DiGraph,
-    groups: dict[Hashable, Iterable[Hashable]],
+    target_sets: dict[Hashable, Iterable[Hashable]],
     max_distance: int = 1,
     weighted: Literal["count", "proportion", "enrichment"] | None = None,
     directed: bool = False,
 ) -> nx.Graph | nx.DiGraph:
     """
-    Create a group connectivity network, see notes for details
+    Create a target set connectivity network, see notes for details
 
     Parameters
     ----------
     network : nx.Graph or nx.DiGraph
         Network to use when finding neighbors. Edge weights
         will be ignored.
-    groups : dict of Hashable to Iterable of Hashable
-        Group definitions, must be a map between group names (which
+    target_sets : dict of Hashable to Iterable of Hashable
+        target set definitions, must be a map between target set names (which
         will be used as nodes in the network), and an iterable of
-        group members (which should be nodes in the network)
+        target set members (which should be nodes in the network)
     max_distance : int, default=1
         Max distance for nodes to be considered neighbors. A value of 0
-        will only connect groups with direct overlaps, while a value of 1
-        will connect groups which have members that are direct neighbors in the
+        will only connect target sets with direct overlaps, while a value of 1
+        will connect target sets which have members that are direct neighbors in the
         network.
     weighted : {'count', 'proportion', 'enrichment'}, optional
         Whether to weight the graph based on the number of connections
-        between the groups. If None (default) no weights are added. If
+        between the target sets. If None (default) no weights are added. If
         'count' then the edge weight is the count of connections between
-        the two groups. If 'proportion', the edge weight is normalized
+        the two target sets. If 'proportion', the edge weight is normalized
         by the maximum possible overlap. If enrichment, node attributes are
         added called pvalue, odds_ratio, and significance. The pvalue and
         odds ratio are the results of performing a Fisher's exact test on
-        the enrichment of one group in the neighborhood of the other (in the
+        the enrichment of one target set in the neighborhood of the other (in the
         undirected case, it is the minimum p-value/maximum odds_ratio found
-        when finding the enrichment of one group in the neighborhood of the
+        when finding the enrichment of one target set in the neighborhood of the
         other). The significance is the -log10 of the p-value. Note that the
         odds_ratio can be infinite.
     directed : bool, default=False
-        Whether the resulting connectivity graph should be directed,
-        ignored unless the input network is directed.
+        Whether the resulting connectivity graph should be directed.
 
     Returns
     -------
-    group_neighborhood_network : nx.Graph or nx.DiGraph
-        The group connectivity graph, which includes nodes for every group
-        defined in `group`, with edges connecting groups which are connected
+    target set_neighborhood_network : nx.Graph or nx.DiGraph
+        The target set connectivity graph, which includes nodes for every target set
+        defined in `target set`, with edges connecting target sets which are connected
         in `network`, with optional edge weighted. Will be nx.Graph unless
         the input network is a DiGraph, and `directed` is True.
 
     Notes
     -----
-    The group connectivity graph is a graph with a node for each group
-    in `groups`, and edges connecting groups which include neighbors
-    on the `network`.
+    The target set connectivity graph is a graph with a node for each target set
+    in `target_sets`, and edges connecting target sets which include neighbors
+    in the `network`.
 
     For example, take a graph with:
 
         * Nodes: {a, b, c, d, e, f, g}
         * Edges: {(a, b), (c,d), (e,f), (a,g)}
 
-    then the group connectivity graph for groups
-    {group1: {a,c}, group2:{d,e}, group3:{b,f}, group4:{g}}
-    will produce the group connectivity graph (with parameter
+    then the target set connectivity graph for target sets
+    {target_set1: {a,c}, target_set2:{d,e}, target_set3:{b,f}, target_set4:{g}}
+    will produce the target set connectivity graph (with parameter
     max_distance set to 1):
 
-        * Nodes: {group1, group2, group3, group4}
-        * Edges: {(group1, group2), (group1, group3), (group1, group4), (group2, group3)}
+        * Nodes: {target_set1, target_set2, target_set3, target_set4}
+        * Edges: {(target_set1, target_set2), (target_set1, target_set3), (target_set1, target_set4), (target_set2, target_set3)}
 
     When counting the number of connections, it is determined
-    by finding the total neighborhood of one of the groups
+    by finding the total neighborhood of one of the target sets
     (that is the total node set within radius of a node
-    in that group), and counting the number of nodes from
-    the other group which are within that neighborhood.
+    in that target set), and counting the number of nodes from
+    the other target set which are within that neighborhood.
     """
-    # If the input network isn't directed, directed must be False
-    if not isinstance(network, nx.DiGraph):
-        directed = False
-    # If the result shouldn't be directed, get an undirected view
-    # of the input graph
-    if not directed and isinstance(network, nx.DiGraph):
-        network = nx.to_undirected(network)
     # Add the expected nodes
     connectivity_network = nx.Graph()
-    connectivity_network.add_nodes_from(groups.keys())
+    connectivity_network.add_nodes_from(target_sets.keys())
     # Convert the iterables into sets for easier comparison
-    group_sets = {k: set(v) for k, v in groups.items()}
+    group_sets = {k: set(v) for k, v in target_sets.items()}
     # Find the neighborhoods around the groups
     neighborhood_dict = {
-        g: get_graph_neighborhood_group(
+        g: get_target_set_graph_neighborhood(
             network=network, radius=max_distance, nodes=n
         )
         for g, n in group_sets.items()
@@ -871,29 +1169,29 @@ def create_group_neighborhood_network(
     return connectivity_network
 
 
-def create_group_distance_network(
+def create_target_set_distance_network(
     network: nx.Graph | nx.DiGraph,
-    groups: dict[Hashable, Iterable[Hashable]],
+    target_sets: dict[Hashable, Iterable[Hashable]],
     weight: str | None = None,
     linkage: Literal["mean", "min", "max"] = "mean",
     directed: bool = False,
 ) -> nx.Graph | nx.DiGraph:
     """
-    Create an network for the distances between the `groups`
+    Create an network for the distances between the `target_sets`
 
     Parameters
     ----------
     network : nx.Graph or nx.DiGraph
         Network to use when finding distances between nodes
-        in the groups. Edge weights are ignored.
-    groups : : dict of Hashable to Iterable of Hashable
-        Group definitions, must be a map between group names (which
+        in the target sets. Edge weights are ignored.
+    target sets : dict of Hashable to Iterable of Hashable
+        target set definitions, must be a map between target set names (which
         will be used as index/columns in the matrix), and an iterable of
-        group members (which should be nodes in the network)
+        target set members (which should be nodes in the network)
     weight : str, optional
         Edge attribute to use for weight, if None all edges have weight 1
     linkage : {'mean', 'min', 'max'}
-        Method to use when combining pairwise distances between groups
+        Method to use when combining pairwise distances between target sets
     directed : bool
         Whether the adjacency matrix should be directed or not, ignored
         unless the input network is a nx.DiGraph
@@ -901,54 +1199,57 @@ def create_group_distance_network(
     Returns
     -------
     nx.Graph or nx.DiGraph
-        Network with a node for each group, and edges weighted by the distances
-        between the `groups` on the `network`.
+        Network with a node for each target set, and edges weighted by the distances
+        between the `target_sets` on the `network`.
 
     Notes
     -----
     Constructs the network using the pairwise distances between
-    groups. For each pair of groups, finds the distances between their
-    nodes and finds the distance between the two groups by aggregating
+    target sets. For each pair of target sets, finds the distances between their
+    nodes and finds the distance between the two target sets by aggregating
     these distances, either using the mean, minimum, or maximum of
-    the set of pairwise distances between two groups of nodes.
+    the set of pairwise distances between two target sets of nodes.
 
     """
     if directed:
         group_obj = nx.DiGraph
     else:
         group_obj = nx.Graph
-    return group_obj(
-        network=network,
-        groups=groups,
-        weight=weight,
-        linkage=linkage,
-        directed=directed,
+    return nx.from_pandas_adjacency(
+        create_target_set_distance_adjacency_matrix(
+            network=network,
+            target_sets=target_sets,
+            weight=weight,
+            linkage=linkage,
+            directed=directed,
+        ),
+        group_obj,
     )
 
 
-def create_group_distance_adjacency_matrix(
+def create_target_set_distance_adjacency_matrix(
     network: nx.Graph | nx.DiGraph,
-    groups: dict[Hashable, Iterable[Hashable]],
+    target_sets: dict[Hashable, Iterable[Hashable]],
     weight: str | None = None,
     linkage: Literal["mean", "min", "max"] = "mean",
     directed: bool = False,
 ) -> pd.DataFrame:
     """
-    Create an adjacency matrix for the distances between the `groups`
+    Create an adjacency matrix for the distances between the `target_sets`
 
     Parameters
     ----------
     network : nx.Graph or nx.DiGraph
         Network to use when finding distances between nodes
-        in the groups. Edge weights are ignored.
-    groups : : dict of Hashable to Iterable of Hashable
-        Group definitions, must be a map between group names (which
+        in the target sets. Edge weights are ignored.
+    target_sets : : dict of Hashable to Iterable of Hashable
+        target set definitions, must be a map between target set names (which
         will be used as index/columns in the matrix), and an iterable of
-        group members (which should be nodes in the network)
+        target set members (which should be nodes in the network)
     weight : str, optional
         Edge attribute to use for weight, if None all edges have weight 1
     linkage : {'mean', 'min', 'max'}
-        Method to use when combining pairwise distances between groups
+        Method to use when combining pairwise distances between target sets
     directed : bool
         Whether the adjacency matrix should be directed or not, ignored
         unless the input network is a nx.DiGraph
@@ -957,27 +1258,29 @@ def create_group_distance_adjacency_matrix(
     -------
     adjacency_matrix : pd.DataFrame
         DataFrame representing the adjacency matrix of the distances
-        between the `groups` on the `network`. Index and columns
-        are the keys of the `groups` dict, with values representing the
-        distances between the groups.
+        between the `target_sets` on the `network`. Index and columns
+        are the keys of the `target_sets` dict, with values representing the
+        distances between the target sets.
 
     Notes
     -----
     Constructs the adjacency matrix using the pairwise distances between
-    groups. For each pair of groups, finds the distances between their
-    nodes and finds the distance between the two groups by aggregating
+    target sets. For each pair of target sets, finds the distances between their
+    nodes and finds the distance between the two target sets by aggregating
     these distances, either using the mean, minimum, or maximum of
-    the set of pairwise distances between two groups of nodes.
+    the set of pairwise distances between two target sets of nodes.
     """
     # Compute the pairwise distances
     distance_dict = dict(nx.shortest_path_length(network, weight=weight))
     # Convert the groups into sets
-    group_sets = {s: set(m) for s, m in groups.items()}
+    group_sets = {s: set(m) for s, m in target_sets.items()}
     # Get the set of all nodes in the network
     network_node_set = set(network.nodes)
     # Create the adjacency matrix
     adj_mat = pd.DataFrame(
-        0.0, index=pd.Index(groups.keys()), columns=pd.Index(groups.keys())
+        0.0,
+        index=pd.Index(target_sets.keys()),
+        columns=pd.Index(target_sets.keys()),
     )
     # Fill in the adjacency matrix
     for g1, g2 in itertools.combinations(group_sets.keys(), 2):
@@ -985,7 +1288,7 @@ def create_group_distance_adjacency_matrix(
         g2_nodes = group_sets[g2] & network_node_set
         if isinstance(network, nx.Graph):
             # Undirected case
-            adj_mat.loc[g1, g2] = _get_group_distance(
+            adj_mat.loc[g1, g2] = _get_target_set_distance(
                 distance_dict=distance_dict,
                 group1=g1_nodes,
                 group2=g2_nodes,
@@ -994,13 +1297,13 @@ def create_group_distance_adjacency_matrix(
             adj_mat.loc[g2, g1] = adj_mat.loc[g1, g2]  # type: ignore
         if isinstance(network, nx.DiGraph):
             # Directed Case
-            d1 = _get_group_distance(
+            d1 = _get_target_set_distance(
                 distance_dict=distance_dict,
                 group1=g1_nodes,
                 group2=g2_nodes,
                 linkage=linkage,
             )
-            d2 = _get_group_distance(
+            d2 = _get_target_set_distance(
                 distance_dict=distance_dict,
                 group1=g2_nodes,
                 group2=g1_nodes,
@@ -1120,7 +1423,12 @@ def create_adjacency_matrix(
     | tuple[np.typing.ArrayLike, np.typing.ArrayLike]
     | tuple[pd.Series, pd.Series] = None,
     directed: bool = True,
+    split_direction: bool = False,
     weight_by_metabolite_stoich: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     product_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     reactant_scale_fn: None
@@ -1150,11 +1458,33 @@ def create_adjacency_matrix(
         See `Notes` for more information.
     directed : bool
         Whether the network should be directed
+    split_direction : bool,default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If False, the result will be a matrix where the index
+        represents metabolites and then reactions (ordered according
+        to their order in the cobra Model object), and the edge
+        weights will be the maximum from the reaction to the metabolite
+        in either the forward or reverse direction. If True, the
+        result will be a matrix where the index represents the forward
+        reactions, then the reverse reactions, and finally the metabolites.
     weight_by_metabolite_stoich: bool, default=True
         Whether the reaction weights should be multiplied by
         a metabolite's stoichiometric coefficient to find
         the edge weight between a reation and a metabolite
         (or a metabolite and a reaction).
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
     product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
         If provided function will be called on the reactant and product
         edge weight arrays (both with columns for reactions and rows for
@@ -1183,6 +1513,8 @@ def create_adjacency_matrix(
     pd.DataFrame or np.ndarray or scipy.sparse.sparray
         The adjacency matrix, the index is ordered based on the
         cobra model's order, reactions first, and then metabolites.
+        If `split_direction` is True, then the order will be
+        forward reactions, reverse reactions, metabolites.
 
     Notes
     -----
@@ -1317,7 +1649,9 @@ def create_adjacency_matrix(
         reverse=reverse,
         directed=directed,
         weighted=weighted,
+        split_direction=split_direction,
         weight_by_metabolite_stoich=weight_by_metabolite_stoich,
+        currency_metabolites=currency_metabolites,
         product_scale_fn=product_scale_fn,
         reactant_scale_fn=reactant_scale_fn,
         zero_tolerance=zero_tolerance,
@@ -1350,6 +1684,236 @@ def create_adjacency_matrix(
     )
 
 
+#######################
+### Mass Flow Graph ###
+#######################
+def create_mass_flow_network(
+    model: cobra.Model,
+    weight: pd.Series | np.typing.ArrayLike | None = None,
+    directed: bool = True,
+    split_direction: bool = False,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
+    nodes_to_remove: Iterable[str] | None = None,
+    remove_top_metabolites: float | None = None,
+    weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
+    zero_tolerance: float = ALMOST_ZERO,
+) -> nx.Graph | nx.DiGraph:
+    """
+    Create a mass flow network from the metabolic model,
+    either based on stoichiometry or a provided flux vector
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model to create the network from
+    weight : ArrayLike, optional
+        The weight to use, if None (default) will create a mass flow network based on
+        stoichiometry. If an arraylike, represents the fluxes through reactions in the model
+        which will be used to create a flux based mass flow network.
+    directed : bool
+        Whether the network should be directed
+    split_direction : bool, default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If True, each reaction will be represented by 2 nodes,
+        which will have ids that are the reaction id, with either
+        '_FORWARD', or '_REVERSE' as a suffix.
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
+    nodes_to_remove : Iterable of str, optional
+        Iterable of nodes which will be removed from the network before it is returned
+    remove_top_metabolites : int or float, optional
+        Number of top most connected metabolites to remove. If an integer that
+        is 1 or greater, that number of top connected metabolites (based on the
+        number of reactions they participate in) are removed. If a float between
+        0.0 and 1.0, instead any metabolite participating in more than that
+        proportion of reactions is removed. So a value of 0.1 would indicate to
+        remove any metabolites which participate in more than 10% of reactions
+        in the model. Note that this removal is independent of the removal of
+        currency metabolites  that occurs if `currency_metabolites` is passed
+        (that the counts for how many reactions a metabolite is involved in is
+        calculated prior to removing currency metabolites). It is also independent
+        of the node removal caused by passing `nodes_to_remove`. This can be useful
+        to remove highly connected metabolites which can distort the topology of
+        the network. Such as common currency metabolites like ATP, or solvent
+        metabolites like H20.
+    weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
+        Optional function for scaling the weights, called with a 1-D numpy array of all the
+        weights in the network, and must return a 1-D numpy array of the same size.
+        This could be used to make the weights all fall in a specific range
+        (e.g. use a minmax scalar so they are all between 0 and 1),
+        or to invert the direction of the weights (so larger weights become smaller) by
+        taking the reciprocal of all the weights.
+    zero_tolerance : float
+        Threshold, below which to consider a (absolute value of a) bound/flux
+        to be 0 (this value MUST BE GREATER THAN 0).
+
+    Returns
+    -------
+    nx.Graph or nx.DiGraph
+        The mass flow network constructed from the provided `cobra.Model`,
+        with nodes for reactions (using the reaction id
+        as the node id). Edge weights represent the mass flow
+        between reactions.
+    """
+    if weight is None:
+        reaction_weights = "stoichiometry"
+        scale_fn = functools.partial(normalize_array, axis=1)
+        product_scale_fn = scale_fn
+        reactant_scale_fn = scale_fn
+    else:
+        reaction_weights = weight
+        product_scale_fn = None
+        reactant_scale_fn = functools.partial(normalize_array, axis=1)
+
+    if weight is None:
+        n_met = len(model.metabolites)
+
+        def _combine_weights(weights: list[float]):
+            return np.sum(weights) / n_met
+    else:
+
+        def _combine_weights(weights: list[float]):
+            return np.sum(weights)
+
+    return create_reaction_network(
+        model=model,
+        weight=reaction_weights,
+        directed=directed,
+        split_direction=split_direction,
+        weight_by_metabolite_stoich=True,
+        currency_metabolites=currency_metabolites,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
+        nodes_to_remove=nodes_to_remove,
+        remove_top_metabolites=remove_top_metabolites,
+        weight_scale_fn=weight_scale_fn,
+        projection_weight=operator.mul,
+        projection_weight_combine=_combine_weights,
+        zero_tolerance=zero_tolerance,
+    )
+
+
+def create_metabolite_mass_flow_network(
+    model: cobra.Model,
+    weight: pd.Series | np.typing.ArrayLike | None = None,
+    directed: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
+    nodes_to_remove: Iterable[str] | None = None,
+    remove_top_metabolites: float | None = None,
+    weight_scale_fn: None | Callable[[np.ndarray], np.ndarray] = None,
+    zero_tolerance: float = ALMOST_ZERO,
+):
+    """
+    Create a metabolite mass flow network from the metabolic model,
+    either based on stoichiometry or a provided flux vector
+
+    Parameters
+    ----------
+    model : cobra.Model
+        Cobra Model to create the network from
+    weight : ArrayLike, optional
+        The weight to use, if None (default) will create a mass flow network based on
+        stoichiometry. If an arraylike, represents the fluxes through reactions in the model
+        which will be used to create a flux based mass flow network.
+    directed : bool
+        Whether the network should be directed
+    split_direction : bool, default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If True, each reaction will be represented by 2 nodes,
+        which will have ids that are the reaction id, with either
+        '_FORWARD', or '_REVERSE' as a suffix.
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
+    nodes_to_remove : Iterable of str, optional
+        Iterable of nodes which will be removed from the network before it is returned
+    remove_top_metabolites : int or float, optional
+        Number of top most connected metabolites to remove. If an integer that
+        is 1 or greater, that number of top connected metabolites (based on the
+        number of reactions they participate in) are removed. If a float between
+        0.0 and 1.0, instead any metabolite participating in more than that
+        proportion of reactions is removed. So a value of 0.1 would indicate to
+        remove any metabolites which participate in more than 10% of reactions
+        in the model. Note that this removal is independent of the removal of
+        currency metabolites  that occurs if `currency_metabolites` is passed
+        (that the counts for how many reactions a metabolite is involved in is
+        calculated prior to removing currency metabolites). It is also independent
+        of the node removal caused by passing `nodes_to_remove`. This can be useful
+        to remove highly connected metabolites which can distort the topology of
+        the network. Such as common currency metabolites like ATP, or solvent
+        metabolites like H20.
+    weight_scale_fn : callable taking np.ndarray and returning np.ndarray, optional
+        Optional function for scaling the weights, called with a 1-D numpy array of all the
+        weights in the network, and must return a 1-D numpy array of the same size.
+        This could be used to make the weights all fall in a specific range
+        (e.g. use a minmax scalar so they are all between 0 and 1),
+        or to invert the direction of the weights (so larger weights become smaller) by
+        taking the reciprocal of all the weights.
+    zero_tolerance : float
+        Threshold, below which to consider a (absolute value of a) bound/flux
+        to be 0 (this value MUST BE GREATER THAN 0).
+
+    Returns
+    -------
+    nx.Graph or nx.DiGraph
+        The metabolites mass flow network constructed from the provided `cobra.Model`,
+        with nodes for metabolites (using the metabolites id
+        as the node id). Edge weights represent the mass flow
+        between metabolites.
+    """
+    if weight is None:
+        reaction_weights = "stoichiometry"
+        scale_fn = functools.partial(normalize_array, axis=0)
+        product_scale_fn = scale_fn
+        reactant_scale_fn = scale_fn
+    else:
+        reaction_weights = weight
+        product_scale_fn = None
+        reactant_scale_fn = functools.partial(normalize_array, axis=0)
+    return create_metabolite_network(
+        model=model,
+        weight=reaction_weights,
+        directed=directed,
+        weight_by_metabolite_stoich=True,
+        currency_metabolites=currency_metabolites,
+        product_scale_fn=product_scale_fn,
+        reactant_scale_fn=reactant_scale_fn,
+        nodes_to_remove=nodes_to_remove,
+        remove_top_metabolites=remove_top_metabolites,
+        weight_scale_fn=weight_scale_fn,
+        projection_weight=operator.mul,
+        projection_weight_combine=np.sum,
+        zero_tolerance=zero_tolerance,
+    )
+
+
 ###############################
 ### Sparse Adjacency Matrix ###
 ###############################
@@ -1359,7 +1923,12 @@ def _create_sparse_adjacency_matrix(
     reverse: sparse.sparray,
     directed: bool = True,
     weighted: bool = True,
+    split_direction: bool = False,
     weight_by_metabolite_stoich: bool = True,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ]
+    | None = None,
     product_scale_fn: None
     | Callable[[sparse.coo_array], sparse.coo_array] = None,
     reactant_scale_fn: None
@@ -1386,11 +1955,35 @@ def _create_sparse_adjacency_matrix(
         Whether the adjacency matrix should be weighted. If False,
         all weights above `zero_tolerance` are set to 1, and
         all weights below `zero_tolerance` are set to 0.
+    split_direction : bool,default=False
+        Whether to split reactions into forward and reverse,
+        or to have forward and reverse be a single node.
+        If False, the result will be a matrix where the index
+        represents reactions and then metabolites (ordered according
+        to their order in the cobra Model object), and the edge
+        weights will be the maximum from the reaction to the metabolite
+        in either the forward or reverse direction (these should generally
+        either be equal, for catalysts which are not consumed, or one
+        should be 0). If True, the result will be a matrix where
+        the index represents the forward reactions, then the reverse reactions,
+        then the metabolites.
     weight_by_metabolite_stoich: bool, default=True
         Whether the reaction weights should be multiplied by
         a metabolite's stoichiometric coefficient to find
         the edge weight between a reation and a metabolite
         (or a metabolite and a reaction).
+    currency_metabolites : iterable of currency metabolite groups, optional
+        An iterable of currency metabolite groups to remove. These are 2-tuples,
+        representing the forms of the metabolite on the 2 sides of a reaction
+        equation. Each of the elements of the 2-tuple can be a metabolite id or an iterable
+        of metabolite ids. Take ATP as an example, in reactions where it is acting
+        as a currency metabolite, on one side you have ATP, and on the other ADP and Pi.
+        This could be specified as ``[(ATP, (ADP, Pi))]``, and so from all equations
+        where ATP was on one side; and both ADP and Pi on the other, ATP, ADP, and Pi
+        would be removed from that equation. In cases where the currency metabolites
+        are the only metabolties in the reaction, they are not removed.
+        These will be processed sequentially, so the order of the passed
+        iterable acts as a priority.
     product_scale_fn, reactant_scale_fn : Callable of coo_array to coo_array, optional
         If provided function will be called on the reactant and product
         edge weight arrays (both with columns for reactions and rows for
@@ -1406,33 +1999,43 @@ def _create_sparse_adjacency_matrix(
     Returns
     -------
     adjacency_matrix : sparse.coo_array
-        The adjacency matrix in the form of a sparse COOrdinate array
+        The adjacency matrix in the form of a sparse COOrdinate array.
+        If `split_direction` is False, the order of the index reactions
+        and then metabolites. If `split_direction` is True, the order
+        will be forward reactions, then reverse reactions, and then metabolites.
     """
     # Get the sparse stoichiometric matrix
     stoichiometric_matrix = _create_stoichiometric_matrix(model=model)
+    # Handle currency metabolites
+    if currency_metabolites is not None:
+        stoichiometric_matrix = _remove_currency_metabolites(
+            model, stoichiometric_matrix, currency_metabolites
+        )
     if not weighted or not weight_by_metabolite_stoich:
-        stoichiometric_matrix: sparse.coo_array = stoichiometric_matrix.sign()  # ty: ignore[unresolved-attribute]
+        stoichiometric_matrix = stoichiometric_matrix.sign()  # ty: ignore[unresolved-attribute]
     # Get the number of reactions, and metabolites
     n_met, n_rxns = stoichiometric_matrix.shape
+    if split_direction:
+        n_rxns *= 2
     # Convert Forward and reverse to csr
     forward = sparse.csr_array(forward.reshape((1, -1)))  # ty: ignore[unresolved-attribute]
-    reverse = sparse.csc_array(
-        reverse.reshape(
+    reverse = sparse.csr_array(
+        reverse.reshape(  # ty: ignore[unresolved-attribute]
             (
                 1,
                 -1,
             )
         )
-    )  # ty: ignore[unresolved-attribute]
+    )
 
     # Split the stoichiomety into products and reactants
-    product_array = stoichiometric_matrix
-    reactant_array = stoichiometric_matrix.copy()
+    product_array: sparse.coo_array = stoichiometric_matrix
+    reactant_array: sparse.coo_array = stoichiometric_matrix.copy()
     product_array.data[product_array.data < 0.0] = 0.0
     reactant_array.data[reactant_array.data > 0.0] = 0.0
     product_array.eliminate_zeros()
     reactant_array.eliminate_zeros()
-    reactant_array = reactant_array * -1
+    reactant_array: sparse.coo_array = abs(reactant_array)
 
     # Convert to csr arrays for the multiplication
     product_array = product_array.tocsr()
@@ -1446,11 +2049,22 @@ def _create_sparse_adjacency_matrix(
     product_reverse: sparse.coo_array = (reactant_array * reverse).tocoo()
 
     # Create the reaction->metabolite, and the metabolite->reaction
-    # matrices, both of which will
-    product_array: sparse.coo_array = product_forward.maximum(product_reverse)
-    reactant_array: sparse.coo_array = reactant_forward.maximum(
-        reactant_reverse
-    )
+    # matrices
+    # If not splitting direction, take the maximum connection weight,
+    # if splitting direction, concatenate the arrays
+    if not split_direction:
+        # Take the maximum connection weight (this should only be between zero and non-zero)
+        product_array: sparse.coo_array = product_forward.maximum(
+            product_reverse
+        )
+        reactant_array: sparse.coo_array = reactant_forward.maximum(
+            reactant_reverse
+        )
+    else:
+        # Concatenate the arrays to create an array with rows representing metabolites,
+        # and columns representing [<Reactions forward><Reactions reverse>]
+        product_array = sparse.hstack([product_forward, product_reverse])
+        reactant_array = sparse.hstack([reactant_forward, reactant_reverse])
     if product_scale_fn is not None:
         product_array = product_scale_fn(product_array)
     if reactant_scale_fn is not None:
@@ -1490,7 +2104,7 @@ def _create_sparse_adjacency_matrix(
 
 def get_top_metabolites(
     model: cobra.Model,
-    n: int,
+    n: float,
     type: Literal["substrate", "reactant", "product"] = "substrate",
 ) -> list[str]:
     """
@@ -1501,32 +2115,56 @@ def get_top_metabolites(
     ----------
     model : cobra.Model
         The model to find the top metabolites for
-    n : int
-        The number of top metabolites to find
+    n : int or float
+        The number of top metabolites to find. If an int greater than 1,
+        this is the number of top metabolites to find. If a
+        float between 0.0 and 1.0, instead returns metabolites
+        which are involved in more than that proportion of
+        reactions. So if n is 0.1, then the metabolites
+        which participate in more than 10% of reactions in the
+        model are returned.
 
     Returns
     -------
     list of str
         A list of the ids of the top `n` metabolites in the `model`
     """
-    # Get a count of the reactions each metabolite is involved in
     stoich_mat = cobra.util.create_stoichiometric_matrix(
         model=model, array_type="DataFrame"
     )
     assert isinstance(stoich_mat, pd.DataFrame), (
         "Cobra returned incorrect stoichiometric matrix type"
     )
-    if type == "substrate":
-        counts = (stoich_mat.abs() > 0).sum(axis=1)
-    elif type == "reactant":
-        counts = (stoich_mat.clip(upper=0.0) < 0.0).sum(axis=1)
-    elif type == "product":
-        counts = (stoich_mat.clip(lower=0.0) > 0.0).sum(axis=1)
+    if n >= 1:
+        # Get a count of the reactions each metabolite is involved in
+        if type == "substrate":
+            counts = (stoich_mat.abs() > 0).sum(axis=1)
+        elif type == "reactant":
+            counts = (stoich_mat.clip(upper=0.0) < 0.0).sum(axis=1)
+        elif type == "product":
+            counts = (stoich_mat.clip(lower=0.0) > 0.0).sum(axis=1)
+        else:
+            raise ValueError(
+                f"Type must be 'substrate', 'reactant', or 'product', but received {type}"
+            )
+        return list(counts.sort_values(ascending=False).iloc[:n].index)
+    elif 0.0 <= n < 1:
+        # Get the proportion of reactions each metabolite is involved in
+        if type == "substrate":
+            proportion = (stoich_mat.abs() > 0).mean(axis=1)
+        elif type == "reactant":
+            proportion = (stoich_mat.clip(upper=0.0) < 0.0).mean(axis=1)
+        elif type == "product":
+            proportion = (stoich_mat.clip(lower=0.0) > 0.0).mean(axis=1)
+        else:
+            raise ValueError(
+                f"Type must be 'substrate', 'reactant', or 'product', but received {type}"
+            )
+        return list(proportion[proportion >= n].index)
     else:
         raise ValueError(
-            f"Type must be 'substrate', 'reactant', or 'product', but received {type}"
+            f"`n` must either be a float between 0 and 1, or an integer 1 or greater, but received {n}"
         )
-    return list(counts.sort_values(ascending=False).iloc[:n].index)
 
 
 def get_top_metabolite_pairs(
@@ -1590,11 +2228,11 @@ def get_top_metabolite_pairs(
 def _enforce_threshold(
     data: pd.DataFrame | pd.Series, threshold: float
 ) -> pd.DataFrame | pd.Series:
-    data[(data >= -threshold) & (data <= threshold)] = 0.0
+    data[(data >= -threshold) & (data <= threshold)] = 0.0  # ty: ignore[invalid-assignment]
     return data
 
 
-def _get_group_distance(
+def _get_target_set_distance(
     distance_dict,
     group1: set[Hashable],
     group2: set[Hashable],
@@ -1634,3 +2272,70 @@ def _create_stoichiometric_matrix(model: cobra.Model) -> sparse.coo_array:
         for met, stoich in rxn.metabolites.items():
             stoich_array[met_ind(met), rxn_ind(rxn)] = stoich
     return stoich_array.tocoo()
+
+
+def _remove_currency_metabolites(
+    model: cobra.Model,
+    stoichiometric_matrix: sparse.coo_array,
+    currency_metabolites: Iterable[
+        str | tuple[str | Iterable[str], str | Iterable[str]]
+    ],
+) -> sparse.coo_array:
+    if not _check_scipy_version_greater(1, 17, 0):
+        # NOTE: SciPy sparse doesn't allow indexing COO arrays until 1.17.0
+        # For compatibility, just using a DOK array to allow this to work,
+        # but its not particularly efficient.
+        stoichiometric_matrix = stoichiometric_matrix.todok()
+    met_index = model.metabolites.index
+    for currency_metabolite_group in currency_metabolites:
+        lhs, rhs = currency_metabolite_group
+        n_lhs = 1 if isinstance(lhs, str) else len(lhs)  # ty: ignore[invalid-argument-type]
+        n_rhs = 1 if isinstance(rhs, str) else len(rhs)  # ty: ignore[invalid-argument-type]
+        # Find the indexes of the metabolites
+        lhs_indices = np.array(
+            [met_index(lhs)]
+            if isinstance(lhs, str)
+            else list(map(met_index, lhs))
+        )
+        rhs_indices = np.array(
+            [met_index(rhs)]
+            if isinstance(rhs, str)
+            else list(map(met_index, rhs))
+        )
+        not_indices = np.ones(stoichiometric_matrix.shape[0], dtype=np.bool)
+        not_indices[lhs_indices] = np.False_
+        not_indices[rhs_indices] = np.False_
+        # Find the indices of the reactions where these currency metabolites
+        # appear on both sides (with appropriate stoichiometry)
+        # NOTE: Non-subscriptable ignored as that is handled by the Scipy version check above
+        remove_from_rxns_bool = (
+            (
+                stoichiometric_matrix[lhs_indices].sum(axis=0) * n_rhs  # ty: ignore[not-subscriptable]
+                + stoichiometric_matrix[rhs_indices].sum(axis=0) * n_lhs  # ty: ignore[not-subscriptable]
+            )
+            == 0.0
+        ) & (np.abs(stoichiometric_matrix[not_indices]).sum(axis=0) > 0)  # ty: ignore[not-subscriptable]
+        # Remove the reactions
+        for idx in itertools.chain(lhs_indices, rhs_indices):
+            stoichiometric_matrix[idx, remove_from_rxns_bool] = 0.0  # ty: ignore[invalid-assignment]
+    if not _check_scipy_version_greater(1, 17, 0):
+        stoichiometric_matrix = stoichiometric_matrix.tocoo()
+    stoichiometric_matrix.eliminate_zeros()
+    return stoichiometric_matrix
+
+
+def normalize_array(array: sparse.sparray, axis: int) -> sparse.coo_array:
+    if axis == 1:
+        array: sparse.csr_array = array.tocsr()  # ty: ignore[unresolved-attribute]
+    elif axis == 0:
+        array: sparse.csc_array = array.tocsc()  # ty: ignore[unresolved-attribute]
+    else:
+        raise ValueError(f"Axis must be 0 or 1, received {axis}")
+    norm = array.sum(axis=axis)
+    norm[norm > 0.0] = np.reciprocal(norm[norm > 0.0])
+    if axis == 1:
+        array = array.multiply(norm.reshape(-1, 1))  # ty: ignore[conflicting-declarations]
+        return array.tocoo()
+    elif axis == 0:
+        array = array.multiply(norm.reshape(1, -1))  # ty: ignore[conflicting-declarations]
+        return array.tocoo()

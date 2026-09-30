@@ -12,11 +12,16 @@ from typing import Any, Literal
 import cobra
 import numpy as np
 import pandas as pd
-import tqdm
 from cobra.manipulation import knock_out_model_genes
 
 # Local Imports
 from metworkpy.divergence.group_divergence import calculate_divergence_grouped
+from metworkpy.utils._notebook import is_notebook
+
+if is_notebook():
+    from tqdm.notebook import tqdm
+else:
+    from tqdm import tqdm
 
 # region Main Function
 
@@ -144,18 +149,18 @@ def ko_divergence(
     unperturbed_sample = cobra.sampling.sample(
         model=model,
         n=sample_count,
-        seed=rng.integers(low=0, high=np.iinfo(np.intp).max),
+        seed=int(rng.integers(low=0, high=np.iinfo(np.intp).max)),
         **sampler_kwargs,
     )
 
-    for gene_to_ko in tqdm.tqdm(genes_to_ko, disable=not progress_bar):
+    for gene_to_ko in tqdm(genes_to_ko, disable=not progress_bar):
         with model as ko_model:
             try:
                 _ = knock_out_model_genes(ko_model, gene_list=[gene_to_ko])
                 perturbed_sample = cobra.sampling.sample(
                     model=ko_model,
                     n=sample_count,
-                    seed=rng.integers(low=0, high=np.iinfo(np.intp).max),
+                    seed=int(rng.integers(low=0, high=np.iinfo(np.intp).max)),
                     **sampler_kwargs,
                 )
             except ValueError:

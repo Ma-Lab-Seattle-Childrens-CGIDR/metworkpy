@@ -10,7 +10,6 @@ from collections.abc import Hashable, Iterable
 from typing import (
     Literal,
     NamedTuple,
-    Union,
     cast,
 )
 
@@ -23,17 +22,17 @@ import pandas as pd
 
 
 # Type for distance dictionaries used in the clustering
-_DistDict = dict[Hashable, dict[Hashable, Union[int, float]]]
+_DistDict = dict[Hashable, dict[Hashable, int | float]]
 
 
-class GroupClusteringResult(NamedTuple):
+class TargetSetClusteringResult(NamedTuple):
     """
-    Results of agglomerative clustering of groups of nodes on a network
+    Results of agglomerative clustering of target sets of nodes on a network
 
     Attributes
     ----------
     clusters : list of set of Hashable
-        List of clusters, in terms of the original node groups
+        List of clusters, in terms of the original node target sets
     children : np.ndarray
         n-1 by 2 numpy array, where n is the initial number of clusters,
         describing the clusters merged at each iteration. The rows represent
@@ -48,30 +47,32 @@ class GroupClusteringResult(NamedTuple):
     distances: np.ndarray[tuple[int], np.dtype[np.float64]]
 
 
-def get_network_group_clustering(
+def get_network_target_set_clustering(
     network: nx.Graph | nx.DiGraph,
-    groups: dict[Hashable, Iterable[Hashable]] | Iterable[Iterable[Hashable]],
+    target_sets: dict[Hashable, Iterable[Hashable]]
+    | Iterable[Iterable[Hashable]],
     n_clusters: int | None = None,
     linkage: Literal["mean", "min", "max"] = "mean",
-) -> GroupClusteringResult:
-    """Perform agglomerative clustering on groups of nodes in a network
+) -> TargetSetClusteringResult:
+    """Perform agglomerative clustering on target sets of nodes in a network
 
     Parameters
     ----------
     network : nx.Graph or nx.DiGraph
-        Network to use to calculate distances between the groups of nodes,
+        Network to use to calculate distances between the target sets of nodes,
         directed graphs will be converted to undirected
-    groups : dict of Hashable to iterable of Hashable
-        Node groups described by a dictionary, keyed by the group name, Iterable of groups, each represented by an iterable of network nodes
+    target_sets : dict of Hashable to iterable of Hashable or iterable of Hashable
+        Node target sets described by a dictionary, keyed by the target set name or Iterable
+        of target sets, each represented by an iterable of network nodes
     n_clusters : int, optional
         The number of clusters to find, if None will merge all clusters into a single
         cluster, if an int will merge until only that many clusters remain
     linkage : {"mean", "min", "max"}
-        Method to use for calculated the distance between node groups
+        Method to use for calculated the distance between node target sets
 
     Returns
     -------
-    GroupClusteringResult
+    TargetSetClusteringResult
         Named tuple of clusters, children, distances, and counts
     """
     # NOTE: This initial implementation is going to be naive,
@@ -90,14 +91,16 @@ def get_network_group_clustering(
         raise ValueError("Network isn't connected, can't perform clustering")
     # Want dicts of cluster to base clusters, and cluster to nodes
     # indexed by incrememting ints
-    if not isinstance(groups, dict):
-        cluster_to_nodes = {i: set(g) for i, g in enumerate(groups)}
+    if not isinstance(target_sets, dict):
+        cluster_to_nodes = {i: set(g) for i, g in enumerate(target_sets)}
         cluster_to_group_names = {i: {i} for i in range(len(cluster_to_nodes))}
     else:
-        cluster_to_nodes = {}
+        assert isinstance(target_sets, dict)
+        cluster_to_nodes: dict[int, set[Hashable]] = {}
         cluster_to_group_names = {}
-        for idx, (group, nodes) in enumerate(groups.items()):
-            cluster_to_nodes[idx] = nodes
+        for idx, (group, nodes) in enumerate(target_sets.items()):
+            nodes = cast(Iterable[Hashable], nodes)
+            cluster_to_nodes[idx] = set(nodes)
             cluster_to_group_names[idx] = {group}
     # Get the initial number of clusters
     n_init_clusters = len(cluster_to_nodes)
@@ -132,7 +135,7 @@ def get_network_group_clustering(
         )
         cluster_dist_arr[c1, c2] = dist
         cluster_dist_arr[c2, c1] = dist
-    for iter in range(n_init_clusters - n_clusters):
+    for idx in range(n_init_clusters - n_clusters):
         # Find the minimum distance between clusters
         to_merge = (-1, -1)
         min_dist = np.inf
@@ -146,17 +149,17 @@ def get_network_group_clustering(
                 min_dist = d
 
         # Merge the clusters
-        new_cluster = n_init_clusters + iter
+        new_cluster = n_init_clusters + idx
         c1, c2 = to_merge
         # Update the distance and children arrays
-        distances[iter] = min_dist
-        children[iter, 0] = c1
-        children[iter, 1] = c2
+        distances[idx] = min_dist
+        children[idx, 0] = c1
+        children[idx, 1] = c2
         # Update the cluster_to_node and cluster_to_group_names dicts
         new_cluster_nodes = cluster_to_nodes.pop(c1) | cluster_to_nodes.pop(c2)
         cluster_to_group_names[new_cluster] = cluster_to_group_names.pop(
             c1
-        ) | cluster_to_group_names.pop(c2)
+        ) | cluster_to_group_names.pop(c2)  # ty: ignore[invalid-assignment]
         # Calculate the distance from this new cluster to the other clusters
         for c, nodes in cluster_to_nodes.items():
             d = linkage_fn(
@@ -170,41 +173,41 @@ def get_network_group_clustering(
         cluster_to_nodes[new_cluster] = new_cluster_nodes
     assert len(cluster_to_group_names) == n_clusters
     assert len(cluster_to_nodes) == n_clusters
-    return GroupClusteringResult(
-        clusters=[cluster for cluster in cluster_to_group_names.values()],
+    return TargetSetClusteringResult(
+        clusters=[cluster for cluster in cluster_to_group_names.values()],  # ty: ignore[invalid-argument-type]
         children=children,
         distances=distances,
     )
 
 
-def get_network_group_linkage(
+def get_network_target_set_linkage(
     network: nx.Graph | nx.DiGraph,
-    groups: Iterable[Iterable[Hashable]],
+    target_sets: Iterable[Iterable[Hashable]],
     linkage: Literal["mean", "min", "max"] = "mean",
 ):
     """
-    Perform agglomerative clustering on groups of nodes in a network, returning a linkage
+    Perform agglomerative clustering on target sets of nodes in a network, returning a linkage
     matrix
 
     Parameters
     ----------
     network : nx.Graph or nx.DiGraph
-        Network to use to calculate distances between the groups of nodes,
+        Network to use to calculate distances between the target sets of nodes,
         directed graphs will be converted to undirected
-    groups : Iterable to iterable of Hashable
-        Node groups described by an iterable, with each entry representing a group.
-        Each group should be an iterable of nodes in the network.
+    target_sets : Iterable to iterable of Hashable
+        Node target sets described by an iterable, with each entry representing a target set.
+        Each target set should be an iterable of nodes in the network.
     linkage : {"mean", "min", "max"}
-        Method to use for calculated the distance between node groups
+        Method to use for calculated the distance between node target sets
 
     Returns
     -------
     linkage_matrix : np.ndarray
         Linkage matrix, described in `SciPy's documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html>`_,
-        an n-1 by 4 matrix `Z`, where n is the number of groups to cluster. The
+        an n-1 by 4 matrix `Z`, where n is the number of target sets to cluster. The
         clusters for iteration i represented by the `Z[i,0]` and `Z[i,1]` are combined
         to form the n+i cluster. The distance between the clusters is in `Z[i,2]` and
-        `Z[i,3]` represents the number of original groups in the new cluster.
+        `Z[i,3]` represents the number of original target sets in the new cluster.
 
     Note
     ----
@@ -212,8 +215,11 @@ def get_network_group_linkage(
     `SciPy's dendrogram function<https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.dendrogram.html>`_
     """
     # Perform the clustering
-    _, children, distances = get_network_group_clustering(
-        network=network, groups=groups, n_clusters=None, linkage=linkage
+    _, children, distances = get_network_target_set_clustering(
+        network=network,
+        target_sets=target_sets,
+        n_clusters=None,
+        linkage=linkage,
     )
     counts = np.zeros(children.shape[0])
     n_samples = children.shape[0] + 1  # Children should have length n-1
@@ -288,7 +294,8 @@ def get_distance_matrix(
     """
     node_index = pd.Index(network.nodes)
     distance_matrix = pd.DataFrame(0.0, index=node_index, columns=node_index)
-    for source, target_dict in nx.shortest_path_length(network, **kwargs):
+    # NOTE: The shortest path returns iterable if source/target not specified
+    for source, target_dict in nx.shortest_path_length(network, **kwargs):  # ty: ignore[not-iterable]
         for target, dist in target_dict.items():
             distance_matrix.loc[source, target] = dist
     return distance_matrix

@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version DEV](#version-dev)
   - [Version 0.11.0](#version-0110)
   - [Version 0.10.0](#version-0100)
   - [Version 0.9.0](#version-090)
@@ -18,6 +19,97 @@
   - [Version 0.2.7](#version-027)
 
 <!--toc:end-->
+
+## Version DEV
+
+- Dropping support for python 3.9
+- Increasing minimum SciPy version to 1.15 for associated sparse array
+  improvements
+- For metabolic network creation functions, added option for removing currency
+  metabolites from generated metabolic graphs, this is done by passing currency
+  metabolite groups, which are tuples representing the forms of currency
+  metabolites seen on two sides of an equation. For ATP, this could be (ATP,
+  ADP) for ATP acting as a phosphate donor, or (ATP, (ADP,Pi)) for ATP acting as
+  an energy carrier. These currency metabolites are removed when the two forms
+  are found (with equal stoichiometry) on opposite sides of a reaction equation,
+  but where they are not the only metabolites present.
+- For metabolic network creation functions, changed 'remove_top_metabolites'
+  parameter to allow for removing metabolites based on participating in above a
+  specified proportion of the reactions in the metabolic model. Now an integer
+  greater than 1 will maintain the previous behaviour, but a float between 0 and
+  1 will remove metabolites which participate in more than that proportion of
+  the models reactions.
+- Added experimental `create_mass_flow_network` function based on
+  "Flux-dependent graphs for metabolic networks" by Mariano Beguerisse-Díaz,
+  Gabriel Bosque, Diego Oyarzún, Jesús Picó & Mauricio Barahona. This method
+  should produce a similar network, but has not been fully tested yet.
+- Added experimental `create_metabolite_mass_flow_network` function inspired by
+  the `create_mass_flow_network` above.
+- Refactor to network density/enrichment functions. Uses neighborhood map
+  functions which allows for some more options in terms of the neighborhood
+  finding/filtering. Now returns dicts instead of pandas Series (can convert to
+  pandas Series with `pd.Series(density_result)`).
+- Added parameters to the `corner_sampling` function to allow for adjusting the
+  randomized objective (changing the number of randomly selected reactions,
+  changing the minimum and maximum possible objective weights).
+- Added parameter to the `gene_target_enrichment` to control minimum
+  neighborhood size (neighborhoods smaller than this will result in NaN)
+- Added parameter to the `gene_neighborhood_density` to control the minimum
+  neighborhood size (neighborhoods smaller than this will result in 0.0)
+- Added function for finding target node enrichment (`node_target_enrichment`),
+  finds the enrichment of target node set within neighborhoods of a network.
+- Added option for metabolic network construction methods to split the reaction
+  nodes into a forward and reverse node, representing the two directions the
+  reactions could potentially operate in. Also, added an option for pruning lone
+  nodes to the `create_metabolic_network` function, which allows for removing
+  all nodes which are connected to no other nodes. This can allow for removing
+  either forward/reverse nodes for reactions which can only operate in one
+  direction (since the node representing the other direction will not be
+  connected to any other nodes).
+- Added option for metabolite network creation methods to return networks as a
+  long-form dataframe, that is with one column which represents the metabolite
+  and another column which represents the members (either reactions or genes).
+  This can optionally include a column for weights depending on the method. This
+  allows for simplified interfacing to libraries which expect this format for
+  describing networks, for example decouplerpy.
+- Added functions for calculating load values and finding choke points in
+  metabolic networks based on (1).
+- Added a function (in gpr submodule) for translating between genes and
+  reactions, while considering all the genes as a group instead of individually:
+  `gene_group_to_reaction_list`. The function `gene_to_reaction_list` in utils
+  is similar (identical in the case that the `essentiality` argument of both
+  functions is False), but considers the genes individually for translation.
+  This differs in situations where a single gene may not be essential for a
+  reaction, but the genes being translated includes all of the genes that would
+  be required for that reaction. For example, a reaction R1 with GPR: 'gene1 OR
+  gene2', in `gene_to_reaction_list` with `essential=True`, this reaction would
+  not be including when translating from `[g1, g2]` to a reaction list, however
+  it would be included with `gene_group_to_reaction_list`.
+- Updated functions in `metworkpy.network.neighborhoods` to allow for specifying
+  an edge weight parameter to use as an edge weight/distance.
+- Added functions for creating a subnetwork from a metabolic network by
+  selecting a subset of nodes, or nodes associated with selected genes. These
+  subnetworks can also optionally include paths between these selected nodes,
+  and neighborhoods around the nodes.
+- Updated fuzzy reaction functionality to allow for softmax scaling in
+  `fuzzy_reaction_set` function in addition to minmax scaling. Modified the gene
+  enrichment membership function so it uses -log10(pvalue) instead of the
+  1-pvalue. This allows for more differentiation of the membership values, and
+  when combined with the scaling='softmax' (which is also selected by default
+  with this membership function), still provides a membership function scaled
+  between 0 and 1.
+- Added options to metabolite synthesis network methods to filter which genes
+  and reactions are allowed to be in the network of each metabolite. This can be
+  global, across all metabolites, or metabolite specific. When combined with the
+  neighborhood methods, this can allow for filtering metabolite neighborhoods to
+  only include reactions/genes within a certain distance of the metabolite.
+
+### References
+
+(1) Rahman, S. A.; Schomburg, D. Observing Local and Global Properties of
+Metabolic Pathways: ‘Load Points’ and ‘Choke Points’ in the Metabolic Networks.
+Bioinformatics 2006, 22 (14), 1767–1774.
+[https://doi.org/10.1093/bioinformatics/btl181](https://doi.org/10.1093/bioinformatics/btl181)
 
 ## Version 0.11.0
 

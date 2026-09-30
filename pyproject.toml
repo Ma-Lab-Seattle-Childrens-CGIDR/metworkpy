@@ -6,10 +6,10 @@ version = "0.11.0"
 readme = "README.md"
 keywords = ["FBA", "metabolism", "IMAT", "metchange"]
 license = { text = "MIT" }
-requires-python = "<3.15,>=3.9"
+requires-python = "<3.15,>=3.10"
 dependencies = [
   "cobra>=0.30.0",
-  "scipy>=1.13.0",
+  "scipy>=1.15.0",
   "networkx>=3.2.1",
   "pandas>=2.2.0",
   "numpy>=1.26",
@@ -18,7 +18,7 @@ dependencies = [
   "tqdm>=4.66.4",
   "pyarrow>=16.0.0",
   "joblib>=1.4.2",
-  "robustrankaggregpy>=0.3.0",
+  "robustrankaggregpy>=0.4.0",
   "docrep>=0.3.2",
 ]
 
@@ -55,6 +55,7 @@ dev = [
   "tox>=4.30.3",
   "tox-uv>=1.28.1",
   "jupyter>=1.1.1",
+  "debugpy>=1.8.21",
 ]
 test = ["highspy>=1.10.0", "osqp>=1.0.3", "pytest>=8.0.1"]
 docs = [
@@ -70,14 +71,12 @@ docs = [
 ]
 
 [build-system]
-# requires = ["pdm-backend"]
-# build-backend = "pdm.backend"
 requires = ["uv_build>=0.12.1,<0.13"]
 build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 filterwarnings = [
-  # This warning just occurs with essentially all multi-processing calls
+# This warning just occurs with essentially all multi-processing calls
   'ignore:This process \(pid=\d+\) is multi-threaded, use of fork\(\) may lead to deadlocks in the child\.:DeprecationWarning',
 ]
 
@@ -113,4 +112,4 @@ exclude = [
   "site-packages",
   "venv",
   "*.ipynb",
-]
+  ]

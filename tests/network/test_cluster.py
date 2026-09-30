@@ -16,8 +16,8 @@ from metworkpy.examples import get_example_model
 # Local Imports
 from metworkpy.network import (
     create_gene_network,
-    get_network_group_clustering,
-    get_network_group_linkage,
+    get_network_target_set_clustering,
+    get_network_target_set_linkage,
 )
 
 
@@ -37,9 +37,9 @@ class TestGroupNetworkCluster(unittest.TestCase):
     def test_2_groups_mean_linkage(self):
         if self.network is None:
             raise ValueError("Test requires a metabolic network")
-        cluster_res = get_network_group_clustering(
+        cluster_res = get_network_target_set_clustering(
             network=self.network,
-            groups=[{"g023", "g013"}, {"g004", "g010"}],
+            target_sets=[{"g023", "g013"}, {"g004", "g010"}],
             n_clusters=None,
             linkage="mean",
         )
@@ -56,9 +56,9 @@ class TestGroupNetworkCluster(unittest.TestCase):
     def test_2_groups_min_linkage(self):
         if self.network is None:
             raise ValueError("Test requires a metabolic network")
-        cluster_res = get_network_group_clustering(
+        cluster_res = get_network_target_set_clustering(
             network=self.network,
-            groups=[{"g023", "g013"}, {"g004", "g010"}],
+            target_sets=[{"g023", "g013"}, {"g004", "g010"}],
             n_clusters=None,
             linkage="min",
         )
@@ -75,9 +75,9 @@ class TestGroupNetworkCluster(unittest.TestCase):
     def test_2_groups_max_linkage(self):
         if self.network is None:
             raise ValueError("Test requires a metabolic network")
-        cluster_res = get_network_group_clustering(
+        cluster_res = get_network_target_set_clustering(
             network=self.network,
-            groups=[{"g023", "g013"}, {"g004", "g010"}],
+            target_sets=[{"g023", "g013"}, {"g004", "g010"}],
             n_clusters=None,
             linkage="max",
         )
@@ -94,9 +94,9 @@ class TestGroupNetworkCluster(unittest.TestCase):
     def test_3_groups_mean_linkage(self):
         if self.network is None:
             raise ValueError("Test requires a metabolic network")
-        cluster_res = get_network_group_clustering(
+        cluster_res = get_network_target_set_clustering(
             network=self.network,
-            groups=[{"g023", "g013"}, {"g004", "g010"}, {"g002", "g001"}],
+            target_sets=[{"g023", "g013"}, {"g004", "g010"}, {"g002", "g001"}],
             n_clusters=None,
             linkage="mean",
         )
@@ -130,9 +130,9 @@ class TestGroupNetworkLinkage(unittest.TestCase):
     def test_2_groups_mean_linkage(self):
         if self.network is None:
             raise ValueError("Test requires a metabolic network")
-        linkage_mat = get_network_group_linkage(
+        linkage_mat = get_network_target_set_linkage(
             network=self.network,
-            groups=[{"g023", "g013"}, {"g001", "g008"}],
+            target_sets=[{"g023", "g013"}, {"g001", "g008"}],
             linkage="mean",
         )
         self.assertTupleEqual(linkage_mat.shape, (1, 4))
@@ -140,9 +140,9 @@ class TestGroupNetworkLinkage(unittest.TestCase):
     def test_3_groups_mean_linkage(self):
         if self.network is None:
             raise ValueError("Test requires a metabolic network")
-        linkage_mat = get_network_group_linkage(
+        linkage_mat = get_network_target_set_linkage(
             network=self.network,
-            groups=[{"g023", "g013"}, {"g001", "g008"}, {"g005", "g006"}],
+            target_sets=[{"g023", "g013"}, {"g001", "g008"}, {"g005", "g006"}],
             linkage="mean",
         )
         self.assertTupleEqual(linkage_mat.shape, (2, 4))

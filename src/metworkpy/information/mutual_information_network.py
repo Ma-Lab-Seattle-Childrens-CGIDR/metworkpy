@@ -9,21 +9,27 @@ from collections.abc import Hashable, Iterable
 from typing import (
     Literal,
     TypeVar,
-    Union,
     cast,
 )
 
 # External Imports
-import joblib  # type: ignore
+import joblib
 import networkx as nx
 import numpy as np
 import pandas as pd
-import scipy  # type: ignore
-import tqdm  # type: ignore
+import scipy
 from numpy.typing import ArrayLike
+
+from metworkpy.utils._notebook import is_notebook
 
 # Local Imports
 from .mutual_information_functions import mutual_information
+
+# Handle import of tqdm to allow notebook usage
+if is_notebook():
+    from tqdm.notebook import tqdm
+else:
+    from tqdm import tqdm
 
 # region Main Function
 T = TypeVar("T", np.ndarray, pd.DataFrame, ArrayLike)
@@ -147,8 +153,8 @@ def mi_pairwise(
                 1.0, index=dataset.columns, columns=dataset.columns
             )
         num_combinations = scipy.special.comb(dataset.shape[1], 2)
-        for idx1, idx2, ret_value in tqdm.tqdm(
-            joblib.Parallel(n_jobs=processes, return_as="generator")(
+        for idx1, idx2, ret_value in tqdm(
+            joblib.Parallel(n_jobs=processes, return_as="generator_unordered")(
                 joblib.delayed(_mi_single_pair)(
                     dataset[i], dataset[j], i, j, **kwargs
                 )
@@ -183,15 +189,21 @@ def mi_pairwise(
         if cutoff is not None:
             mi_result.loc[pvalue_result < cutoff] = 0.0
     else:
-        dataset = np.array(dataset)  # Coerce arraylike into array
+        dataset = np.array(
+            dataset
+        )  # Coerce arraylike into array  # ty: ignore[invalid-assignment]
         mi_result = np.zeros((dataset.shape[1], dataset.shape[1]))
         if calculate_pvalue:
-            pvalue_result: T = np.ones((dataset.shape[1], dataset.shape[1]))
+            pvalue_result: T = np.ones((dataset.shape[1], dataset.shape[1]))  # ty: ignore[invalid-assignment]
         num_combinations = scipy.special.comb(dataset.shape[1], 2)
-        for idx1, idx2, ret_value in tqdm.tqdm(
-            joblib.Parallel(n_jobs=processes, return_as="generator")(
+        for idx1, idx2, ret_value in tqdm(
+            joblib.Parallel(n_jobs=processes, return_as="generator_unordered")(
                 joblib.delayed(_mi_single_pair)(
-                    dataset[:, i], dataset[:, j], i, j, **kwargs
+                    dataset[:, i],  # ty: ignore[invalid-argument-type]
+                    dataset[:, j],  # ty: ignore[invalid-argument-type]
+                    i,
+                    j,
+                    **kwargs,
                 )
                 for i, j in itertools.combinations(range(dataset.shape[1]), 2)
             ),
@@ -262,7 +274,7 @@ def _mi_single_pair(
 # region Grouped Mutual Information
 
 IndexArray = np.ndarray[tuple[int], np.dtype[np.intp]]
-ResultIndex = Union[Hashable, np.intp]
+ResultIndex = Hashable | np.intp
 
 
 def mi_pairwise_grouped(
@@ -374,7 +386,7 @@ def mi_pairwise_grouped(
         )
     # Now actually calculate the mutual information values
     num_combinations = scipy.special.comb(dataset.shape[1], 2)
-    for idx1, idx2, ret_value in tqdm.tqdm(
+    for idx1, idx2, ret_value in tqdm(
         joblib.Parallel(n_jobs=processes, return_as="generator")(
             joblib.delayed(_mi_grouped_single_pair)(
                 dataset, g1=groups[i], g2=groups[j], idx1=i, idx2=j, **kwargs

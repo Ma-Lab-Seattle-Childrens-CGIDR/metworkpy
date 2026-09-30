@@ -4,20 +4,16 @@ channels:
 dependencies:
   - python=3.13
   - cobra
-  - scipy
-  - pandas
-  - osqp
-  - pyarrow
-  - matplotlib
-  - joblib
-  - openpyxl
-  - tqdm
   - highspy
+  - matplotlib
+  - jupyter
+  - matplotlib
   - networkx
-  - optlang
-  - sympy
+  - osqp
+  - openpyxl
   - pip
+  - scipy
   - pip:
     - iplotx
-    - escher
-    - "git+https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy.git"
+    - hopsy
+    - ..
