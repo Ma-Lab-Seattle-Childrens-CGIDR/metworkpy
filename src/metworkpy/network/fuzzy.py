@@ -6,6 +6,7 @@ Sub-module for finding fuzzy sets of reactions
 from __future__ import annotations
 
 import functools
+import inspect
 import math
 from collections.abc import Callable, Iterable
 from typing import (
@@ -28,6 +29,10 @@ from robustrankaggregpy.aggregate_ranks import (
 )
 from scipy import stats
 from scipy.stats import gmean, rv_discrete
+
+from metworkpy.network.centrality import (
+    closeness_centrality_subset,
+)
 
 # Local Imports
 from metworkpy.network.neighborhoods import (
@@ -579,6 +584,60 @@ def membership_gene_enrichment(
     return -np.log10(pval)
 
 
+class MembershipSubsetCloseness:
+    """
+    A class implementing a membership function
+    based on subset closeness, the membership of a node
+    is its subset closeness for the set of reactions
+    associated with the gene sets
+
+    Parameters
+    ----------
+    reaction : cobra.Reaction
+        The reaction to find the membership of
+    network : nx.Graph
+        Connectivity graph of the network
+    gene_set : set of str
+        The set of gene's to translate into a reaction set
+    reaction_to_gene_dict : dict of str to set of str
+        A dict for translating from reactions to sets of genes
+        associated with each reaction
+
+    Returns
+    -------
+    membership : float
+        The membership of the reaction in the reaction set, calculated
+        as the subset closeness of the reaction node with respect to the
+        subset of reactions associated with genes in `gene_set`.
+    """
+
+    def __init__(self):
+        self.reaction_subset: set[str] | None = None
+
+    def __call__(
+        self,
+        reaction: cobra.Reaction,
+        network: nx.Graph,
+        gene_set: set[str],
+        reaction_to_gene_dict: dict[str, set[str]],
+        distance: str | None = None,
+    ):
+        if self.reaction_subset is None:
+            self.reaction_subset = {
+                r
+                for r in network
+                if r in reaction_to_gene_dict
+                and (len(reaction_to_gene_dict[r] & gene_set) >= 1)
+            }
+        return closeness_centrality_subset(
+            G=network,
+            targets=self.reaction_subset,
+            u=reaction.id,
+            distance=distance,
+            wf_improved=True,
+        )
+
+
 # endregion Membership Functions
 
 # region Fuzzy Reaction Set
@@ -591,6 +650,7 @@ MEMBERSHIP_FUNCTIONS = {
     "knn gene density": membership_knn_gene_distance,
     "knn reaction density": membership_knn_reaction_distance,
     "gene enrichment": membership_gene_enrichment,
+    "subset closeness": MembershipSubsetCloseness,
 }
 
 
@@ -660,6 +720,7 @@ def fuzzy_reaction_set(
     * 'knn gene density'
     * 'knn reaction density'
     * 'gene enrichment'
+    * 'subset closeness'
 
     The difference between the gene and reaction density functions, are
     how multiple genes being associated with a single reaction are counted.
@@ -676,6 +737,7 @@ def fuzzy_reaction_set(
     membership_knn_gene_density : Used when 'knn gene density' selected
     membership_knn_reaction_density : Used when 'knn reaction density' selected
     membership_gene_enrichment : Used when 'gene enrichment' selected
+    MembershipSubsetCloseness : Used when 'subset closeness' selected
     """
     # Get the correct membership function
     if isinstance(membership_fn, str):
@@ -686,6 +748,8 @@ def fuzzy_reaction_set(
             )
 
         membership_fn = MEMBERSHIP_FUNCTIONS[membership_fn]  # type: ignore
+        if inspect.isclass(membership_fn):
+            membership_fn = membership_fn()
 
     if not callable(membership_fn):
         raise TypeError("Received invalid membership function")
@@ -820,7 +884,8 @@ def fuzzy_reaction_intersection(
     * max: Take the max of the membership values
     * geom: Take the geometric mean of the membership values
     * rank-agg: Perform rank aggregation on the membership values
-      using `robustrankaggregpy <https://robustrankaggregpy.readthedocs.io/en/latest/index.html>`_, and the subtract the resulting
+      using `robustrankaggregpy <https://robustrankaggregpy.readthedocs.io/en/latest/index.html>`_,
+      and the subtract the resulting
       score from 1.0 (since the scores resulting from the rank
       aggregation methods are closer to 0 for items that tend
       to be ranked near the top, so subtracting from 1 ensures

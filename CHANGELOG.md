@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version DEV](#version-dev)
   - [Version 0.12.0](#version-0120)
     - [References](#references)
   - [Version 0.11.0](#version-0110)
@@ -20,6 +21,11 @@
   - [Version 0.2.7](#version-027)
 
 <!--toc:end-->
+
+## Version DEV
+
+- metworkpy.network
+  - Add subset closeness as option for membership function in fuzzy submodule
 
 ## Version 0.12.0
 
