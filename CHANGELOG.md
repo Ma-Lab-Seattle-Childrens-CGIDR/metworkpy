@@ -26,6 +26,9 @@
 
 - metworkpy.network
   - Add subset closeness as option for membership function in fuzzy submodule
+- metworkpy.divergence
+  - BUGFIX: Make adaptive method of Kullback-Leibler divergence respect the clip
+    parameter (previously just ignored)
 
 ## Version 0.12.0
 
