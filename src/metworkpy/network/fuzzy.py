@@ -31,6 +31,7 @@ from scipy import stats
 from scipy.stats import gmean, rv_discrete
 
 from metworkpy.network.centrality import (
+    betweenness_centrality_subset,
     closeness_centrality_subset,
 )
 
@@ -602,6 +603,8 @@ class MembershipSubsetCloseness:
     reaction_to_gene_dict : dict of str to set of str
         A dict for translating from reactions to sets of genes
         associated with each reaction
+    distance : str,optional
+        Edge attribute key used as the distance between nodes
 
     Returns
     -------
@@ -638,6 +641,64 @@ class MembershipSubsetCloseness:
         )
 
 
+class MembershipSubsetBetweenness:
+    """
+    A class implementing a membership function
+    based on subset betweenness, the membership of a node
+    is its subset betweenness for the set of reactions
+    associated with the gene sets
+
+    Parameters
+    ----------
+    reaction : cobra.Reaction
+        The reaction to find the membership of
+    network : nx.Graph
+        Connectivity graph of the network
+    gene_set : set of str
+        The set of gene's to translate into a reaction set
+    reaction_to_gene_dict : dict of str to set of str
+        A dict for translating from reactions to sets of genes
+        associated with each reaction
+    distance : str,optional
+        Edge attribute key used as the distance between nodes
+
+    Returns
+    -------
+    membership : float
+        The membership of the reaction in the reaction set, calculated
+        as the subset betweenness of the reaction node with respect to the
+        subset of reactions associated with genes in `gene_set`.
+    """
+
+    def __init__(self):
+        self.reaction_subset: set[str] | None = None
+        self.betweenness_centrality_subset: dict | None
+
+    def __call__(
+        self,
+        reaction: cobra.Reaction,
+        network: nx.Graph,
+        gene_set: set[str],
+        reaction_to_gene_dict: dict[str, set[str]],
+        weight: str | None = None,
+    ):
+        if self.reaction_subset is None:
+            self.reaction_subset = {
+                r
+                for r in network
+                if r in reaction_to_gene_dict
+                and (len(reaction_to_gene_dict[r] & gene_set) >= 1)
+            }
+        if self.betweenness_centrality_subset is None:
+            self.betweenness_centrality_subset = betweenness_centrality_subset(
+                G=network,
+                targets=self.reaction_subset,
+                normalized=True,
+                weight=weight,
+            )
+        return self.betweenness_centrality_subset[reaction.id]
+
+
 # endregion Membership Functions
 
 # region Fuzzy Reaction Set
@@ -651,6 +712,7 @@ MEMBERSHIP_FUNCTIONS = {
     "knn reaction density": membership_knn_reaction_distance,
     "gene enrichment": membership_gene_enrichment,
     "subset closeness": MembershipSubsetCloseness,
+    "subset betweenness": MembershipSubsetBetweenness,
 }
 
 
