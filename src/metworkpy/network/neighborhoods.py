@@ -1019,10 +1019,110 @@ def combine_neighborhood_pvalues_weighted(
 
 
 def combine_neighborhood_pvalues(
+    pvalues: Mapping[NodeType, float],
+    network: nx.Graph | nx.DiGraph,
+    *,
+    node_weights: Mapping[NodeType, float] | None = None,
+    radius: float = 2,
+    nodes: Iterable[NodeType] | None = None,
+    node_filter: Callable[[NodeType], bool] | set[NodeType] | None = None,
+    weight: str | None = None,
+    include_node: bool = True,
+    processes: int | None = None,
+    **kwargs,
+) -> CombinePvaluesResult:
+    """
+    Combine the p-values for genes in neighborhoods of `network`
+
+    Parameters
+    ----------
+    pvalues : dict of node id to float
+        P-values assigned to nodes in the network, any nodes with ids not
+        in this dict will be treated as having a p-value of NaN, the
+        handling of which can be modified by passing `nan_policy` as a
+        keyword argument (which will be passed to SciPy stats
+        `combine_pvalues` function).
+    network : nx.Graph or nx.DiGraph
+        The metabolic network to map over
+    node_weights : dict of node id to float, optional
+        Optional weights to apply if using "stouffer" method
+        `scipy.stats.combine_pvalues <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.combine_pvalues.html>`_,
+        should be a dict of node id to a weight for each node.
+    radius : float
+        The size of the neighborhood to map over.
+        Any nodes within radius distance of the central node will be included
+        in the central nodes neighborhood. A radius of 0
+        means that only the central node will be included in the neighborhood
+        (assuming `include_node` is True, other it would just be the empty set).
+    nodes : Iterable of node id, optional
+        Nodes to use as neighborhood centers, other nodes will still be included
+        in neighborhoods but will not act as neighborhood centers.
+    node_filter : callable of node id->bool or set of node ids, optional
+        Filter nodes in the network to consider when finding neighborhoods.
+        If a Callable, should take node ids as the only argument and return
+        a bool, if True the node will be considered in neighborhoods,
+        if False it will not be. If a set, only nodes in the set will be included
+        in neighborhoods.
+    weight : str, optional
+        If provided indicates the edge parameter to be used as weights
+        when finding distances from a central node to
+        define a neighborhood. If None, all edges are treated as having a
+        weight of 1.
+    include_node : bool, default=True
+        Whether to include the central node in a neighborhood
+    processes : int, optional
+        The number of processes to use for parallel mapping of a
+        the function
+    kwargs
+        Keyword arguments are passed to
+        `scipy.stats.combine_pvalues <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.combine_pvalues.html>`_,
+        if 'node_weights' is not None don't pass 'method' since that is
+        required to be 'stouffer' to allow for the weighting and so that
+        will be automatically set.
+
+    Returns
+    -------
+    dict of node id to result
+        Dictionary of central nodes to the result of applying the passed function `fn`
+        to the neighborhood around it.
+    """
+    if node_weights is not None:
+        kwargs["method"] = "stouffer"
+
+    def combine_pvals(node_ids: set[str]):
+        return stats.combine_pvalues(
+            [pvalues.get(n, np.nan) for n in node_ids],
+            weights=[node_weights.get(n, np.nan) for n in node_ids]
+            if node_weights is not None
+            else None,
+            **kwargs,
+        )
+
+    res_dict = neighborhood_map(
+        fn=combine_pvals,
+        network=network,
+        radius=radius,
+        nodes=nodes,
+        node_filter=node_filter,
+        weight=weight,
+        include_node=include_node,
+        processes=processes,
+    )
+    # Split the results into statistics and pvalues
+    stats_dict = {}
+    pvals_dict = {}
+    for node, (stat, pval) in res_dict.items():
+        stats_dict[node] = stat
+        pvals_dict[node] = pval
+    return CombinePvaluesResult(stats_dict, pvals_dict)
+
+
+def combine_neighborhood_gene_pvalues(
     gene_pvalues: Mapping[str, float],
     network: nx.Graph | nx.DiGraph,
     gene_weights: Mapping[str, float] | None = None,
     model: cobra.Model | None = None,
+    *,
     reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
     direction_split: bool = False,
     radius: float = 2,
@@ -1090,7 +1190,9 @@ def combine_neighborhood_pvalues(
     kwargs
         Keyword arguments are passed to
         `scipy.stats.combine_pvalues <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.combine_pvalues.html>`_,
-        don't pass 'method' since that is required to be 'stouffer' to allow for the weighting.
+        if 'gene_weights' is not None, don't pass 'method' since that
+        is required to be 'stouffer' to allow for the weighting, so
+        it will be automatically set.
 
     Returns
     -------
@@ -1098,6 +1200,8 @@ def combine_neighborhood_pvalues(
         Dictionary of central nodes to the result of applying the passed function `fn`
         to the neighborhood around it.
     """
+    if gene_weights is not None:
+        kwargs["method"] = "stouffer"
 
     def combine_pvals(gene_ids: set[str]):
         return stats.combine_pvalues(
@@ -1105,7 +1209,6 @@ def combine_neighborhood_pvalues(
             weights=[gene_weights.get(g, np.nan) for g in gene_ids]
             if gene_weights is not None
             else None,
-            method="stouffer",
             **kwargs,
         )
 
