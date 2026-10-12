@@ -22,7 +22,7 @@
 
 <!--toc:end-->
 
-## Version DEV
+## Version 0.13.0
 
 - metworkpy.network
 
