@@ -438,9 +438,12 @@ def _kl_cont_adaptive(
     )
 
     # Now, calculate the actual divergence estimate
-    return np.sum(digamma(l_i) - digamma(k_i)) / p.shape[0] + np.log(
+    div = np.sum(digamma(l_i) - digamma(k_i)) / p.shape[0] + np.log(
         q.shape[0] / (p.shape[0] - 1)
     )
+    if not clip:
+        return div
+    return max(div, 0.0)
 
 
 # endregion Continuous Divergence

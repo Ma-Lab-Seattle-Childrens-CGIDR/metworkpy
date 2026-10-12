@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version DEV](#version-dev)
   - [Version 0.12.0](#version-0120)
     - [References](#references)
   - [Version 0.11.0](#version-0110)
@@ -20,6 +21,27 @@
   - [Version 0.2.7](#version-027)
 
 <!--toc:end-->
+
+## Version 0.13.0
+
+- metworkpy.network
+
+  - Add subset closeness and betweenness as options for membership function in
+    fuzzy submodule
+  - Update neighborhood p-values functions in neighborhoods submodule.
+    - Name updated from combine_neighborhood_pvalues->
+      combine_neighborhood_gene_pvalues to reflect which neighborhoods
+    - New function added (taking over previous name of
+      combine_neighborhood_pvalues) which works on node p-values instead of gene
+      p-values
+    - Updated handling of method parameter, not it is only changed to 'stouffer'
+      if weights parameter is not None (previously it was always set which
+      didn't allow for using different methods when weighting wasn't required)
+
+- metworkpy.divergence
+
+  - BUGFIX: Make adaptive method of Kullback-Leibler divergence respect the clip
+    parameter (previously just ignored)
 
 ## Version 0.12.0
 

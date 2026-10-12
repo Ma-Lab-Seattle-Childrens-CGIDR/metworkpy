@@ -1,4 +1,4 @@
-name: metworkpy
+name: metworkpy-example
 channels:
   - conda-forge
 dependencies:
@@ -9,11 +9,12 @@ dependencies:
   - jupyter
   - matplotlib
   - networkx
+  - numpy
   - osqp
   - openpyxl
+  - pandas
   - pip
   - scipy
   - pip:
-    - iplotx
-    - hopsy
-    - ..
+      - iplotx
+      - ..
