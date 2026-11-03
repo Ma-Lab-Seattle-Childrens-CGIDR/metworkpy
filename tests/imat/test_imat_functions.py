@@ -337,6 +337,17 @@ class TestImat(unittest.TestCase):
         self.imat_helper(test_model)
 
     @skipIf(
+        importlib.util.find_spec("highspy") is None
+        and importlib.util.find_spec("osqp") is None,
+        "HiGHSpy or OSQP isn't installed, so hybrid solver can't be used",
+    )
+    def test_imat_hybrid(self):
+        assert self.model is not None
+        test_model = self.model.copy()
+        test_model.solver = "hybrid"
+        self.imat_helper(test_model)
+
+    @skipIf(
         importlib.util.find_spec("swiglpk") is None, "glpk is not installed"
     )
     def test_imat_glpk(self):
