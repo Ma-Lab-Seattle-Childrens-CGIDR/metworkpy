@@ -2,6 +2,9 @@
 
 ![Metworkpy Logo](metworkpy_logo.png "MetworkPy Logo")
 
+[![Documentation Status](https://readthedocs.org/projects/metworkpy/badge/?version=latest)](https://metworkpy.readthedocs.io/en/latest/?badge=latest)
+[![Check](https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/actions/workflows/check.yml/badge.svg)](https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/actions/workflows/check.yml)
+
 <!--toc:start-->
 
 - [Welcome to MetworkPy](#welcome-to-metworkpy)
