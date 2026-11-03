@@ -5,8 +5,8 @@ import tempfile
 import unittest
 
 # External Library Imports
-from cobra import Metabolite, Reaction  # type: ignore
-from cobra.core.configuration import Configuration  # type: ignore
+from cobra import Metabolite, Reaction
+from cobra.core.configuration import Configuration
 
 # Local imports
 import metworkpy.utils.models
@@ -23,7 +23,7 @@ class TestParseFileType(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        Configuration.solver = "glpk"  # Use GLPK solver for testing
+        Configuration().solver = "glpk"  # Use GLPK solver for testing
 
     def test_parse_file_type(self):
         self.assertEqual(
@@ -58,7 +58,7 @@ class TestModelIO(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        Configuration.solver = "glpk"  # Use GLPK solver for testing
+        Configuration().solver = "glpk"  # Use GLPK solver for testing
 
     def test_read_model(self):
         data_path = str(pathlib.Path(__file__).parent.parent.joinpath("data"))
