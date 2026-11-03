@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Iterable
-from typing import cast
 
 # External Imports
 import cobra
@@ -38,7 +37,7 @@ def reaction_to_gene_ids(
     gene_set : set[str]
         Set of genes associated with a particular reaction
     """
-    rxn_obj = cast(cobra.Reaction, model.reactions.get_by_id(reaction))
+    rxn_obj = model.reactions.get_by_id(reaction)
     gene_set = rxn_obj.genes
     if len(gene_set) == 0:
         return set()
@@ -73,7 +72,7 @@ def gene_to_reaction_ids(
     reaction_set : set[str]
         Set of reactions associated with a particular gene
     """
-    gene_obj = cast(cobra.Gene, model.genes.get_by_id(gene))
+    gene_obj = model.genes.get_by_id(gene)
     rxn_set = gene_obj.reactions
     if len(rxn_set) == 0:
         return set()
@@ -183,7 +182,7 @@ def gene_to_reaction_list(
     """
     return list(
         functools.reduce(
-            lambda x, y: x | y,
+            lambda x, y: x | y,  # ty: ignore[unsupported-operator]
             (
                 gene_to_reaction_ids(model=model, gene=g, essential=essential)
                 for g in gene_list
