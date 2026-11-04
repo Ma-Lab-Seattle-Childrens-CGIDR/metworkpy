@@ -11,7 +11,13 @@ from typing import Literal
 # External Imports
 import cobra
 import pandas as pd
-import sympy as sym
+
+try:
+    # If symengine is installed, need to directly
+    # import the Add, otherwise the objective construction fails
+    from symengine import Add  # ty: ignore[unresolved-import]
+except ModuleNotFoundError:
+    from sympy import Add
 
 # Local Imports
 from metworkpy.sampling import corner_sampling
@@ -330,41 +336,38 @@ def add_imat_objective_(
     """
     if isinstance(rxn_weights, dict):
         rxn_weights = pd.Series(rxn_weights)
-    rh = rxn_weights[rxn_weights > ALMOST_ZERO]
-    rl = rxn_weights[rxn_weights < -ALMOST_ZERO]
-    rh_obj = []
-    rl_obj = []
+    rh = rxn_weights[rxn_weights > ALMOST_ZERO]  # ty: ignore[unsupported-operator]
+    rl = rxn_weights[rxn_weights < -ALMOST_ZERO]  # ty: ignore[unsupported-operator]
+    obj = []
     for rxn, weight in rh.items():  # For each highly expressed reaction
         # Get the forward and reverse variables from the model
         forward_variable = model.solver.variables[
             _get_rxn_imat_binary_variable_name(
-                rxn,  # type: ignore
+                rxn,
                 expression_weight="high",
                 which="positive",
             )
         ]
         reverse_variable = model.solver.variables[
             _get_rxn_imat_binary_variable_name(
-                rxn,  # type: ignore
+                rxn,
                 expression_weight="high",
                 which="negative",
             )
         ]
         # Adds the two variables to the rh list which will be used for sum
-        rh_obj += [forward_variable * weight, reverse_variable * weight]
+        obj += [forward_variable * weight, reverse_variable * weight]
     for rxn, weight in rl.items():  # For each lowly expressed reaction
         variable = model.solver.variables[
             _get_rxn_imat_binary_variable_name(
-                rxn,  # type: ignore
+                rxn,
                 expression_weight="low",
                 which="positive",
             )
         ]
         # Note: Only one variable for lowly expressed reactions
-        rl_obj += [variable * abs(weight)]
-    imat_obj = model.solver.interface.Objective(
-        sym.Add(*rh_obj, *rl_obj), direction="max"
-    )
+        obj += [variable * abs(weight)]
+    imat_obj = model.solver.interface.Objective(Add(*obj), direction="max")
     model.objective = imat_obj
 
 
