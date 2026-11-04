@@ -3,7 +3,8 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
-  - [Version DEV](#version-dev)
+  - [Version 0.13.1](#version-0131)
+  - [Version 0.13.0](#version-0130)
   - [Version 0.12.0](#version-0120)
     - [References](#references)
   - [Version 0.11.0](#version-0110)
@@ -21,6 +22,14 @@
   - [Version 0.2.7](#version-027)
 
 <!--toc:end-->
+
+## Version 0.13.1
+
+- metworkpy.imat
+
+  - Fix interaction with symengine. Previously, symengine being installed could
+    cause the iMAT objective construction to fail, but this release should fix
+    that issue
 
 ## Version 0.13.0
 
