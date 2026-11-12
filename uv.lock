@@ -2079,6 +2079,19 @@ wheels = [
 ]
 
 [[package]]
+name = "mdformat"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown-it-py" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3f/05/32b5e14b192b0a8a309f32232c580aefedd9d06017cb8fe8fce34bec654c/mdformat-1.0.0.tar.gz", hash = "sha256:4954045fcae797c29f86d4ad879e43bb151fa55dbaf74ac6eaeacf1d45bb3928", size = 56953, upload-time = "2025-10-16T12:05:03.695Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/9a/8fe71b95985ca7a4001effbcc58e5a07a1f2a2884203f74dcf48a3b08315/mdformat-1.0.0-py3-none-any.whl", hash = "sha256:bca015d65a1d063a02e885a91daee303057bc7829c2cd37b2075a50dbb65944b", size = 53288, upload-time = "2025-10-16T12:05:02.607Z" },
+]
+
+[[package]]
 name = "mdurl"
 version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2132,6 +2145,7 @@ hybrid = [
 dev = [
     { name = "debugpy" },
     { name = "jupyter" },
+    { name = "mdformat" },
     { name = "pandas-stubs", version = "2.3.3.260113", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pandas-stubs", version = "3.0.5.260914", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pre-commit" },
@@ -2188,6 +2202,7 @@ provides-extras = ["cplex", "gurobi", "excel", "hybrid"]
 dev = [
     { name = "debugpy", specifier = ">=1.8.21" },
     { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "mdformat", specifier = ">=1.0.0" },
     { name = "pandas-stubs", specifier = ">=2.2.2.240807" },
     { name = "pre-commit", specifier = ">=3.7.1,<4.0.0" },
     { name = "ruff", specifier = ">=0.11.0,<1.0.0" },

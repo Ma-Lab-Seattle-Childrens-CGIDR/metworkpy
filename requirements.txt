@@ -590,7 +590,9 @@ lark==1.3.1 \
 markdown-it-py==4.2.0 \
     --hash=sha256:04a21681d6fbb623de53f6f364d352309d4094dd4194040a10fd51833e418d49 \
     --hash=sha256:9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a
-    # via rich
+    # via
+    #   mdformat
+    #   rich
 markupsafe==3.0.4 \
     --hash=sha256:051417f74bcaaefa316276e0ff723f541616ca51043d070da00249d9bddd3e3c \
     --hash=sha256:06de8ef6331f6e822c28d577dc8bf43fe398800477c49498f38fc38b67ff33fc \
@@ -702,6 +704,9 @@ matplotlib-inline==0.2.2 \
     # via
     #   ipykernel
     #   ipython
+mdformat==1.0.0 \
+    --hash=sha256:4954045fcae797c29f86d4ad879e43bb151fa55dbaf74ac6eaeacf1d45bb3928 \
+    --hash=sha256:bca015d65a1d063a02e885a91daee303057bc7829c2cd37b2075a50dbb65944b
 mdurl==0.1.2 \
     --hash=sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8 \
     --hash=sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba
@@ -2106,6 +2111,7 @@ tomli==2.5.0 ; python_full_version < '3.11' \
     # via
     #   jupyter-builder
     #   jupyterlab
+    #   mdformat
     #   pyproject-api
     #   tox
     #   tox-uv-bare

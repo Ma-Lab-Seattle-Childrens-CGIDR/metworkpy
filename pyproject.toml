@@ -56,6 +56,7 @@ dev = [
   "tox-uv>=1.28.1",
   "jupyter>=1.1.1",
   "debugpy>=1.8.21",
+  "mdformat>=1.0.0",
 ]
 test = ["highspy>=1.10.0", "osqp>=1.0.3", "pytest>=8.0.1"]
 docs = [

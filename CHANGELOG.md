@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version 0.13.2](#version-0132)
   - [Version 0.13.1](#version-0131)
   - [Version 0.13.0](#version-0130)
   - [Version 0.12.0](#version-0120)
@@ -22,6 +23,14 @@
   - [Version 0.2.7](#version-027)
 
 <!--toc:end-->
+
+## Version 0.13.2
+
+- metworkpy.network.density
+
+  - Allow density functions to accept iterables instead of requiring lists
+    specifically, also add an actual check that the passed target/gene_target is
+    acceptable so it doesn't throw a hard to diagnose error to users.
 
 ## Version 0.13.1
 
