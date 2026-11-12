@@ -35,7 +35,7 @@ DEFAULT_RADIUS = 2
 
 def node_target_density(
     network: nx.Graph | nx.DiGraph,
-    targets: list[Hashable] | Mapping[Hashable, float | int] | pd.Series,
+    targets: Iterable[Hashable] | Mapping[Hashable, float | int] | pd.Series,
     radius: int = DEFAULT_RADIUS,
     nodes: Iterable[NodeType] | None = None,
     *,
@@ -51,11 +51,11 @@ def node_target_density(
 
     Parameters
     ----------
-    network : nx.DiGraph | nx.Graph
+    network : nx.DiGraph or nx.Graph
         Networkx network (directed or undirected) to find the target
         density of.
-    targets : list | dict | pd.Series
-        Targets to find density of. Can be a list of nodes in the network
+    targets : iterable or dict or pd.Series
+        Targets to find density of. Can be an iterable of nodes in the network
         where are targeted nodes will be treated equally, or a dict or
         Series keyed by nodes in the network which can specify a target
         weight (such as multiple targets for a single node). If a dict or
@@ -100,10 +100,17 @@ def node_target_density(
     targets found (in the case of dict or Series input) divided by the number of nodes
     within that radius is the density for a particular node.
     """
-    if isinstance(targets, list):
-        targets = {k: 1 for k in targets}
-    elif isinstance(targets, pd.Series):
-        targets = targets.to_dict()  # type: ignore
+    if isinstance(targets, pd.Series):
+        targets = targets.to_dict()
+    elif isinstance(targets, dict):
+        pass  # Just pass through as is
+    else:
+        try:
+            targets = {k: 1 for k in targets}
+        except TypeError:
+            raise TypeError(
+                f"`targets` should be a pandas Series, dict, or iterable but received a {type(targets)}"
+            )
     assert isinstance(targets, dict), (
         f"Targets must be a dict, but received: {type(targets)}"
     )
@@ -275,7 +282,7 @@ def node_target_enrichment(
 
 def gene_target_density(
     metabolic_network: nx.Graph | nx.DiGraph,
-    gene_targets: pd.Series | list[str] | Mapping[str, float],
+    gene_targets: pd.Series | Iterable[str] | Mapping[str, float],
     metabolic_model: cobra.Model | None = None,
     *,
     reaction_to_gene_set_dict: Mapping[NodeType, set[str]] | None = None,
@@ -299,9 +306,9 @@ def gene_target_density(
         Metabolic network in the form of a reaction network, can be
         directed or undirected, but directed graphs will be converted
         to undirected.
-    gene_targets : pd.Series or list or dict
+    gene_targets : pd.Series or iterable or dict
         Targets/counts of targets for genes associated with reactions in the
-        metabolic network. If a list each value should be a gene id, and will
+        metabolic network. If an iterable each value should be a gene id, and will
         have equal weight. If a dict, should be keyed by gene id, with values
         corresponding to weight. If a pd.Series, should be indexed by gene id,
         with values corresponding to weight.
@@ -354,10 +361,19 @@ def gene_target_density(
         neighborhood of that node (`nodes` and `node_filter` can be
         used to only )
     """
-    if isinstance(gene_targets, list):
-        gene_targets = {g: 1 for g in gene_targets}
-    elif isinstance(gene_targets, pd.Series):
+    if isinstance(gene_targets, pd.Series):
         gene_targets = gene_targets.to_dict()  # type: ignore
+    elif isinstance(gene_targets, dict):
+        pass  # Just pass through as is
+    else:
+        # Assume the object is interable, and try to iterate it
+        try:
+            gene_targets = {g: 1 for g in gene_targets}
+        except TypeError:
+            # The object is not iterable
+            raise TypeError(
+                f"`gene_targets` should be a pandas Series, dict, or iterable but received a {type(gene_targets)}"
+            )
 
     def _get_density(gene_ids: set[NodeType]):
         if len(gene_ids) < min_neighborhood:
