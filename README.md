@@ -2,6 +2,7 @@
 
 ![Metworkpy Logo](metworkpy_logo.png "MetworkPy Logo")
 
+![PyPI Version](https://img.shields.io/pypi/v/metworkpy)
 [![Documentation Status](https://readthedocs.org/projects/metworkpy/badge/?version=latest)](https://metworkpy.readthedocs.io/en/latest/?badge=latest)
 [![Check](https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/actions/workflows/check.yml/badge.svg)](https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/metworkpy/actions/workflows/check.yml)
 
@@ -124,6 +125,12 @@ under the BSD-3-Clause, see above) function closeness_centrality. Specifically,
 ### Kullback-Leibler Divergence
 
 1. [Q. Wang, S. R. Kulkarni and S. Verdu, "Divergence Estimation for Multidimensional Densities Via k-Nearest-Neighbor Distances," in IEEE Transactions on Information Theory, vol. 55, no. 5, pp. 2392-2405, May 2009, doi: 10.1109/TIT.2009.2016060.](https://ieeexplore.ieee.org/document/4839047)
+
+### MCL Algorithm
+
+1. Van Dongen, S. (2008). Graph Clustering Via a Discrete Uncoupling Process.
+   SIAM Journal on Matrix Analysis and Applications, 30(1), 121–141.
+   [https://doi.org/10.1137/040608635](https://doi.org/10.1137/040608635)
 
 ### Mutual Information
 
