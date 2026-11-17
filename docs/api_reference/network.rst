@@ -11,6 +11,22 @@ Centrality
    :undoc-members:
    :show-inheritance:
 
+Chokepoints
+-----------
+
+.. automodule:: metworkpy.network.choke
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Clustering
+----------
+
+.. automodule:: metworkpy.network.cluster
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Components
 ----------
 
@@ -44,8 +60,6 @@ Neighborhoods
    :undoc-members:
    :show-inheritance:
 
-
-
 Network Construction
 ---------------------
 
@@ -58,6 +72,14 @@ Projection
 ----------
 
 .. automodule:: metworkpy.network.projection
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Subnetwork
+----------
+
+.. automodule:: metworkpy.network.subnetwork
    :members:
    :undoc-members:
    :show-inheritance:
