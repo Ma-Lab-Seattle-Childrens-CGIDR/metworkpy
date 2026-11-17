@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version 0.14.0](#version-0140)
   - [Version 0.13.2](#version-0132)
   - [Version 0.13.1](#version-0131)
   - [Version 0.13.0](#version-0130)
@@ -36,6 +37,8 @@
   - BREAKING: Subset closeness centrality parameter `targets` changes to
     `sources` to reflect the fact that it is calculating inward closeness, and
     to match the naming in the betweenness functions.
+- metworkpy.network.clustering
+  - Add a function for performing MCL clustering: `get_mcl_clustering`
 
 ## Version 0.13.2
 
