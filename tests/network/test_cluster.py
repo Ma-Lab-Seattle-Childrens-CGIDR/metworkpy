@@ -5,8 +5,8 @@ Test the cluster submodule
 # Standard Library Imports
 from __future__ import annotations
 
-from collections import defaultdict
 import unittest
+from collections import defaultdict
 
 # External Imports
 import networkx as nx
