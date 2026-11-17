@@ -10,6 +10,7 @@ import pandas as pd
 
 from metworkpy.network import create_reaction_network
 from metworkpy.network.centrality import (
+    _rescale,
     betweenness_centrality_bipartite_subset,
     betweenness_centrality_subset,
     closeness_centrality_subset,
@@ -132,6 +133,84 @@ class TestCentralitySubset(unittest.TestCase):
             self.assertGreater(sub_close[n], self.small_graph_closeness[n])
         for n in ["A", "C"]:
             self.assertGreater(sub_btwn[n], self.small_graph_betweenness[n])
+
+    def test_edge_cases(self):
+        # Single source
+        _ = betweenness_centrality_subset(
+            self.small_graph, sources=["A"], targets=["B", "C"]
+        )
+        # Single Target
+        _ = betweenness_centrality_subset(
+            self.small_graph, sources=["A", "B"], targets=["C"]
+        )
+        # Single source and target
+        _ = betweenness_centrality_subset(
+            self.small_graph, sources=["A"], targets=["B"]
+        )
+        # Single target overlapping with source
+        _ = betweenness_centrality_subset(
+            self.small_graph, sources=["A", "B"], targets=["B"]
+        )
+        # Single source overlapping with target
+        _ = betweenness_centrality_subset(
+            self.small_graph, sources=["A"], targets=["A", "B"]
+        )
+
+
+class TestRescale(unittest.TestCase):
+    def test_single_source_no_endpoints(self):
+        res = _rescale(
+            {"A": 0.0, "B": 1.0, "C": 1.0, "D": 1.0, "E": 1.0},
+            sources={
+                "A",
+            },
+            targets={"C", "D"},
+        )
+
+        self.assertAlmostEqual(res["A"], 0.0)
+        self.assertAlmostEqual(res["B"], 1.0 / 2.0)
+        self.assertAlmostEqual(res["C"], 1.0)
+        self.assertAlmostEqual(res["D"], 1.0)
+        self.assertAlmostEqual(res["E"], 1.0 / 2.0)
+
+    def test_single_target_no_endpoints(self):
+        res = _rescale(
+            {"A": 1.0, "B": 1.0, "C": 0.0, "D": 1.0, "E": 1.0},
+            sources={"A", "B"},
+            targets={"C"},
+        )
+
+        self.assertAlmostEqual(res["A"], 1.0)
+        self.assertAlmostEqual(res["B"], 1.0)
+        self.assertAlmostEqual(res["C"], 0.0)
+        self.assertAlmostEqual(res["D"], 1.0 / 2.0)
+        self.assertAlmostEqual(res["E"], 1.0 / 2.0)
+
+    def test_single_target_with_overlap_no_endpoints(self):
+        res = _rescale(
+            {"A": 0.0, "B": 0.0, "C": 1.0, "D": 1.0, "E": 1.0},
+            sources={"A", "B"},
+            targets={"A"},
+        )
+
+        self.assertAlmostEqual(res["A"], 0.0)
+        self.assertAlmostEqual(res["B"], 0.0)
+        self.assertAlmostEqual(res["C"], 1.0)
+        self.assertAlmostEqual(res["D"], 1.0)
+        self.assertAlmostEqual(res["E"], 1.0)
+
+    def test_single_source_with_overlap_no_endpoints(self):
+        res = _rescale(
+            {"A": 0.0, "B": 0.0, "C": 1.0, "D": 1.0, "E": 1.0},
+            sources={"A"},
+            targets={"A", "B"},
+        )
+
+        self.assertAlmostEqual(res["A"], 0.0)
+        self.assertAlmostEqual(res["B"], 0.0)
+        self.assertAlmostEqual(res["C"], 1.0)
+        self.assertAlmostEqual(res["D"], 1.0)
+        self.assertAlmostEqual(res["E"], 1.0)
 
 
 class TestCentralityBipartiteSubset(unittest.TestCase):

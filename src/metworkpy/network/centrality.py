@@ -587,39 +587,39 @@ def _rescale(
             # v can't be an endpoint, so if it is in source
             # need to remove it (only in source)
             if source_not_target > 0:
-                source_scale = 1.0 / (
-                    (source_not_target - 1) * len(targets)
-                    + source_target_intersection * (len(targets) - 1)
-                )
+                if source_target_intersection > 0 and len(targets) > 1:
+                    source_scale = 1.0 / (
+                        (source_not_target - 1) * len(targets)
+                        + source_target_intersection * (len(targets) - 1)
+                    )
+                else:
+                    source_scale = 1.0
             else:
-                # All source nodes are also in target,
-                # so this value will never be used
+                # There are no nodes that are only in source
+                # so this is never used
                 source_scale = None
             # Now it is only in target
             # So needs to be removed from targets
-            target_scale = 1.0 / (
-                source_not_target * (len(targets) - 1)
-                + (source_target_intersection) * (len(targets) - 1)
-            )
+            if len(targets) > 1:
+                target_scale = 1.0 / (
+                    source_not_target * (len(targets) - 1)
+                    + (source_target_intersection) * (len(targets) - 1)
+                )
+            else:
+                # There is only 1 target, and it is the v being scaled
+                target_scale = 1.0
             # Now it is in both
             # so needs to be removed from source and target sets
-            if len(targets) > 2:
+            if (len(targets) > 1 and source_not_target > 0) or (
+                len(targets) > 2 and source_target_intersection > 1
+            ):
                 source_and_target_scale = 1.0 / (
                     source_not_target * (len(targets) - 1)
                     + (source_target_intersection - 1)
                     * (len(targets) - 2)  # 2 because remove start and v
                 )
             else:
-                if source_not_target > 0:
-                    source_and_target_scale = 1.0 / (
-                        source_not_target * (len(targets) - 1)
-                    )
-                else:
-                    # If there are not at least 2 targets, and v is
-                    # in both source and target sets there can't be
-                    # paths, set to 1 and
-                    # it will be multiplied by a value of 0 below
-                    source_and_target_scale = 1.0
+                source_and_target_scale = 1.0
             # Not v is in neigher set
             neither_scale = 1.0 / (
                 source_not_target * len(targets)
