@@ -17,8 +17,22 @@ from typing import (
 import networkx as nx
 import numpy as np
 import pandas as pd
+from scipy import sparse
+from scipy.sparse import linalg as sp_linalg
+
+from metworkpy.network.sparray_utils import (
+    allclose_array,
+    normalize_array,
+    prune_array,
+)
 
 # Local imports
+from metworkpy.utils._notebook import is_notebook
+
+if is_notebook():
+    from tqdm.notebook import tqdm
+else:
+    from tqdm import tqdm
 
 
 # Type for distance dictionaries used in the clustering
@@ -299,3 +313,153 @@ def get_distance_matrix(
         for target, dist in target_dict.items():
             distance_matrix.loc[source, target] = dist
     return distance_matrix
+
+
+def get_mcl_clustering(
+    network: nx.Graph
+    | nx.DiGraph
+    | pd.DataFrame
+    | np.ndarray
+    | sparse.sparray,
+    *,
+    weight: str | None = "weight",
+    expansion: int = 2,
+    inflation: float = 2.0,
+    loop_val: float = 1,
+    prune_threshold: float = 1e-5,
+    prune_freq: int = 1,
+    max_iter: int = 100,
+    convergence_atol: float = 1e-8,
+    convergence_rtol: float = 1e-5,
+    ascending_size: bool = True,
+    progress_bar: bool = False,
+):
+    """
+    Perform MCL Clustering on a network
+
+    Parameters
+    ----------
+    network : nx.Graph or nx.DiGraph or np.ndarray or pd.DataFrame
+        The network to be clusteredsimmilarity matrix of the graph to be clustered
+    weight : str,optional
+        If `network` is a networkx Graph or DiGraph, which edge attribute holds the
+        simmilarity between nodes
+    expansion : int,default=2
+        The power to raise the stochastic matrix to when clustering
+    inflation : float,default=2.0
+        The inflation power parameter
+    loop_val : float, default=1
+        Weight for self-loops added to the graph
+    prune_threshold : float,default=1e-5
+        Values below this threshold will be set to 0.0
+    prune_freq : int,default=2
+        Number of iterations between pruning
+    max_iter : int,default=100
+        Maximum number of iterations to perform, if convergence fails
+        a RuntimeError will be raised
+    convergence_atol,convergence_rtol : float
+        The convergence absolute and relative tolerance, handled the
+        same as `numpy.allclose <https://numpy.org/devdocs//reference/generated/numpy.allclose.html>`_
+    ascending_size : bool,default=False
+        Whether the cluster should be returned in ascending size,
+        if False returns in descending size.
+    progress_bar : bool,default=True
+        Whether to display a progress bar (will count from 0 to
+        `max_iter`, but usually end before the progress bar completes)
+
+    Returns
+    -------
+    list of sets of Hashable
+        The clusters identified via the MCL algorithm as a list of
+        sets of nodes containing the clusters
+
+    Notes
+    -----
+    Markov cluster process (MCL) is a graph clustering algorithm based on
+    stochastic flow on a graph [1]_. See [2]_ for more information about
+    the algorithm.
+
+    References
+    ----------
+    .. [1] Van Dongen, S. (2008). Graph Clustering Via a Discrete
+           Uncoupling Process. SIAM Journal on Matrix Analysis and
+           Applications, 30(1), 121–141. https://doi.org/10.1137/040608635
+    .. [2] MCL - a cluster algorithm for graphs. (n.d.). Retrieved November
+           16, 2026, from https://micans.org/mcl/
+    """
+    # Convert the incoming network into a sparse array (in DOK format)
+    # since we have to update the self-loop values
+    match network:
+        case nx.Graph() | nx.DiGraph():
+            nodes = list(network.nodes)
+            sim = nx.to_scipy_sparse_array(
+                network, weight=weight, format="dok"
+            )
+        case sparse.sparray():
+            nodes = list(range(network.shape[0]))  # ty: ignore[unresolved-attribute]
+            sim = network.to_dok()  # ty: ignore[unresolved-attribute]
+        case pd.DataFrame():
+            nodes = list(network.columns)
+            # NOTE: Ensuring the order of the index
+            sim = sparse.dok_array(network.loc[nodes].to_numpy())
+        case np.ndarray():
+            nodes = list(range(network.shape[0]))
+            sim = sparse.dok_array(network)
+
+    # Ensure we have a square matrix
+    if sim.shape[0] != sim.shape[1]:
+        raise ValueError(
+            f"Expected 'network' to be a square matrix, but found {sim.shape[0]} rows and {sim.shape[1]} columns"
+        )
+    # Make sure it has a float dtype
+    sim = sim.astype(np.float64)
+
+    # Add in the self-loops
+    for idx in range(sim.shape[0]):
+        sim[idx, idx] = loop_val
+
+    # Normalize the matrix
+    sim: sparse.csc_array = normalize_array(sim, axis=0).tocsc()
+
+    # Create a variable holding the previous matrix to check for convergence
+    prev_sim: sparse.csc_array | None = None
+
+    # Iterate for at most max_iter
+    for iter in tqdm(range(max_iter), disable=not progress_bar):
+        # Expand
+        sim = sp_linalg.matrix_power(sim, expansion)
+        # Inflate
+        sim = sim.power(inflation)
+        sim = normalize_array(sim, axis=0).tocsc()
+
+        # Prune
+        if iter % prune_freq == prune_freq - 1:
+            sim = prune_array(sim, prune_threshold)
+
+        # Check for convergence
+        if prev_sim is not None and allclose_array(
+            sim, prev_sim, rtol=convergence_rtol, atol=convergence_atol
+        ):
+            break
+        prev_sim = sim.copy()
+    else:
+        raise RuntimeError("Failed to converge!")
+    # Final Prune
+    sim = prune_array(sim, prune_threshold)
+    # Convert the simmilarity matrix into a networkx Graph (since we are looking for
+    # connected components)
+    cluster_network = nx.from_scipy_sparse_array(sim)
+    # Rename the nodes to match the input network
+    cluster_network = nx.relabel_nodes(
+        cluster_network, {idx: node for idx, node in enumerate(nodes)}
+    )
+
+    # Get the connected_components
+    return [
+        set(c)
+        for c in sorted(
+            nx.connected_components(cluster_network),
+            key=len,
+            reverse=not ascending_size,
+        )
+    ]

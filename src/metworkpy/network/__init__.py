@@ -7,6 +7,7 @@ from .centrality import (
 from .choke import find_choke_points
 from .cluster import (
     get_distance_matrix,
+    get_mcl_clustering,
     get_network_target_set_clustering,
     get_network_target_set_linkage,
 )
@@ -70,6 +71,7 @@ __all__ = [
     "get_distance_matrix",
     "get_gene_kpaths_subnetwork",
     "get_kpaths_subnetwork",
+    "get_mcl_clustering",
     "get_network_target_set_clustering",
     "get_network_target_set_linkage",
     "get_top_metabolite_pairs",
