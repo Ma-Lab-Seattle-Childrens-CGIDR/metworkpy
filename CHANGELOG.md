@@ -25,6 +25,13 @@
 
 <!--toc:end-->
 
+## Version 0.14.1
+
+- metworkpy.network.centrality
+  - BUGFIX: Fix how betweenness centrality subset functions normalize
+    betweenness in cases where there is only a single source or target, or a
+    small number of sources/targets with overlaps, etc.
+
 ## Version 0.14.0
 
 - metworkpy.network.centrality
