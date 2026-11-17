@@ -30,6 +30,7 @@ from metworkpy.network.neighborhoods import (
     get_target_set_graph_neighborhood,
 )
 from metworkpy.network.projection import bipartite_project
+from metworkpy.network.sparray_utils import normalize_array
 from metworkpy.utils import reaction_to_gene_ids, reaction_to_gene_list
 from metworkpy.utils._scipy_compat import _check_scipy_version_greater
 
@@ -2322,20 +2323,3 @@ def _remove_currency_metabolites(
         stoichiometric_matrix = stoichiometric_matrix.tocoo()
     stoichiometric_matrix.eliminate_zeros()
     return stoichiometric_matrix
-
-
-def normalize_array(array: sparse.sparray, axis: int) -> sparse.coo_array:
-    if axis == 1:
-        array: sparse.csr_array = array.tocsr()  # ty: ignore[unresolved-attribute]
-    elif axis == 0:
-        array: sparse.csc_array = array.tocsc()  # ty: ignore[unresolved-attribute]
-    else:
-        raise ValueError(f"Axis must be 0 or 1, received {axis}")
-    norm = array.sum(axis=axis)
-    norm[norm > 0.0] = np.reciprocal(norm[norm > 0.0])
-    if axis == 1:
-        array = array.multiply(norm.reshape(-1, 1))  # ty: ignore[conflicting-declarations]
-        return array.tocoo()
-    elif axis == 0:
-        array = array.multiply(norm.reshape(1, -1))  # ty: ignore[conflicting-declarations]
-        return array.tocoo()
