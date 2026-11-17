@@ -588,25 +588,40 @@ def _rescale(
             # need to remove it (only in source)
             if len(sources) > 1:
                 # There is another source beside v
+                if source_not_target > 0:
+                    # If there is any v in sources only, source_not_target must be greater than 0
+                    # However, this could still result in a 0 division if no such v exists,
+                    # even though the source_scale will neved be used, the function
+                    # will error
+                    # So we add a check to ensure that there is at least 1 source not target
 
-                # But, there may not be enough targets
-
-                # If there is another source which is not a target
-                # there is at least a valid path from it to a target
-                if source_not_target > 1:
-                    source_scale = 1.0 / (
-                        (source_not_target - 1) * len(targets)
-                        + source_target_intersection * (len(targets) - 1)
-                    )
-                # OR there is a source in targets, and an additional target
-                elif source_target_intersection > 0 and len(targets) > 1:
-                    source_scale = 1.0 / (
-                        source_target_intersection * (len(targets) - 1)
-                    )
+                    # In this case we still need to see if we can have any valid paths,
+                    # we may not have valid paths in the case where there are two sources,
+                    # v is in sources, but the other source is also the only target
+                    if (
+                        # This is the case where the other source is not also a target,
+                        # and we know that we have at least one target to create a valid path
+                        source_not_target > 1
+                    ) or (
+                        # This is the case where the other source is a target,
+                        # but there is a valid additional target
+                        source_target_intersection > 0 and len(targets) > 1
+                    ):
+                        source_scale = 1.0 / (
+                            (source_not_target - 1) * len(targets)
+                            + source_target_intersection * (len(targets) - 1)
+                        )
+                    else:
+                        # Here we have no valid paths that could go throug v,
+                        # so v will have a betweenness of 0, set this to 1
+                        # so that errors aren't thrown, but the value should always
+                        # end up being 0
+                        source_scale = 1.0
                 else:
-                    # Here we have at least 2 sources, but the non-v
-                    # one overlaps with the targets so we don't have valid paths
-                    source_scale = 1.0
+                    # Here, there is at least two sources, but no source_not_target,
+                    # which means that no v which is only in source exists
+                    # thus this will never be used
+                    source_scale = None
             else:
                 # There are no nodes that are only in source
                 # so this is multiplied by 0
