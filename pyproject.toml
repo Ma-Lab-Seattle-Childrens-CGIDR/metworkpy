@@ -2,9 +2,21 @@
 name = "metworkpy"
 description = "Tools for creating and working with network models of metabolism."
 authors = [{ name = "Braden Griebel", email = "bgriebel@uw.edu" }]
-version = "0.14.0"
+version = "0.14.1"
 readme = "README.md"
-keywords = ["FBA", "metabolism", "IMAT", "metchange"]
+keywords = ["FBA", "metabolism", "IMAT", "metchange", "network"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
 license = "MIT"
 requires-python = "<3.15,>=3.10"
 dependencies = [

@@ -3,6 +3,7 @@
 <!--toc:start-->
 
 - [Changelog](#changelog)
+  - [Version 0.14.1](#version-0141)
   - [Version 0.14.0](#version-0140)
   - [Version 0.13.2](#version-0132)
   - [Version 0.13.1](#version-0131)

@@ -1087,7 +1087,7 @@ prompt-toolkit==3.0.53 \
     # via
     #   ipython
     #   jupyter-console
-psutil==7.2.2 ; (python_full_version < '3.11' and sys_platform == 'cygwin') or (python_full_version < '3.11' and sys_platform == 'emscripten') or (sys_platform != 'cygwin' and sys_platform != 'emscripten') \
+psutil==7.2.2 ; python_full_version < '3.11' or (sys_platform != 'cygwin' and sys_platform != 'emscripten') \
     --hash=sha256:0746f5f8d406af344fd547f1c8daa5f5c33dbc293bb8d6a16d80b4bb88f59372 \
     --hash=sha256:076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9 \
     --hash=sha256:11fe5a4f613759764e79c65cf11ebdf26e33d6dd34336f8a337aa2996d71c841 \
