@@ -24,6 +24,19 @@
 
 <!--toc:end-->
 
+## Version 0.14.0
+
+- metworkpy.network.centrality
+  - BREAKING: Allow subset betweenness centrality functions to accept sources
+    and targets (instead of just targets as previously). Now, the subset
+    betweenness will be calculated for paths between sources and targets. If a
+    set of nodes is passed to sources, and `None` is passed to targets, then
+    these nodes will be both the sources and the target, matching the old
+    behavior of targets.
+  - BREAKING: Subset closeness centrality parameter `targets` changes to
+    `sources` to reflect the fact that it is calculating inward closeness, and
+    to match the naming in the betweenness functions.
+
 ## Version 0.13.2
 
 - metworkpy.network.density

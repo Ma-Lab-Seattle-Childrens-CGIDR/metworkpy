@@ -13,6 +13,7 @@ SciPy
 SciPy's
 Smyth
 SymPy
+betweenness
 dexom
 essentiality
 gembox

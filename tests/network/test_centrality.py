@@ -80,7 +80,7 @@ class TestCentralitySubset(unittest.TestCase):
     def test_all_targeted(self):
         calculated_closeness = pd.Series(
             closeness_centrality_subset(
-                self.random_graph, targets=self.random_graph.nodes
+                self.random_graph, sources=self.random_graph.nodes
             )
         )
         pd.testing.assert_series_equal(

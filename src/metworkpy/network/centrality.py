@@ -62,7 +62,7 @@ from networkx.algorithms.centrality.betweenness import (
 
 def closeness_centrality_subset(
     G: nx.Graph | nx.DiGraph,
-    targets: Iterable[Hashable] | None = None,
+    sources: Iterable[Hashable] | None = None,
     u: Hashable | None = None,
     distance: Hashable | None = None,
     wf_improved: bool = True,
@@ -72,14 +72,14 @@ def closeness_centrality_subset(
 
     Subset closeness centrality, based on closeness centrality [1]_, of a
     node `u` is the reciprocal of the avergage shortest path distance
-    to `u` over all `n-1` reachable nodes which are in `targets`
+    to `u` over all reachable nodes which are in `sources`
 
     .. math::
 
         C(u) = \frac{n - 1}{\sum_{v=1}^{n-1} d(v, u)},
 
     where `d(v, u)` is the shortest-path distance between `v` and `u`, where
-    `v` is in `targets`, and `n-1` is the number of targets reachable from `u`.
+    `v` is in `sources`, and `n-1` is the number of nodes reachable from `u`.
     Notice that the closeness distance function computes the incoming
     distance to `u` for directed graphs. To use outward distance, act
     on `G.reverse()`.
@@ -103,8 +103,8 @@ def closeness_centrality_subset(
     G : graph
       A NetworkX graph
 
-    targets : list of nodes, optional
-        The nodes to use as targets for the shortest paths in closeness
+    sources : list of nodes, optional
+        The nodes to use as sources for the shortest paths in closeness
 
     u : node, optional
       Return only the value for node u
@@ -174,17 +174,17 @@ def closeness_centrality_subset(
     assert isinstance(nodes, Iterable), (
         "Can't iterate over nodes in the network"
     )
-    if targets is None:
-        targets = cast(Iterable, G.nodes)
-    targets_set = set(targets)
+    if sources is None:
+        sources = cast(Iterable, G.nodes)
+    sources_set = set(sources)
     closeness_dict = {}
-    target_count = len(targets_set)
+    target_count = len(sources_set)
     for n in nodes:
         sp = path_length(G, n)  # ty: ignore[missing-argument]
         totsp = 0.0
         reachable_targets = 0.0
         for id, length in sp.items():
-            if id in targets_set:
+            if id in sources_set:
                 totsp += length
                 reachable_targets += 1.0
         _closeness_centrality = 0.0

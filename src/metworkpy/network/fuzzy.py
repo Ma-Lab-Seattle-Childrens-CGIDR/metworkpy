@@ -634,7 +634,7 @@ class MembershipSubsetCloseness:
             }
         return closeness_centrality_subset(
             G=network,
-            targets=self.reaction_subset,
+            sources=self.reaction_subset,
             u=reaction.id,
             distance=distance,
             wf_improved=True,
