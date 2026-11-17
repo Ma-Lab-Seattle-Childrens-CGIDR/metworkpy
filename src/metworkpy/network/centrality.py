@@ -231,12 +231,11 @@ def betweenness_centrality_subset(
     G : graph
       A NetworkX graph.
     sources : list of nodes
-        Nodes to use as sources for shortest paths in betweenness calculation. If None,
-        all nodes in the network are used as sources.
+      nodes to use as sources for shortest paths in betweenness calculation. if none,
+      all nodes in the network are used as sources.
     targets : list of nodes
-      Nodes to use as targets for shortest paths in betweenness. If None, sources is used
-      as the targets as well (and if sources is also None, all nodes in the network
-      are used as targets).
+      nodes to use as targets for shortest paths in betweenness. if none, all nodes in the
+      network are used as sources.
     normalized : bool, optional
       If True the betweenness values are normalized by :math:`2/((n-1)(n-2))`
       for graphs, and :math:`1/((n-1)(n-2))` for directed graphs where :math:`n`
@@ -247,8 +246,8 @@ def betweenness_centrality_subset(
       Weights are used to calculate weighted shortest paths, so they are
       interpreted as distances.
     endpoints : bool
-        If `True`, include the endpoints $s$ and $t$ in the shortest path counts.
-        This is taken into account when rescaling the values.
+      If `True`, include the endpoints $s$ and $t$ in the shortest path counts.
+      This is taken into account when rescaling the values.
 
     Returns
     -------
@@ -286,7 +285,7 @@ def betweenness_centrality_subset(
     if sources is None:
         sources = G.nodes
     if targets is None:
-        targets = sources
+        targets = G.nodes
     for s in sources:
         # single source shortest paths
         if weight is None:  # use BFS
@@ -342,22 +341,25 @@ def betweenness_centrality_bipartite_subset(
     Parameters
     ----------
     G : graph
-        A NetworkX graph, should be a bipartite graph (this condition is not checked).
+      A NetworkX graph, should be a bipartite graph (this condition is not checked).
     node_partition : Iterable[Hashable]
-        One of the two sets of nodes in the bipartite graph, specifically
-        the set which contains all the targets
-    targets : list of nodes, optional
-        Nodes to use as sources/targets for shortest paths in betweenness,
-        all of these should fall into a single partition of the bipartite
-        graph (this condition is not checked). If None, uses all nodes
-        in the node_partition
+      One of the two sets of nodes in the bipartite graph, specifically
+      the set which contains all the targets
+    sources : list of nodes
+      Nodes to use as sources for shortest paths in betweenness calculation. if none,
+      all nodes in the network are used as sources. All sources should
+      be in the same subset of the bipartite graph (this is not checked).
+    targets : list of nodes
+      Nodes to use as targets for shortest paths in betweenness calculation. if none,
+      all nodes in the network are used as sources. All sources should
+      be in the same subset of the bipartite graph (this is not checked).
     normalized : bool, optional
-        If True the betweenness values are normalized by :math:`2/((n-1)(n-2))`
-        for graphs, and :math:`1/((n-1)(n-2))` for directed graphs where :math:`n`
-        is the number of nodes in targets.
+      If True the betweenness values are normalized by :math:`2/((n-1)(n-2))`
+      for graphs, and :math:`1/((n-1)(n-2))` for directed graphs where :math:`n`
+      is the number of nodes in targets.
     endpoints : bool
-        If `True`, include the endpoints $s$ and $t$ in the shortest path counts.
-        This is taken into account when rescaling the values.
+      If `True`, include the endpoints $s$ and $t$ in the shortest path counts.
+      This is taken into account when rescaling the values.
 
     Returns
     -------
@@ -405,7 +407,7 @@ def betweenness_centrality_bipartite_subset(
         sources = projected_graph.nodes
     # If no targets provided, use sources
     if targets is None:
-        targets = sources
+        targets = projected_graph.nodes
     # For each source,
     for s in sources:
         # single source shortest paths
@@ -433,7 +435,7 @@ def _common_neighbors(
 ) -> set[Hashable]:
     if G.is_directed():
         assert isinstance(G, nx.DiGraph)
-        return set(G.successors(n1)) & set(G.predecessors(n2))  # type: ignore # ty error
+        return set(G.successors(n1)) & set(G.predecessors(n2))
     return set(G.neighbors(n1)) & set(G.neighbors(n2))
 
 

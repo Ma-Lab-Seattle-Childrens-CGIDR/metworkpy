@@ -189,9 +189,7 @@ def mi_pairwise(
         if cutoff is not None:
             mi_result.loc[pvalue_result < cutoff] = 0.0
     else:
-        dataset = np.array(
-            dataset
-        )  # Coerce arraylike into array  # ty: ignore[invalid-assignment]
+        dataset = np.array(dataset)  # Coerce arraylike into array  # ty: ignore[invalid-assignment]
         mi_result = np.zeros((dataset.shape[1], dataset.shape[1]))
         if calculate_pvalue:
             pvalue_result: T = np.ones((dataset.shape[1], dataset.shape[1]))  # ty: ignore[invalid-assignment]

@@ -80,7 +80,8 @@ class TestCentralitySubset(unittest.TestCase):
     def test_all_targeted(self):
         calculated_closeness = pd.Series(
             closeness_centrality_subset(
-                self.random_graph, sources=self.random_graph.nodes
+                self.random_graph,
+                sources=self.random_graph.nodes,
             )
         )
         pd.testing.assert_series_equal(
@@ -117,7 +118,9 @@ class TestCentralitySubset(unittest.TestCase):
         )
         sub_btwn = pd.Series(
             betweenness_centrality_subset(
-                self.small_graph, self.small_graph_targets
+                self.small_graph,
+                sources=self.small_graph_targets,
+                targets=self.small_graph_targets,
             )
         )
         for n in [
@@ -240,6 +243,7 @@ class TestCentralityBipartiteSubset(unittest.TestCase):
                 self.small_network,
                 node_partition=self.small_network_partition_1,
                 sources=["B", "D", "E", "F"],
+                targets=["B", "D", "E", "F"],
             )
         )
         for n in ["A", "C", "a", "b", "d", "e", "f"]:
@@ -250,7 +254,11 @@ class TestCentralityBipartiteSubset(unittest.TestCase):
             self.small_network, self.small_network_partition_1
         )
         proj_btwn_subset = pd.Series(
-            betweenness_centrality_subset(proj_graph, ["B", "D", "E", "F"])
+            betweenness_centrality_subset(
+                proj_graph,
+                sources=["B", "D", "E", "F"],
+                targets=["B", "D", "E", "F"],
+            )
         )
 
         # The betweenness centrality of the nodes should be the same following projection
