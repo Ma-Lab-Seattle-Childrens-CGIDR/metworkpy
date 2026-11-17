@@ -202,17 +202,19 @@ def closeness_centrality_subset(
 
 def betweenness_centrality_subset(
     G: nx.Graph | nx.DiGraph,
+    sources: Iterable[Hashable] | None = None,
     targets: Iterable[Hashable] | None = None,
     normalized=True,
     weight=None,
-):
+    endpoints: bool = False,
+) -> dict[Hashable, float]:
     r"""Compute betweenness centrality for a subset of nodes.
 
     .. math::
 
-       c_B(v) =\sum_{s,t \in T} \frac{\sigma(s, t|v)}{\sigma(s, t)}
+       c_B(v) =\sum_{s \in S,t \in T} \frac{\sigma(s, t|v)}{\sigma(s, t)}
 
-    where :math:`T` is the set of targets,
+    where :math:`S` is the set of sources and :math:`T` is the set of targets,
     :math:`\sigma(s, t)` is the number of shortest :math:`(s, t)`-paths,
     and :math:`\sigma(s, t|v)` is the number of those paths
     passing through some  node :math:`v` other than :math:`s, t`.
@@ -220,28 +222,33 @@ def betweenness_centrality_subset(
     and if :math:`v \in {s, t}`, :math:`\sigma(s, t|v) = 0` [2]_.
 
     The normalization is slightly different from NetworkX,
-    as it normalizes only to the possible (s,t) pairs in targets,
-    rather than to all possible (s,t) pairs in the network.
+    as it normalizes only to the possible (s,t) pairs in sources and
+    targets, rather than to all possible (s,t) pairs in the network.
 
 
     Parameters
     ----------
     G : graph
       A NetworkX graph.
-
-    targets: list of nodes
-      Nodes to use as sources/targets for shortest paths in betweenness
-
+    sources : list of nodes
+        Nodes to use as sources for shortest paths in betweenness calculation. If None,
+        all nodes in the network are used as sources.
+    targets : list of nodes
+      Nodes to use as targets for shortest paths in betweenness. If None, sources is used
+      as the targets as well (and if sources is also None, all nodes in the network
+      are used as targets).
     normalized : bool, optional
       If True the betweenness values are normalized by :math:`2/((n-1)(n-2))`
       for graphs, and :math:`1/((n-1)(n-2))` for directed graphs where :math:`n`
       is the number of nodes in targets.
-
     weight : None or string, optional (default=None)
       If None, all edge weights are considered equal.
       Otherwise holds the name of the edge attribute used as weight.
       Weights are used to calculate weighted shortest paths, so they are
       interpreted as distances.
+    endpoints : bool
+        If `True`, include the endpoints $s$ and $t$ in the shortest path counts.
+        This is taken into account when rescaling the values.
 
     Returns
     -------
@@ -276,22 +283,31 @@ def betweenness_centrality_subset(
        https://doi.org/10.1016/j.socnet.2007.11.001
     """
     betweenness_dict = dict.fromkeys(G, 0.0)  # b[v]=0 for v in G
+    if sources is None:
+        sources = G.nodes
     if targets is None:
-        targets = G.nodes
-    for s in targets:
+        targets = sources
+    for s in sources:
         # single source shortest paths
         if weight is None:  # use BFS
             S, P, sigma, _ = shortest_path(G, s)
         else:  # use Dijkstra's algorithm
             S, P, sigma, _ = dijkstra(G, s, weight)
-        betweenness_dict = _accumulate_subset(
-            betweenness_dict, S, P, sigma, s, targets
-        )
+        if endpoints:
+            betweenness_dict = _accumulate_subset_endpoints(
+                betweenness_dict, S, P, sigma, s, targets
+            )
+        else:
+            betweenness_dict = _accumulate_subset_basic(
+                betweenness_dict, S, P, sigma, s, targets
+            )
     betweenness_dict = _rescale(
         betweenness_dict,
-        set(targets),
+        sources=set(sources),
+        targets=set(targets),
         normalized=normalized,
         directed=G.is_directed(),
+        endpoints=endpoints,
     )
     return betweenness_dict
 
@@ -299,8 +315,10 @@ def betweenness_centrality_subset(
 def betweenness_centrality_bipartite_subset(
     G: nx.Graph | nx.DiGraph,
     node_partition: Iterable[Hashable],
+    sources: Iterable[Hashable] | None = None,
     targets: Iterable[Hashable] | None = None,
-    normalized=True,
+    normalized: bool = True,
+    endpoints: bool = False,
 ):
     r"""
     Compute betweenness centrality for a subset of
@@ -324,22 +342,22 @@ def betweenness_centrality_bipartite_subset(
     Parameters
     ----------
     G : graph
-      A NetworkX graph, should be a bipartite graph (this condition is not checked).
-
+        A NetworkX graph, should be a bipartite graph (this condition is not checked).
     node_partition : Iterable[Hashable]
         One of the two sets of nodes in the bipartite graph, specifically
         the set which contains all the targets
-
-    targets: list of nodes, optional
-      Nodes to use as sources/targets for shortest paths in betweenness,
-      all of these should fall into a single partition of the bipartite
-      graph (this condition is not checked). If None, uses all nodes
-      in the node_partition
-
+    targets : list of nodes, optional
+        Nodes to use as sources/targets for shortest paths in betweenness,
+        all of these should fall into a single partition of the bipartite
+        graph (this condition is not checked). If None, uses all nodes
+        in the node_partition
     normalized : bool, optional
-      If True the betweenness values are normalized by :math:`2/((n-1)(n-2))`
-      for graphs, and :math:`1/((n-1)(n-2))` for directed graphs where :math:`n`
-      is the number of nodes in targets.
+        If True the betweenness values are normalized by :math:`2/((n-1)(n-2))`
+        for graphs, and :math:`1/((n-1)(n-2))` for directed graphs where :math:`n`
+        is the number of nodes in targets.
+    endpoints : bool
+        If `True`, include the endpoints $s$ and $t$ in the shortest path counts.
+        This is taken into account when rescaling the values.
 
     Returns
     -------
@@ -382,19 +400,28 @@ def betweenness_centrality_bipartite_subset(
     betweenness_dict = dict.fromkeys(G, 0.0)
     # Project the network onto the node partition
     projected_graph = nx.bipartite.projected_graph(G, node_partition)
-    # If no targets provided, use all nodes in the node_partition
+    # If no sources are provided, use all nodes in node_partition
+    if sources is None:
+        sources = projected_graph.nodes
+    # If no targets provided, use sources
     if targets is None:
-        targets = projected_graph.nodes
+        targets = sources
     # For each source,
-    for s in targets:
+    for s in sources:
         # single source shortest paths
         S, P, sigma, _ = shortest_path(projected_graph, s)
-        betweenness_dict = _accumulate_bipartite_subset(
-            G, betweenness_dict, S, P, sigma, s, targets
-        )
+        if endpoints:
+            betweenness_dict = _accumulate_bipartite_subset_endpoints(
+                G, betweenness_dict, S, P, sigma, s, targets
+            )
+        else:
+            betweenness_dict = _accumulate_bipartite_subset_basic(
+                G, betweenness_dict, S, P, sigma, s, targets
+            )
     betweenness_dict = _rescale(
         betweenness_dict,
-        set(targets),
+        sources=set(sources),
+        targets=set(targets),
         normalized=normalized,
         directed=G.is_directed(),
     )
@@ -417,7 +444,7 @@ def _common_neighbors(
 # P is a dict of node to list of predecessors (on ANY shortest path)
 # Sigma[v] is a count of shortest paths from source to v
 # delta[v] is the dependency of source on v \in V (starts at 0.0)
-def _accumulate_bipartite_subset(
+def _accumulate_bipartite_subset_basic(
     G: nx.Graph | nx.DiGraph,
     betweenness_dict: dict[Hashable, float],
     S,  # Nodes on paths
@@ -446,44 +473,43 @@ def _accumulate_bipartite_subset(
     return betweenness_dict
 
 
-def _rescale(
-    betweenness: dict[Hashable, float],
-    subset: set[Hashable],
-    normalized: bool,
-    directed=False,
+def _accumulate_bipartite_subset_endpoints(
+    G: nx.Graph | nx.DiGraph,
+    betweenness_dict: dict[Hashable, float],
+    S,  # Nodes on paths
+    P,  # Predecessors
+    sigma: dict[Hashable, float],  # Path counts
+    source: Hashable,  # Source Node
+    targets: Iterable[Hashable],  # Set of targets
 ):
-    """
-    betweenness_centrality_subset helper.
-
-    Uses different normalization that the default in networkx
-    """
-    len_subset = len(subset)
-    if normalized:
-        if len_subset < 2:
-            subset_scale = None  # no normalization b=0 for all nodes
-            non_subset_scale = None
-        elif len_subset == 2:
-            subset_scale = (
-                1.0  # No normalization for subset, since it's only endpoints
-            )
-            non_subset_scale = 1.0 / ((len_subset) * (len_subset - 1))
-        else:
-            subset_scale = 1.0 / ((len_subset - 1) * (len_subset - 2))
-            non_subset_scale = 1.0 / ((len_subset) * (len_subset - 1))
-    else:  # rescale by 2 for undirected graphs
-        if not directed:
-            non_subset_scale = 0.5
-            subset_scale = 0.5
-        else:
-            non_subset_scale = None
-            subset_scale = None
-    if (non_subset_scale is not None) and (subset_scale is not None):
-        for v in betweenness:
-            betweenness[v] *= subset_scale if v in subset else non_subset_scale
-    return betweenness
+    # Since source is in sources, update betweenness to account for
+    # it being on all paths
+    betweenness_dict[source] += len(S) - 1
+    delta = dict.fromkeys(G, 0.0)
+    target_set = set(targets) - {source}
+    # S is a stack that we will go through to
+    # visit the nodes from the BFS in reverse order
+    while S:
+        # w is the current node
+        w = S.pop()
+        # Go through w's predecessors
+        for v in P[w]:
+            if w in target_set:
+                c = (sigma[v] / sigma[w]) * (1.0 + delta[w])
+            else:
+                c = delta[w] * sigma[v] / sigma[w]
+            for u in _common_neighbors(G, v, w):
+                betweenness_dict[u] += c
+            delta[v] += c
+        if w != source:
+            if w in targets:
+                betweenness_dict[w] += delta[w] + 1
+            else:
+                betweenness_dict[w] += delta[w]
+    return betweenness_dict
 
 
-def _accumulate_subset(betweenness, S, P, sigma, s, targets):
+def _accumulate_subset_basic(betweenness, S, P, sigma, s, targets):
     delta = dict.fromkeys(S, 0.0)
     target_set = set(targets) - {s}
     while S:
@@ -499,9 +525,147 @@ def _accumulate_subset(betweenness, S, P, sigma, s, targets):
     return betweenness
 
 
+def _accumulate_subset_endpoints(betweenness, S, P, sigma, s, targets):
+    # Update betweenness to account for s being on all paths,
+    # and being a source
+    betweenness[s] += len(S) - 1
+    delta = dict.fromkeys(S, 0.0)
+    target_set = set(targets) - {s}
+    while S:
+        w = S.pop()
+        if w in target_set:
+            coeff = (delta[w] + 1.0) / sigma[w]
+        else:
+            coeff = delta[w] / sigma[w]
+        for v in P[w]:
+            delta[v] += sigma[v] * coeff
+        if w != s:
+            if w in targets:
+                betweenness[w] += delta[w] + 1
+            else:
+                betweenness[w] += delta[w]
+    return betweenness
+
+
+def _rescale(
+    betweenness: dict[Hashable, float],
+    sources: set[Hashable],
+    targets: set[Hashable],
+    normalized: bool = True,
+    directed: bool = False,
+    endpoints: bool = False,
+):
+    """
+    betweenness_centrality_subset helper.
+
+    Uses different normalization that the default in networkx
+    """
+    # First, determine if rescaling is neccesary
+    if len(sources) == 0 or len(targets) == 0 or len(sources | targets) < 2:
+        # No rescaling necessary: b=0 for all nodes
+        return betweenness
+
+    if normalized:
+        # Find the sizes of overlaps of source/target for claculating the
+        # number of paths
+        source_target_intersection = len(sources & targets)
+        source_not_target = len(sources - targets)
+        if endpoints:
+            # Since v can be an endpoint, it doesn't matter
+            # if its in one of the sets,
+            # we only have to ensure the source and target are different
+            source_and_target_scale = 1.0 / (
+                source_not_target * len(targets)
+                + source_target_intersection * (len(targets) - 1)
+            )
+            source_scale = source_and_target_scale
+            target_scale = source_and_target_scale
+            neither_scale = source_and_target_scale
+        else:
+            # v can't be an endpoint, so if it is in source
+            # need to remove it (only in source)
+            if source_not_target > 0:
+                source_scale = 1.0 / (
+                    (source_not_target - 1) * len(targets)
+                    + source_target_intersection * (len(targets) - 1)
+                )
+            else:
+                # All source nodes are also in target,
+                # so this value will never be used
+                source_scale = None
+            # Now it is only in target
+            # So needs to be removed from targets
+            target_scale = 1.0 / (
+                source_not_target * (len(targets) - 1)
+                + (source_target_intersection) * (len(targets) - 1)
+            )
+            # Now it is in both
+            # so needs to be removed from source and target sets
+            if len(targets) > 2:
+                source_and_target_scale = 1.0 / (
+                    source_not_target * (len(targets) - 1)
+                    + (source_target_intersection - 1)
+                    * (len(targets) - 2)  # 2 because remove start and v
+                )
+            else:
+                if source_not_target > 0:
+                    source_and_target_scale = 1.0 / (
+                        source_not_target * (len(targets) - 1)
+                    )
+                else:
+                    # If there are not at least 2 targets, and v is
+                    # in both source and target sets there can't be
+                    # paths, set to 1 and
+                    # it will be multiplied by a value of 0 below
+                    source_and_target_scale = 1.0
+            # Not v is in neigher set
+            neither_scale = 1.0 / (
+                source_not_target * len(targets)
+                + source_target_intersection * (len(targets) - 1)
+            )
+        # NOTE: Don't need the divide by 2 here regardless
+        # of if the graph is directed because:
+        # - If the graph is not directed, the factor of 2 should
+        #   also be divided from the number of paths and that would
+        #   cancel with the path directedness correction
+        # - If the graph is directed, no correction needs to be
+        #   applied
+        # So in either case, the above scales handle the directedness
+    else:
+        source_and_target_scale = 1.0
+        source_scale = 1.0
+        target_scale = 1.0
+        neither_scale = 1.0
+        if not directed:
+            # If not directed, need to divide by 2 since
+            # we shouldn't count the path in both directions
+            source_and_target_scale /= 2.0
+            source_scale /= 2.0
+            target_scale /= 2.0
+            neither_scale /= 2.0
+    for v in betweenness:
+        if v in sources and v in targets:
+            # In both
+            betweenness[v] *= source_and_target_scale
+        elif v in sources:
+            # In sources but not targets
+            assert source_scale is not None
+            betweenness[v] *= source_scale
+        elif v in targets:
+            # In targets but not sources
+            betweenness[v] *= target_scale
+        else:
+            # In neither
+            betweenness[v] *= neither_scale
+
+    return betweenness
+
+
 #######################################
 # Code below is not based on NetworkX #
 #######################################
+
+
 def find_load_values(
     network: nx.DiGraph | nx.Graph,
     k: int = 1,

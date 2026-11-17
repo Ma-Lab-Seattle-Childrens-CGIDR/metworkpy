@@ -239,7 +239,7 @@ class TestCentralityBipartiteSubset(unittest.TestCase):
             betweenness_centrality_bipartite_subset(
                 self.small_network,
                 node_partition=self.small_network_partition_1,
-                targets=["B", "D", "E", "F"],
+                sources=["B", "D", "E", "F"],
             )
         )
         for n in ["A", "C", "a", "b", "d", "e", "f"]:
